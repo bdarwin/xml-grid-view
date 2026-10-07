@@ -1,0 +1,21 @@
+{
+  "name": "xml-grid-view",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@10.34.6",
+  "scripts": {
+    "build": "pnpm -r --workspace-concurrency=1 run build",
+    "test": "pnpm --filter @xmlgridview/core test",
+    "lint": "eslint . && pnpm -r run typecheck",
+    "typecheck": "pnpm -r run typecheck",
+    "fixtures:generate": "pnpm --filter @xmlgridview/core fixtures:generate",
+    "fixtures:check": "pnpm --filter @xmlgridview/core fixtures:check"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "eslint": "^9.39.0",
+    "globals": "^15.15.0",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.0.0"
+  }
+}

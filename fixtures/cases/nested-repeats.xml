@@ -1,0 +1,16 @@
+<orders>
+  <order id="1001">
+    <customer>Ann</customer>
+    <line sku="X" qty="2"><price>1.00</price></line>
+    <line sku="Y" qty="1"><price>2.50</price></line>
+    <tag>rush</tag>
+    <tag>gift</tag>
+  </order>
+  <order id="1002">
+    <customer>Bob</customer>
+    <line sku="Z" qty="5"><price>0.10</price><discount pct="10"/></line>
+  </order>
+  <order id="1003">
+    <customer>Cy</customer>
+  </order>
+</orders>

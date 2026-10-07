@@ -1,0 +1,62 @@
+{
+  "0": {
+    "groups": [{ "tag": "book", "count": 3 }],
+    "grids": {
+      "book": {
+        "columns": [{ "key": "@id", "kind": "attr" }, { "key": "@lang", "kind": "attr" }, { "key": "title", "kind": "leaf" }, { "key": "author", "kind": "leaf" }, { "key": "price", "kind": "leaf" }],
+        "rows": [["b1", "en", "The Cat in the Hat", "Seuss", "9.99"], ["b2", "fr", "Le Petit Prince", "Saint-Exupéry", "12.50"], ["b3", "en", "Concatenation Theory", "CAT Jones", "40"]]
+      }
+    }
+  },
+  "0/0": {
+    "groups": [{ "tag": "title", "count": 1 }, { "tag": "author", "count": 1 }, { "tag": "price", "count": 1 }],
+    "grids": {
+      "title": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [["The Cat in the Hat"]]
+      },
+      "author": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [["Seuss"]]
+      },
+      "price": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [["9.99"]]
+      }
+    }
+  },
+  "0/1": {
+    "groups": [{ "tag": "title", "count": 1 }, { "tag": "author", "count": 1 }, { "tag": "price", "count": 1 }],
+    "grids": {
+      "title": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [["Le Petit Prince"]]
+      },
+      "author": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [["Saint-Exupéry"]]
+      },
+      "price": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [["12.50"]]
+      }
+    }
+  },
+  "0/2": {
+    "groups": [{ "tag": "title", "count": 1 }, { "tag": "author", "count": 1 }, { "tag": "price", "count": 1 }],
+    "grids": {
+      "title": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [["Concatenation Theory"]]
+      },
+      "author": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [["CAT Jones"]]
+      },
+      "price": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [["40"]]
+      }
+    }
+  }
+}

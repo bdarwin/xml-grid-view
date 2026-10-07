@@ -1,0 +1,11 @@
+{
+  "0": {
+    "groups": [{ "tag": "c", "count": 6 }],
+    "grids": {
+      "c": {
+        "columns": [{ "key": "@name", "kind": "attr" }, { "key": "@q", "kind": "attr" }, { "key": "#text", "kind": "text" }],
+        "rows": [["amp", null, "&"], ["lt", null, "<tag>"], ["quote", "\"x\" 'y'", "quotes"], ["numeric", null, "AB😀"], ["emoji", null, "😀 smile é"], ["nbsp", null, " padded "]]
+      }
+    }
+  }
+}

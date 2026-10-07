@@ -1,0 +1,344 @@
+{
+  "cases": [
+    {
+      "query": "cat",
+      "options": { "caseSensitive": false, "wholeWord": false, "regex": false },
+      "scope": "document",
+      "target": "all",
+      "expected": [
+        {
+          "path": "0",
+          "target": "name",
+          "attr": null,
+          "ranges": [[0, 3]]
+        },
+        {
+          "path": "0/0/0",
+          "target": "text",
+          "attr": null,
+          "ranges": [[4, 7]]
+        },
+        {
+          "path": "0/2/0",
+          "target": "text",
+          "attr": null,
+          "ranges": [[3, 6]]
+        },
+        {
+          "path": "0/2/1",
+          "target": "text",
+          "attr": null,
+          "ranges": [[0, 3]]
+        }
+      ]
+    },
+    {
+      "query": "Cat",
+      "options": { "caseSensitive": true, "wholeWord": false, "regex": false },
+      "scope": "document",
+      "target": "all",
+      "expected": [
+        {
+          "path": "0/0/0",
+          "target": "text",
+          "attr": null,
+          "ranges": [[4, 7]]
+        }
+      ]
+    },
+    {
+      "query": "cat",
+      "options": { "caseSensitive": false, "wholeWord": true, "regex": false },
+      "scope": "document",
+      "target": "all",
+      "expected": [
+        {
+          "path": "0/0/0",
+          "target": "text",
+          "attr": null,
+          "ranges": [[4, 7]]
+        },
+        {
+          "path": "0/2/1",
+          "target": "text",
+          "attr": null,
+          "ranges": [[0, 3]]
+        }
+      ]
+    },
+    {
+      "query": "cat",
+      "options": { "caseSensitive": true, "wholeWord": true, "regex": false },
+      "scope": "document",
+      "target": "text",
+      "expected": []
+    },
+    {
+      "query": "^b[0-9]$",
+      "options": { "caseSensitive": false, "wholeWord": false, "regex": true },
+      "scope": "document",
+      "target": "all",
+      "expected": [
+        {
+          "path": "0/0",
+          "target": "attrValue",
+          "attr": "id",
+          "ranges": [[0, 2]]
+        },
+        {
+          "path": "0/1",
+          "target": "attrValue",
+          "attr": "id",
+          "ranges": [[0, 2]]
+        },
+        {
+          "path": "0/2",
+          "target": "attrValue",
+          "attr": "id",
+          "ranges": [[0, 2]]
+        }
+      ]
+    },
+    {
+      "query": "lang",
+      "options": { "caseSensitive": false, "wholeWord": false, "regex": false },
+      "scope": "document",
+      "target": "attrNames",
+      "expected": [
+        {
+          "path": "0/0",
+          "target": "attrName",
+          "attr": "lang",
+          "ranges": [[0, 4]]
+        },
+        {
+          "path": "0/1",
+          "target": "attrName",
+          "attr": "lang",
+          "ranges": [[0, 4]]
+        },
+        {
+          "path": "0/2",
+          "target": "attrName",
+          "attr": "lang",
+          "ranges": [[0, 4]]
+        }
+      ]
+    },
+    {
+      "query": "en",
+      "options": { "caseSensitive": false, "wholeWord": false, "regex": false },
+      "scope": "document",
+      "target": "attrValues",
+      "expected": [
+        {
+          "path": "0/0",
+          "target": "attrValue",
+          "attr": "lang",
+          "ranges": [[0, 2]]
+        },
+        {
+          "path": "0/2",
+          "target": "attrValue",
+          "attr": "lang",
+          "ranges": [[0, 2]]
+        }
+      ]
+    },
+    {
+      "query": "book",
+      "options": { "caseSensitive": false, "wholeWord": false, "regex": false },
+      "scope": "document",
+      "target": "names",
+      "expected": [
+        {
+          "path": "0/0",
+          "target": "name",
+          "attr": null,
+          "ranges": [[0, 4]]
+        },
+        {
+          "path": "0/1",
+          "target": "name",
+          "attr": null,
+          "ranges": [[0, 4]]
+        },
+        {
+          "path": "0/2",
+          "target": "name",
+          "attr": null,
+          "ranges": [[0, 4]]
+        }
+      ]
+    },
+    {
+      "query": "(",
+      "options": { "caseSensitive": false, "wholeWord": false, "regex": true },
+      "scope": "document",
+      "target": "all",
+      "expected": { "error": true }
+    },
+    {
+      "query": "[0-9]+\\.[0-9]+",
+      "options": { "caseSensitive": false, "wholeWord": false, "regex": true },
+      "scope": "document",
+      "target": "all",
+      "expected": [
+        {
+          "path": "0/0/2",
+          "target": "text",
+          "attr": null,
+          "ranges": [[0, 4]]
+        },
+        {
+          "path": "0/1/2",
+          "target": "text",
+          "attr": null,
+          "ranges": [[0, 5]]
+        }
+      ]
+    },
+    {
+      "query": "",
+      "options": { "caseSensitive": false, "wholeWord": false, "regex": false },
+      "scope": "document",
+      "target": "all",
+      "expected": []
+    },
+    {
+      "query": "e",
+      "options": { "caseSensitive": false, "wholeWord": false, "regex": false },
+      "scope": "grid",
+      "target": "all",
+      "grid": { "path": "0", "group": "book" },
+      "expected": [
+        {
+          "row": 0,
+          "column": "@lang",
+          "ranges": [[0, 1]]
+        },
+        {
+          "row": 0,
+          "column": "title",
+          "ranges": [[2, 3], [13, 14]]
+        },
+        {
+          "row": 0,
+          "column": "author",
+          "ranges": [[1, 2]]
+        },
+        {
+          "row": 1,
+          "column": "title",
+          "ranges": [[1, 2], [4, 5], [14, 15]]
+        },
+        {
+          "row": 1,
+          "column": "author",
+          "ranges": [[6, 7]]
+        },
+        {
+          "row": 2,
+          "column": "@lang",
+          "ranges": [[0, 1]]
+        },
+        {
+          "row": 2,
+          "column": "title",
+          "ranges": [[6, 7], [16, 17]]
+        },
+        {
+          "row": 2,
+          "column": "author",
+          "ranges": [[7, 8]]
+        }
+      ]
+    },
+    {
+      "query": "cat",
+      "options": { "caseSensitive": false, "wholeWord": true, "regex": false },
+      "scope": "grid",
+      "target": "all",
+      "grid": { "path": "0", "group": "book" },
+      "expected": [
+        {
+          "row": 0,
+          "column": "title",
+          "ranges": [[4, 7]]
+        },
+        {
+          "row": 2,
+          "column": "author",
+          "ranges": [[0, 3]]
+        }
+      ]
+    },
+    {
+      "query": "en",
+      "options": { "caseSensitive": false, "wholeWord": false, "regex": false },
+      "scope": "grid",
+      "target": "attrValues",
+      "grid": { "path": "0", "group": "book" },
+      "expected": [
+        {
+          "row": 0,
+          "column": "@lang",
+          "ranges": [[0, 2]]
+        },
+        {
+          "row": 2,
+          "column": "@lang",
+          "ranges": [[0, 2]]
+        }
+      ]
+    }
+  ],
+  "xpath": [
+    {
+      "expr": "//book[@lang='fr']/title",
+      "expected": {
+        "nodes": [{ "path": "0/1/0", "kind": "element", "attr": null }]
+      }
+    },
+    {
+      "expr": "//@id",
+      "expected": {
+        "nodes": [{ "path": "0/0", "kind": "attribute", "attr": "id" }, { "path": "0/1", "kind": "attribute", "attr": "id" }, { "path": "0/2", "kind": "attribute", "attr": "id" }]
+      }
+    },
+    {
+      "expr": "//book/title/text()",
+      "expected": {
+        "nodes": [{ "path": "0/0/0", "kind": "text", "attr": null }, { "path": "0/1/0", "kind": "text", "attr": null }, { "path": "0/2/0", "kind": "text", "attr": null }]
+      }
+    },
+    {
+      "expr": "count(//book)",
+      "expected": { "scalar": 3 }
+    },
+    {
+      "expr": "string(//book[2]/author)",
+      "expected": { "scalar": "Saint-Exupéry" }
+    },
+    {
+      "expr": "//book[price > 10]",
+      "expected": {
+        "nodes": [{ "path": "0/1", "kind": "element", "attr": null }, { "path": "0/2", "kind": "element", "attr": null }]
+      }
+    },
+    {
+      "expr": "boolean(//magazine)",
+      "expected": { "scalar": false }
+    },
+    {
+      "expr": "//book[",
+      "expected": { "error": true }
+    },
+    {
+      "expr": "/catalog/*[last()]",
+      "expected": {
+        "nodes": [{ "path": "0/2", "kind": "element", "attr": null }]
+      }
+    }
+  ]
+}

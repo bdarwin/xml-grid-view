@@ -1,0 +1,8 @@
+<chars>
+  <c name="amp">&amp;</c>
+  <c name="lt">&lt;tag&gt;</c>
+  <c name="quote" q="&quot;x&quot; &apos;y&apos;">quotes</c>
+  <c name="numeric">&#65;&#x42;&#x1F600;</c>
+  <c name="emoji">😀 smile é</c>
+  <c name="nbsp">&#160;padded&#160;</c>
+</chars>

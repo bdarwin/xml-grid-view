@@ -1,0 +1,37 @@
+{
+  "cases": [
+    {
+      "query": "onetwo",
+      "options": { "caseSensitive": false, "wholeWord": false, "regex": false },
+      "scope": "document",
+      "target": "all",
+      "expected": [
+        {
+          "path": "0/0",
+          "target": "text",
+          "attr": null,
+          "ranges": [[0, 6]]
+        }
+      ]
+    },
+    {
+      "query": "inline",
+      "options": { "caseSensitive": false, "wholeWord": false, "regex": false },
+      "scope": "document",
+      "target": "all",
+      "expected": []
+    }
+  ],
+  "xpath": [
+    {
+      "expr": "//setting[.='onetwo']/@key",
+      "expected": {
+        "nodes": [{ "path": "0/0", "kind": "attribute", "attr": "key" }]
+      }
+    },
+    {
+      "expr": "count(//comment())",
+      "expected": { "scalar": 3 }
+    }
+  ]
+}

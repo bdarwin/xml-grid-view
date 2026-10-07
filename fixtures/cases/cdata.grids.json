@@ -1,0 +1,11 @@
+{
+  "0": {
+    "groups": [{ "tag": "script", "count": 3 }],
+    "grids": {
+      "script": {
+        "columns": [{ "key": "@lang", "kind": "attr" }, { "key": "#text", "kind": "text" }],
+        "rows": [["js", "if (a < b && c > d) { go(); }"], ["sql", "SELECT 1 WHERE x < 2 ;"], ["none", null]]
+      }
+    }
+  }
+}

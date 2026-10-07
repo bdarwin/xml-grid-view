@@ -1,0 +1,32 @@
+{
+  "cases": [
+    {
+      "query": "x",
+      "options": { "caseSensitive": false, "wholeWord": false, "regex": false },
+      "scope": "document",
+      "target": "all",
+      "expected": [
+        {
+          "path": "0/0/2",
+          "target": "text",
+          "attr": null,
+          "ranges": [[0, 1]]
+        }
+      ]
+    }
+  ],
+  "xpath": [
+    {
+      "expr": "//row[not(*)]",
+      "expected": {
+        "nodes": [{ "path": "0/2", "kind": "element", "attr": null }]
+      }
+    },
+    {
+      "expr": "//*[not(node())]",
+      "expected": {
+        "nodes": [{ "path": "0/0/0", "kind": "element", "attr": null }, { "path": "0/0/1", "kind": "element", "attr": null }, { "path": "0/1/1", "kind": "element", "attr": null }, { "path": "0/2", "kind": "element", "attr": null }]
+      }
+    }
+  ]
+}

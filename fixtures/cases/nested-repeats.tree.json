@@ -1,0 +1,167 @@
+{
+  "tag": "orders",
+  "ns": "",
+  "path": "0",
+  "start": 0,
+  "end": 416,
+  "attrs": [],
+  "text": "",
+  "children": [
+    {
+      "tag": "order",
+      "ns": "",
+      "path": "0/0",
+      "start": 11,
+      "end": 214,
+      "attrs": [{ "name": "id", "value": "1001", "start": 18, "end": 27 }],
+      "text": "",
+      "children": [
+        {
+          "tag": "customer",
+          "ns": "",
+          "path": "0/0/0",
+          "start": 33,
+          "end": 57,
+          "attrs": [],
+          "text": "Ann",
+          "children": []
+        },
+        {
+          "tag": "line",
+          "ns": "",
+          "path": "0/0/1",
+          "start": 62,
+          "end": 110,
+          "attrs": [{ "name": "sku", "value": "X", "start": 68, "end": 75 }, { "name": "qty", "value": "2", "start": 76, "end": 83 }],
+          "text": "",
+          "children": [
+            {
+              "tag": "price",
+              "ns": "",
+              "path": "0/0/1/0",
+              "start": 84,
+              "end": 103,
+              "attrs": [],
+              "text": "1.00",
+              "children": []
+            }
+          ]
+        },
+        {
+          "tag": "line",
+          "ns": "",
+          "path": "0/0/2",
+          "start": 115,
+          "end": 163,
+          "attrs": [{ "name": "sku", "value": "Y", "start": 121, "end": 128 }, { "name": "qty", "value": "1", "start": 129, "end": 136 }],
+          "text": "",
+          "children": [
+            {
+              "tag": "price",
+              "ns": "",
+              "path": "0/0/2/0",
+              "start": 137,
+              "end": 156,
+              "attrs": [],
+              "text": "2.50",
+              "children": []
+            }
+          ]
+        },
+        {
+          "tag": "tag",
+          "ns": "",
+          "path": "0/0/3",
+          "start": 168,
+          "end": 183,
+          "attrs": [],
+          "text": "rush",
+          "children": []
+        },
+        {
+          "tag": "tag",
+          "ns": "",
+          "path": "0/0/4",
+          "start": 188,
+          "end": 203,
+          "attrs": [],
+          "text": "gift",
+          "children": []
+        }
+      ]
+    },
+    {
+      "tag": "order",
+      "ns": "",
+      "path": "0/1",
+      "start": 217,
+      "end": 347,
+      "attrs": [{ "name": "id", "value": "1002", "start": 224, "end": 233 }],
+      "text": "",
+      "children": [
+        {
+          "tag": "customer",
+          "ns": "",
+          "path": "0/1/0",
+          "start": 239,
+          "end": 263,
+          "attrs": [],
+          "text": "Bob",
+          "children": []
+        },
+        {
+          "tag": "line",
+          "ns": "",
+          "path": "0/1/1",
+          "start": 268,
+          "end": 336,
+          "attrs": [{ "name": "sku", "value": "Z", "start": 274, "end": 281 }, { "name": "qty", "value": "5", "start": 282, "end": 289 }],
+          "text": "",
+          "children": [
+            {
+              "tag": "price",
+              "ns": "",
+              "path": "0/1/1/0",
+              "start": 290,
+              "end": 309,
+              "attrs": [],
+              "text": "0.10",
+              "children": []
+            },
+            {
+              "tag": "discount",
+              "ns": "",
+              "path": "0/1/1/1",
+              "start": 309,
+              "end": 329,
+              "attrs": [{ "name": "pct", "value": "10", "start": 319, "end": 327 }],
+              "text": "",
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "tag": "order",
+      "ns": "",
+      "path": "0/2",
+      "start": 350,
+      "end": 406,
+      "attrs": [{ "name": "id", "value": "1003", "start": 357, "end": 366 }],
+      "text": "",
+      "children": [
+        {
+          "tag": "customer",
+          "ns": "",
+          "path": "0/2/0",
+          "start": 372,
+          "end": 395,
+          "attrs": [],
+          "text": "Cy",
+          "children": []
+        }
+      ]
+    }
+  ]
+}

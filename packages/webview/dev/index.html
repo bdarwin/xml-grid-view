@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>XML Grid View (dev)</title>
+    <link rel="stylesheet" href="webview.css" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script src="webview.js"></script>
+    <script>
+      // Standalone harness: acts as the host. Open with ?file=<url> or drop a file onto the page.
+      const send = (msg) => window.postMessage(msg, "*");
+      let initialized = false;
+      async function start(text, name) {
+        send({ type: initialized ? "update" : "init", version: 1, fileName: name, text, theme: {}, settings: {} });
+        initialized = true;
+      }
+      window.addEventListener("xgv-host", (e) => {
+        const msg = e.detail;
+        if (msg.type === "ready") {
+          const file = new URLSearchParams(location.search).get("file");
+          if (file) fetch(file).then((r) => r.text()).then((t) => start(t, file));
+          else start('<catalog>\n  <book id="1"><title>Example</title><price>10</price></book>\n  <book id="2"><title>Drop an XML file here</title><price>20</price></book>\n</catalog>', "sample.xml");
+        } else if (msg.type === "copy") {
+          navigator.clipboard?.writeText(msg.text).catch(() => {});
+          console.log("host <- copy", JSON.stringify(msg.text));
+        } else console.log("host <-", msg);
+      });
+      window.addEventListener("dragover", (e) => e.preventDefault());
+      window.addEventListener("drop", async (e) => {
+        e.preventDefault();
+        const f = e.dataTransfer.files[0];
+        if (f) start(await f.text(), f.name);
+      });
+    </script>
+  </body>
+</html>

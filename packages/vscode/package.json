@@ -1,0 +1,133 @@
+{
+  "name": "xml-grid-view",
+  "displayName": "XML Grid View",
+  "description": "Read-only tree and grid viewer for XML files, with search and XPath.",
+  "version": "0.1.0",
+  "publisher": "xmlgridview",
+  "private": true,
+  "license": "SEE LICENSE IN README.md",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Visualization",
+    "Other"
+  ],
+  "keywords": [
+    "xml",
+    "grid",
+    "table",
+    "xpath",
+    "viewer"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "customEditors": [
+      {
+        "viewType": "xmlGridView.editor",
+        "displayName": "XML Grid View",
+        "selector": [
+          {
+            "filenamePattern": "*.xml"
+          }
+        ],
+        "priority": "option"
+      }
+    ],
+    "commands": [
+      {
+        "command": "xmlGridView.openWith",
+        "title": "Open With XML Grid View",
+        "category": "XML Grid View",
+        "icon": "$(table)"
+      },
+      {
+        "command": "xmlGridView.showSource",
+        "title": "Show Source",
+        "category": "XML Grid View",
+        "icon": "$(go-to-file)"
+      },
+      {
+        "command": "xmlGridView.find",
+        "title": "Find",
+        "category": "XML Grid View"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "xmlGridView.openWith",
+          "when": "resourceExtname == .xml && activeEditor == workbench.editors.files.textFileEditor",
+          "group": "navigation"
+        },
+        {
+          "command": "xmlGridView.showSource",
+          "when": "activeCustomEditorId == xmlGridView.editor",
+          "group": "navigation"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "xmlGridView.openWith",
+          "when": "resourceExtname == .xml",
+          "group": "navigation@20"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "xmlGridView.openWith",
+          "when": "resourceExtname == .xml"
+        },
+        {
+          "command": "xmlGridView.showSource",
+          "when": "activeCustomEditorId == xmlGridView.editor"
+        },
+        {
+          "command": "xmlGridView.find",
+          "when": "activeCustomEditorId == xmlGridView.editor"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "xmlGridView.find",
+        "key": "ctrl+f",
+        "mac": "cmd+f",
+        "when": "activeCustomEditorId == xmlGridView.editor"
+      }
+    ],
+    "configuration": {
+      "title": "XML Grid View",
+      "properties": {
+        "xmlGridView.copyWithHeader": {
+          "type": "boolean",
+          "default": false,
+          "description": "Include the column header row when copying cells. Ctrl/Cmd+Shift+C does the opposite."
+        },
+        "xmlGridView.largeFileThresholdMB": {
+          "type": "number",
+          "default": 50,
+          "minimum": 1,
+          "description": "Files larger than this (in MB) show a notice and are only parsed after clicking \"Load anyway\"."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "node build.mjs && vsce package --no-dependencies --skip-license --allow-missing-repository",
+    "compile": "node build.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node build.mjs && tsc -p tsconfig.test.json && node out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.0",
+    "@types/node": "^22.0.0",
+    "@types/vscode": "~1.90.0",
+    "@vscode/test-electron": "^3.1.0",
+    "@vscode/vsce": "^3.2.0",
+    "@xmlgridview/core": "workspace:*",
+    "@xmlgridview/webview": "workspace:*",
+    "esbuild": "^0.25.0",
+    "mocha": "^10.7.0"
+  }
+}

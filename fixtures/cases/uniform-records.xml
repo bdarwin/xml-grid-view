@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<catalog>
+  <book id="b1" lang="en">
+    <title>The Cat in the Hat</title>
+    <author>Seuss</author>
+    <price>9.99</price>
+  </book>
+  <book id="b2" lang="fr">
+    <title>Le Petit Prince</title>
+    <author>Saint-Exupéry</author>
+    <price>12.50</price>
+  </book>
+  <book id="b3" lang="en">
+    <title>Concatenation Theory</title>
+    <author>CAT Jones</author>
+    <price>40</price>
+  </book>
+</catalog>

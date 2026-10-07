@@ -1,0 +1,16 @@
+<idea-plugin>
+  <id>dev.xmlgridview.viewer</id>
+  <name>XML Grid View</name>
+  <vendor>xmlgridview</vendor>
+  <description><![CDATA[
+    Read-only XML viewer with a tree, a grid of repeating elements, and search (text, regex, XPath).
+    Open any XML file and switch the editor to <b>Split</b> or <b>Viewer</b> with the toolbar toggle.
+  ]]></description>
+
+  <depends>com.intellij.modules.platform</depends>
+  <depends>com.intellij.modules.xml</depends>
+
+  <extensions defaultExtensionNs="com.intellij">
+    <fileEditorProvider implementation="dev.xmlgridview.intellij.editor.XmlGridEditorProvider"/>
+  </extensions>
+</idea-plugin>

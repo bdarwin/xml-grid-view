@@ -1,0 +1,124 @@
+{
+  "cases": [
+    {
+      "query": "title",
+      "options": { "caseSensitive": false, "wholeWord": false, "regex": false },
+      "scope": "document",
+      "target": "names",
+      "expected": [
+        {
+          "path": "0/0",
+          "target": "name",
+          "attr": null,
+          "ranges": [[0, 5]]
+        },
+        {
+          "path": "0/1/1",
+          "target": "name",
+          "attr": null,
+          "ranges": [[0, 5]]
+        },
+        {
+          "path": "0/2/1",
+          "target": "name",
+          "attr": null,
+          "ranges": [[0, 5]]
+        }
+      ]
+    },
+    {
+      "query": "media",
+      "options": { "caseSensitive": false, "wholeWord": false, "regex": false },
+      "scope": "document",
+      "target": "names",
+      "expected": [
+        {
+          "path": "0/1/2",
+          "target": "name",
+          "attr": null,
+          "ranges": [[0, 5]]
+        },
+        {
+          "path": "0/2/2",
+          "target": "name",
+          "attr": null,
+          "ranges": [[0, 5]]
+        }
+      ]
+    },
+    {
+      "query": "width",
+      "options": { "caseSensitive": false, "wholeWord": false, "regex": false },
+      "scope": "document",
+      "target": "all",
+      "expected": [
+        {
+          "path": "0/1/2",
+          "target": "attrName",
+          "attr": "media:width",
+          "ranges": [[6, 11]]
+        }
+      ]
+    },
+    {
+      "query": "png",
+      "options": { "caseSensitive": false, "wholeWord": false, "regex": false },
+      "scope": "document",
+      "target": "attrValues",
+      "expected": [
+        {
+          "path": "0/1/2",
+          "target": "attrValue",
+          "attr": "url",
+          "ranges": [[2, 5]]
+        },
+        {
+          "path": "0/2/2",
+          "target": "attrValue",
+          "attr": "url",
+          "ranges": [[2, 5]]
+        }
+      ]
+    }
+  ],
+  "xpath": [
+    {
+      "expr": "/d:feed/d:entry/d:title",
+      "expected": {
+        "nodes": [{ "path": "0/1/1", "kind": "element", "attr": null }, { "path": "0/2/1", "kind": "element", "attr": null }]
+      }
+    },
+    {
+      "expr": "//media:thumbnail/@url",
+      "expected": {
+        "nodes": [{ "path": "0/1/2", "kind": "attribute", "attr": "url" }, { "path": "0/2/2", "kind": "attribute", "attr": "url" }]
+      }
+    },
+    {
+      "expr": "//media:thumbnail[@media:width]",
+      "expected": {
+        "nodes": [{ "path": "0/1/2", "kind": "element", "attr": null }]
+      }
+    },
+    {
+      "expr": "/feed",
+      "expected": {
+        "nodes": []
+      }
+    },
+    {
+      "expr": "//*[local-name()='link']",
+      "expected": {
+        "nodes": [{ "path": "0/2/3", "kind": "element", "attr": null }]
+      }
+    },
+    {
+      "expr": "count(//d:entry)",
+      "expected": { "scalar": 2 }
+    },
+    {
+      "expr": "//x:y",
+      "expected": { "error": true }
+    }
+  ]
+}

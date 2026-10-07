@@ -1,0 +1,45 @@
+{
+  "0": {
+    "groups": [{ "tag": "b", "count": 2 }],
+    "grids": {
+      "b": {
+        "columns": [{ "key": "c", "kind": "complex" }],
+        "rows": [
+          [{ "drill": "c", "count": 1 }],
+          [null]
+        ]
+      }
+    }
+  },
+  "0/0": {
+    "groups": [{ "tag": "c", "count": 1 }],
+    "grids": {
+      "c": {
+        "columns": [{ "key": "d", "kind": "complex" }],
+        "rows": [
+          [{ "drill": "d", "count": 1 }]
+        ]
+      }
+    }
+  },
+  "0/0/0": {
+    "groups": [{ "tag": "d", "count": 1 }],
+    "grids": {
+      "d": {
+        "columns": [{ "key": "@k", "kind": "attr" }, { "key": "e", "kind": "complex" }],
+        "rows": [
+          ["1", { "drill": "e", "count": 2 }]
+        ]
+      }
+    }
+  },
+  "0/0/0/0": {
+    "groups": [{ "tag": "e", "count": 2 }],
+    "grids": {
+      "e": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [["deep"], ["deeper"]]
+      }
+    }
+  }
+}

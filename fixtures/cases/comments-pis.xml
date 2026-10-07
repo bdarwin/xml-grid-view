@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<!-- leading comment -->
+<?app-config mode="test"?>
+<config>
+  <!-- settings below -->
+  <setting key="a">one<!-- inline -->two</setting>
+  <?ignore me?>
+  <setting key="b">three</setting>
+</config>

@@ -1,0 +1,8 @@
+<inventory>
+  <item sku="A1"><name>Widget</name><qty>3</qty></item>
+  <item sku="B2" discontinued="true"><name>Gadget</name><color>red</color></item>
+  <note>Counted on Monday</note>
+  <item><qty>0</qty></item>
+  <supplier code="S1"/>
+  <note>Recount needed</note>
+</inventory>

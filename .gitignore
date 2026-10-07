@@ -1,0 +1,11 @@
+node_modules/
+dist/
+out/
+*.vsix
+.vscode-test/
+packages/intellij/build/
+packages/intellij/.gradle/
+packages/intellij/.intellijPlatform/
+.idea/
+*.log
+.DS_Store

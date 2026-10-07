@@ -1,0 +1,124 @@
+{
+  "tag": "inventory",
+  "ns": "",
+  "path": "0",
+  "start": 0,
+  "end": 277,
+  "attrs": [],
+  "text": "",
+  "children": [
+    {
+      "tag": "item",
+      "ns": "",
+      "path": "0/0",
+      "start": 14,
+      "end": 67,
+      "attrs": [{ "name": "sku", "value": "A1", "start": 20, "end": 28 }],
+      "text": "",
+      "children": [
+        {
+          "tag": "name",
+          "ns": "",
+          "path": "0/0/0",
+          "start": 29,
+          "end": 48,
+          "attrs": [],
+          "text": "Widget",
+          "children": []
+        },
+        {
+          "tag": "qty",
+          "ns": "",
+          "path": "0/0/1",
+          "start": 48,
+          "end": 60,
+          "attrs": [],
+          "text": "3",
+          "children": []
+        }
+      ]
+    },
+    {
+      "tag": "item",
+      "ns": "",
+      "path": "0/1",
+      "start": 70,
+      "end": 149,
+      "attrs": [{ "name": "sku", "value": "B2", "start": 76, "end": 84 }, { "name": "discontinued", "value": "true", "start": 85, "end": 104 }],
+      "text": "",
+      "children": [
+        {
+          "tag": "name",
+          "ns": "",
+          "path": "0/1/0",
+          "start": 105,
+          "end": 124,
+          "attrs": [],
+          "text": "Gadget",
+          "children": []
+        },
+        {
+          "tag": "color",
+          "ns": "",
+          "path": "0/1/1",
+          "start": 124,
+          "end": 142,
+          "attrs": [],
+          "text": "red",
+          "children": []
+        }
+      ]
+    },
+    {
+      "tag": "note",
+      "ns": "",
+      "path": "0/2",
+      "start": 152,
+      "end": 182,
+      "attrs": [],
+      "text": "Counted on Monday",
+      "children": []
+    },
+    {
+      "tag": "item",
+      "ns": "",
+      "path": "0/3",
+      "start": 185,
+      "end": 210,
+      "attrs": [],
+      "text": "",
+      "children": [
+        {
+          "tag": "qty",
+          "ns": "",
+          "path": "0/3/0",
+          "start": 191,
+          "end": 203,
+          "attrs": [],
+          "text": "0",
+          "children": []
+        }
+      ]
+    },
+    {
+      "tag": "supplier",
+      "ns": "",
+      "path": "0/4",
+      "start": 213,
+      "end": 234,
+      "attrs": [{ "name": "code", "value": "S1", "start": 223, "end": 232 }],
+      "text": "",
+      "children": []
+    },
+    {
+      "tag": "note",
+      "ns": "",
+      "path": "0/5",
+      "start": 237,
+      "end": 264,
+      "attrs": [],
+      "text": "Recount needed",
+      "children": []
+    }
+  ]
+}

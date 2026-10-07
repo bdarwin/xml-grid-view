@@ -1,0 +1,41 @@
+{
+  "tag": "scripts",
+  "ns": "",
+  "path": "0",
+  "start": 0,
+  "end": 200,
+  "attrs": [],
+  "text": "",
+  "children": [
+    {
+      "tag": "script",
+      "ns": "",
+      "path": "0/0",
+      "start": 12,
+      "end": 80,
+      "attrs": [{ "name": "lang", "value": "js", "start": 20, "end": 29 }],
+      "text": "if (a < b && c > d) { go(); }",
+      "children": []
+    },
+    {
+      "tag": "script",
+      "ns": "",
+      "path": "0/1",
+      "start": 83,
+      "end": 145,
+      "attrs": [{ "name": "lang", "value": "sql", "start": 91, "end": 101 }],
+      "text": "SELECT 1 WHERE x < 2 ;",
+      "children": []
+    },
+    {
+      "tag": "script",
+      "ns": "",
+      "path": "0/2",
+      "start": 148,
+      "end": 189,
+      "attrs": [{ "name": "lang", "value": "none", "start": 156, "end": 167 }],
+      "text": "",
+      "children": []
+    }
+  ]
+}

@@ -1,0 +1,51 @@
+{
+  "tag": "points",
+  "ns": "",
+  "path": "0",
+  "start": 0,
+  "end": 91,
+  "attrs": [],
+  "text": "",
+  "children": [
+    {
+      "tag": "p",
+      "ns": "",
+      "path": "0/0",
+      "start": 11,
+      "end": 27,
+      "attrs": [{ "name": "x", "value": "1", "start": 14, "end": 19 }, { "name": "y", "value": "2", "start": 20, "end": 25 }],
+      "text": "",
+      "children": []
+    },
+    {
+      "tag": "p",
+      "ns": "",
+      "path": "0/1",
+      "start": 30,
+      "end": 52,
+      "attrs": [{ "name": "x", "value": "3", "start": 33, "end": 38 }, { "name": "y", "value": "4", "start": 39, "end": 44 }, { "name": "z", "value": "5", "start": 45, "end": 50 }],
+      "text": "",
+      "children": []
+    },
+    {
+      "tag": "p",
+      "ns": "",
+      "path": "0/2",
+      "start": 55,
+      "end": 74,
+      "attrs": [{ "name": "y", "value": "6", "start": 58, "end": 63 }, { "name": "label", "value": "", "start": 64, "end": 72 }],
+      "text": "",
+      "children": []
+    },
+    {
+      "tag": "p",
+      "ns": "",
+      "path": "0/3",
+      "start": 77,
+      "end": 81,
+      "attrs": [],
+      "text": "",
+      "children": []
+    }
+  ]
+}

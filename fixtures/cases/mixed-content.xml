@@ -1,0 +1,6 @@
+<doc>
+  <p>Hello <b>bold</b> and <i>italic</i> text.</p>
+  <p>Plain paragraph.</p>
+  <p><b>Only bold</b></p>
+  <p>Two <b>b1</b> parts <b>b2</b> here</p>
+</doc>

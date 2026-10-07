@@ -1,0 +1,14 @@
+<feed xmlns="http://www.w3.org/2005/Atom" xmlns:media="http://search.yahoo.com/mrss/">
+  <title>Example</title>
+  <entry>
+    <id>urn:1</id>
+    <title>First</title>
+    <media:thumbnail url="a.png" media:width="64"/>
+  </entry>
+  <entry>
+    <id>urn:2</id>
+    <title>Second</title>
+    <media:thumbnail url="b.png"/>
+    <link href="http://example.com/2" xmlns="urn:other"/>
+  </entry>
+</feed>

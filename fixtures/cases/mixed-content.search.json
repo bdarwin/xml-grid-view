@@ -1,0 +1,114 @@
+{
+  "cases": [
+    {
+      "query": "bold",
+      "options": { "caseSensitive": false, "wholeWord": false, "regex": false },
+      "scope": "document",
+      "target": "all",
+      "expected": [
+        {
+          "path": "0/0/0",
+          "target": "text",
+          "attr": null,
+          "ranges": [[0, 4]]
+        },
+        {
+          "path": "0/2/0",
+          "target": "text",
+          "attr": null,
+          "ranges": [[5, 9]]
+        }
+      ]
+    },
+    {
+      "query": "text.",
+      "options": { "caseSensitive": false, "wholeWord": false, "regex": false },
+      "scope": "document",
+      "target": "all",
+      "expected": [
+        {
+          "path": "0/0",
+          "target": "text",
+          "attr": null,
+          "ranges": [[12, 17]]
+        }
+      ]
+    },
+    {
+      "query": "b",
+      "options": { "caseSensitive": false, "wholeWord": true, "regex": false },
+      "scope": "document",
+      "target": "names",
+      "expected": [
+        {
+          "path": "0/0/0",
+          "target": "name",
+          "attr": null,
+          "ranges": [[0, 1]]
+        },
+        {
+          "path": "0/2/0",
+          "target": "name",
+          "attr": null,
+          "ranges": [[0, 1]]
+        },
+        {
+          "path": "0/3/0",
+          "target": "name",
+          "attr": null,
+          "ranges": [[0, 1]]
+        },
+        {
+          "path": "0/3/1",
+          "target": "name",
+          "attr": null,
+          "ranges": [[0, 1]]
+        }
+      ]
+    },
+    {
+      "query": "b",
+      "options": { "caseSensitive": false, "wholeWord": false, "regex": false },
+      "scope": "grid",
+      "target": "all",
+      "grid": { "path": "0", "group": "p" },
+      "expected": [
+        {
+          "row": 0,
+          "column": "b",
+          "ranges": [[0, 1]]
+        },
+        {
+          "row": 2,
+          "column": "b",
+          "ranges": [[0, 1]]
+        },
+        {
+          "row": 3,
+          "column": "b",
+          "ranges": [[0, 1]]
+        }
+      ]
+    }
+  ],
+  "xpath": [
+    {
+      "expr": "//p[b]",
+      "expected": {
+        "nodes": [{ "path": "0/0", "kind": "element", "attr": null }, { "path": "0/2", "kind": "element", "attr": null }, { "path": "0/3", "kind": "element", "attr": null }]
+      }
+    },
+    {
+      "expr": "//p/text()",
+      "expected": {
+        "nodes": [{ "path": "0/0", "kind": "text", "attr": null }, { "path": "0/1", "kind": "text", "attr": null }, { "path": "0/3", "kind": "text", "attr": null }]
+      }
+    },
+    {
+      "expr": "//p[not(*)]",
+      "expected": {
+        "nodes": [{ "path": "0/1", "kind": "element", "attr": null }]
+      }
+    }
+  ]
+}

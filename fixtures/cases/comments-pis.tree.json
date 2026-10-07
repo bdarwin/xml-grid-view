@@ -1,0 +1,31 @@
+{
+  "tag": "config",
+  "ns": "",
+  "path": "0",
+  "start": 74,
+  "end": 220,
+  "attrs": [],
+  "text": "",
+  "children": [
+    {
+      "tag": "setting",
+      "ns": "",
+      "path": "0/0",
+      "start": 111,
+      "end": 159,
+      "attrs": [{ "name": "key", "value": "a", "start": 120, "end": 127 }],
+      "text": "onetwo",
+      "children": []
+    },
+    {
+      "tag": "setting",
+      "ns": "",
+      "path": "0/1",
+      "start": 178,
+      "end": 210,
+      "attrs": [{ "name": "key", "value": "b", "start": 187, "end": 194 }],
+      "text": "three",
+      "children": []
+    }
+  ]
+}

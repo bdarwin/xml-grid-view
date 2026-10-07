@@ -1,0 +1,39 @@
+{
+  "cases": [
+    {
+      "query": "",
+      "options": { "caseSensitive": false, "wholeWord": false, "regex": false },
+      "scope": "document",
+      "target": "attrValues",
+      "expected": []
+    },
+    {
+      "query": "label",
+      "options": { "caseSensitive": false, "wholeWord": false, "regex": false },
+      "scope": "document",
+      "target": "all",
+      "expected": [
+        {
+          "path": "0/2",
+          "target": "attrName",
+          "attr": "label",
+          "ranges": [[0, 5]]
+        }
+      ]
+    }
+  ],
+  "xpath": [
+    {
+      "expr": "//p[@label]",
+      "expected": {
+        "nodes": [{ "path": "0/2", "kind": "element", "attr": null }]
+      }
+    },
+    {
+      "expr": "//p[not(@*)]",
+      "expected": {
+        "nodes": [{ "path": "0/3", "kind": "element", "attr": null }]
+      }
+    }
+  ]
+}

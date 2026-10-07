@@ -1,0 +1,11 @@
+{
+  "0": {
+    "groups": [{ "tag": "setting", "count": 2 }],
+    "grids": {
+      "setting": {
+        "columns": [{ "key": "@key", "kind": "attr" }, { "key": "#text", "kind": "text" }],
+        "rows": [["a", "onetwo"], ["b", "three"]]
+      }
+    }
+  }
+}

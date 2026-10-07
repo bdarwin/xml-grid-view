@@ -1,0 +1,5 @@
+<scripts>
+  <script lang="js"><![CDATA[if (a < b && c > d) { go(); }]]></script>
+  <script lang="sql">SELECT 1 <![CDATA[WHERE x < 2]]> ;</script>
+  <script lang="none"><![CDATA[]]></script>
+</scripts>

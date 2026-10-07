@@ -1,0 +1,11 @@
+{
+  "0": {
+    "groups": [{ "tag": "p", "count": 4 }],
+    "grids": {
+      "p": {
+        "columns": [{ "key": "@x", "kind": "attr" }, { "key": "@y", "kind": "attr" }, { "key": "@z", "kind": "attr" }, { "key": "@label", "kind": "attr" }],
+        "rows": [["1", "2", null, null], ["3", "4", "5", null], [null, "6", null, ""], [null, null, null, null]]
+      }
+    }
+  }
+}

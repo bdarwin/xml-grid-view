@@ -1,0 +1,113 @@
+{
+  "tag": "feed",
+  "ns": "http://www.w3.org/2005/Atom",
+  "path": "0",
+  "start": 0,
+  "end": 395,
+  "attrs": [],
+  "text": "",
+  "children": [
+    {
+      "tag": "title",
+      "ns": "http://www.w3.org/2005/Atom",
+      "path": "0/0",
+      "start": 89,
+      "end": 111,
+      "attrs": [],
+      "text": "Example",
+      "children": []
+    },
+    {
+      "tag": "entry",
+      "ns": "http://www.w3.org/2005/Atom",
+      "path": "0/1",
+      "start": 114,
+      "end": 228,
+      "attrs": [],
+      "text": "",
+      "children": [
+        {
+          "tag": "id",
+          "ns": "http://www.w3.org/2005/Atom",
+          "path": "0/1/0",
+          "start": 126,
+          "end": 140,
+          "attrs": [],
+          "text": "urn:1",
+          "children": []
+        },
+        {
+          "tag": "title",
+          "ns": "http://www.w3.org/2005/Atom",
+          "path": "0/1/1",
+          "start": 145,
+          "end": 165,
+          "attrs": [],
+          "text": "First",
+          "children": []
+        },
+        {
+          "tag": "media:thumbnail",
+          "ns": "http://search.yahoo.com/mrss/",
+          "path": "0/1/2",
+          "start": 170,
+          "end": 217,
+          "attrs": [{ "name": "url", "value": "a.png", "start": 187, "end": 198 }, { "name": "media:width", "value": "64", "start": 199, "end": 215 }],
+          "text": "",
+          "children": []
+        }
+      ]
+    },
+    {
+      "tag": "entry",
+      "ns": "http://www.w3.org/2005/Atom",
+      "path": "0/2",
+      "start": 231,
+      "end": 387,
+      "attrs": [],
+      "text": "",
+      "children": [
+        {
+          "tag": "id",
+          "ns": "http://www.w3.org/2005/Atom",
+          "path": "0/2/0",
+          "start": 243,
+          "end": 257,
+          "attrs": [],
+          "text": "urn:2",
+          "children": []
+        },
+        {
+          "tag": "title",
+          "ns": "http://www.w3.org/2005/Atom",
+          "path": "0/2/1",
+          "start": 262,
+          "end": 283,
+          "attrs": [],
+          "text": "Second",
+          "children": []
+        },
+        {
+          "tag": "media:thumbnail",
+          "ns": "http://search.yahoo.com/mrss/",
+          "path": "0/2/2",
+          "start": 288,
+          "end": 318,
+          "attrs": [{ "name": "url", "value": "b.png", "start": 305, "end": 316 }],
+          "text": "",
+          "children": []
+        },
+        {
+          "tag": "link",
+          "ns": "urn:other",
+          "path": "0/2/3",
+          "start": 323,
+          "end": 376,
+          "attrs": [{ "name": "href", "value": "http://example.com/2", "start": 329, "end": 356 }],
+          "text": "",
+          "children": []
+        }
+      ]
+    }
+  ]
+}

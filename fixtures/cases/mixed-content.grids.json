@@ -1,0 +1,47 @@
+{
+  "0": {
+    "groups": [{ "tag": "p", "count": 4 }],
+    "grids": {
+      "p": {
+        "columns": [{ "key": "b", "kind": "complex" }, { "key": "i", "kind": "leaf" }, { "key": "#text", "kind": "text" }],
+        "rows": [
+          [{ "drill": "b", "count": 1 }, "italic", "Hello  and  text."],
+          [null, null, "Plain paragraph."],
+          [{ "drill": "b", "count": 1 }, null, null],
+          [{ "drill": "b", "count": 2 }, null, "Two  parts  here"]
+        ]
+      }
+    }
+  },
+  "0/0": {
+    "groups": [{ "tag": "b", "count": 1 }, { "tag": "i", "count": 1 }],
+    "grids": {
+      "b": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [["bold"]]
+      },
+      "i": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [["italic"]]
+      }
+    }
+  },
+  "0/2": {
+    "groups": [{ "tag": "b", "count": 1 }],
+    "grids": {
+      "b": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [["Only bold"]]
+      }
+    }
+  },
+  "0/3": {
+    "groups": [{ "tag": "b", "count": 2 }],
+    "grids": {
+      "b": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [["b1"], ["b2"]]
+      }
+    }
+  }
+}

@@ -1,0 +1,64 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  vsix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test
+      - run: pnpm fixtures:check
+      - run: pnpm build
+      - uses: actions/upload-artifact@v7
+        with:
+          name: vsix
+          path: packages/vscode/*.vsix
+
+  intellij:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/intellij
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v6
+      - run: ./gradlew test buildPlugin --no-daemon
+      - uses: actions/upload-artifact@v7
+        with:
+          name: intellij-plugin
+          path: packages/intellij/build/distributions/*.zip
+
+  release:
+    needs: [vsix, intellij]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          path: artifacts
+          merge-multiple: true
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" artifacts/* \
+            --title "XML Grid View $GITHUB_REF_NAME" \
+            --notes "VS Code: install the .vsix via Extensions → … → Install from VSIX.
+          IntelliJ 2024.3+: Settings → Plugins → ⚙ → Install Plugin from Disk… and pick the .zip.
+          See the README for features and known limitations."

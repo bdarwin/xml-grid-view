@@ -33,6 +33,11 @@ downloads VS Code on first use.
 
 ## Installing
 
+Prebuilt `.vsix` and IntelliJ plugin `.zip` files are attached to each
+[GitHub release](https://github.com/bdarwin/xml-grid-view/releases). To build them
+yourself, see above. Releases are made by pushing a `v*` tag; the release
+workflow runs the tests and then attaches both builds.
+
 ### VS Code
 
 Choose **Extensions → … → Install from VSIX…** and pick

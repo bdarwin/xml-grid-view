@@ -199,6 +199,20 @@ export function ValueInspector(p: { target: InspectorTarget; onClose(): void; on
     } else p.onCopy(tab === "text" && json ? json.pretty : p.target.text);
   };
 
+  // Full value of the selected tree node or grid cell, shown wrapped below the view.
+  let detailText: string | null = null;
+  if (json && tab === "tree" && selected !== null) {
+    const node = nodes.find((n) => n.pointer === selected);
+    if (node) detailText = isJsonContainer(node.value) ? prettyJson(node.value) : jsonPrimitiveText(node.value);
+  } else if (json && tab === "grid" && table && gridSel) {
+    const r = view[gridSel.focus.v];
+    if (r !== undefined) {
+      const i = r * table.columns.length + gridSel.focus.c;
+      const v = table.cells[i];
+      detailText = typeof v === "number" ? `${table.labels[i]} (double-click or Enter to open)` : (v ?? "");
+    }
+  }
+
   const crumbs = ["$", ...path.map(String)];
   const lines = p.target.text.split("\n").length;
 
@@ -315,7 +329,7 @@ export function ValueInspector(p: { target: InspectorTarget; onClose(): void; on
             ))}
           </nav>
         )}
-        <div class="inspector-body">
+        <div class={"inspector-body" + (json && tab !== "text" ? " with-detail" : "")}>
           {json && tab === "tree" && (
             <JsonTree
               root={json.value}
@@ -358,6 +372,11 @@ export function ValueInspector(p: { target: InspectorTarget; onClose(): void; on
           )}
           {(tab === "text" || !json) && <TextView text={textForTab} matcher={matcher} current={current} wrap={wrap} />}
         </div>
+        {json && tab !== "text" && (
+          <pre class="inspector-detail" aria-label="Selected value" tabIndex={0}>
+            {detailText ?? <span class="muted">Select an item to see its full value.</span>}
+          </pre>
+        )}
         {filterPopup && table && filterPopup.col < table.columns.length && (
           <FilterPopup
             table={table}

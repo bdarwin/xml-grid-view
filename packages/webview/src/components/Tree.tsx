@@ -1,6 +1,6 @@
 import type { Matcher, TreeSkeleton } from "@xmlgridview/core";
 import { useEffect, useMemo } from "preact/hooks";
-import { Highlight } from "./Highlight";
+import { Highlight, PreviewText } from "./Highlight";
 import { scrollRowIntoView, useViewport } from "./useViewport";
 
 export const TREE_ROW_HEIGHT = 22;
@@ -138,7 +138,7 @@ export function Tree(p: TreeProps) {
         </span>
         {sk.preview[id] && (
           <span class="preview">
-            <Highlight text={sk.preview[id]} matcher={p.highlightPreview ? p.matcher : null} />
+            <PreviewText text={sk.preview[id]} matcher={p.highlightPreview ? p.matcher : null} />
           </span>
         )}
         {sk.childCount[id] > 0 && <span class="count">{sk.childCount[id]}</span>}

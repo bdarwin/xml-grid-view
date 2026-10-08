@@ -121,6 +121,8 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
   const [flatValues, setFlatValues] = useState<Map<number, FlatValues>>(new Map());
   const flatPending = useRef(new Set<number>());
   const [inspector, setInspector] = useState<InspectorTarget | null>(null);
+  const [nodeFilter, setNodeFilter] = useState("");
+  const [nodeFilterHits, setNodeFilterHits] = useState<Set<number> | null>(null);
 
   const textRef = useRef("");
   const settingsRef = useRef(settings);
@@ -665,6 +667,40 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
     [mode, skeleton, flatCollapsed, treeFilter],
   );
 
+  // "Filter nodes" box above the tree: tag names, attribute names/values and text, case-insensitive.
+  useEffect(() => {
+    const q = nodeFilter.trim();
+    if (!q || !skeleton) {
+      setNodeFilterHits(null);
+      return;
+    }
+    let cancelled = false;
+    const t = setTimeout(() => {
+      worker
+        .request<"searchDoc">({ type: "searchDoc", gen, query: { text: q, options: { ...DEFAULT_OPTIONS }, targets: { ...ALL_TARGETS } } })
+        .then((r) => {
+          if (cancelled) return;
+          const keep = new Set<number>();
+          for (const m of r.matches) for (let a = m.elementId; a >= 0 && !keep.has(a); a = skeleton.parent[a]) keep.add(a);
+          setNodeFilterHits(keep);
+        })
+        .catch(() => undefined);
+    }, settings.debounceMs);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [nodeFilter, gen, skeleton]);
+
+  /** Tree filter: the filter box and Find's "show only matches" combined (both must match). */
+  const treeViewFilter = useMemo(() => {
+    if (!nodeFilterHits) return treeFilter;
+    if (!treeFilter) return nodeFilterHits;
+    const both = new Set<number>();
+    for (const id of nodeFilterHits) if (treeFilter.has(id)) both.add(id);
+    return both;
+  }, [nodeFilterHits, treeFilter]);
+
   const findCount = gridHits ? gridHits.length : (elementHits?.length ?? 0);
 
   const goToHit = (i: number) => {
@@ -878,11 +914,27 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
         onRatio={setSplit}
         left={
           <div class="tree-wrap" ref={treeWrap}>
+            <div class="tree-filter">
+              <input
+                type="search"
+                placeholder="Filter nodes (tag, attribute, text)"
+                aria-label="Filter nodes"
+                value={nodeFilter}
+                onInput={(e) => setNodeFilter((e.target as HTMLInputElement).value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape" && nodeFilter) {
+                    e.stopPropagation();
+                    setNodeFilter("");
+                  }
+                }}
+              />
+              {nodeFilterHits && <span class="muted small">{nodeFilterHits.size ? "" : "No matches"}</span>}
+            </div>
             <Tree
               skeleton={skeleton}
               expanded={expanded}
               selected={selected}
-              filter={treeFilter}
+              filter={treeViewFilter}
               hits={hitSet}
               matcher={matcher}
               highlightNames={find.targets.names}

@@ -27,8 +27,11 @@
   --xgv-warning-bg: color-mix(in srgb, orange 25%, Canvas);
   --xgv-warning-fg: CanvasText;
   --xgv-error-fg: #d33;
-  --xgv-tag-fg: var(--xgv-fg);
+  --xgv-tag-fg: #0033b3;
   --xgv-attr-fg: var(--xgv-muted-fg);
+  --xgv-attr-name-fg: #871094;
+  --xgv-attr-value-fg: #067d17;
+  --xgv-stripe-bg: color-mix(in srgb, CanvasText 4%, transparent);
   --xgv-json-key-fg: #9b46b0;
   --xgv-json-string-fg: #a31515;
   --xgv-json-number-fg: #098658;
@@ -1001,4 +1004,76 @@ button.icon {
 .tree:focus .tree-row.selected .json-bool,
 .tree:focus .tree-row.selected .json-null {
   color: inherit;
+}
+
+/* Colours: tags, attribute names and values; zebra stripes */
+.tree .pv-name,
+.flat-row.attr .attr-name {
+  color: var(--xgv-attr-name-fg);
+}
+.tree .pv-value,
+.flat-row.attr .flat-value,
+.cell.attr-cell {
+  color: var(--xgv-attr-value-fg);
+}
+.tree .pv-eq,
+.tree .pv-text {
+  color: var(--xgv-muted-fg);
+}
+.attr-name {
+  color: var(--xgv-attr-name-fg);
+}
+.hcell.kind-attr .hlabel {
+  color: var(--xgv-attr-name-fg);
+}
+.hcell.kind-leaf .hlabel,
+.hcell.kind-complex .hlabel {
+  color: var(--xgv-tag-fg);
+}
+.grid-row.odd .cell,
+.flat-row.odd .flat-name,
+.flat-row.odd .flat-value {
+  background-color: var(--xgv-stripe-bg);
+}
+.tree:focus .tree-row.selected .pv-name,
+.tree:focus .tree-row.selected .pv-value,
+.tree:focus .tree-row.selected .pv-eq,
+.tree:focus .tree-row.selected .pv-text,
+.grid:focus .cell.sel.attr-cell {
+  color: inherit;
+}
+
+/* Tree filter box */
+.tree-wrap {
+  flex-direction: column;
+}
+.tree-filter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--xgv-border);
+}
+.tree-filter input {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Inspector: wrapped value of the selected item */
+.inspector-body.with-detail {
+  flex: 3;
+}
+.inspector-detail {
+  flex: 1;
+  min-height: 60px;
+  max-height: 40%;
+  margin: 0;
+  padding: 8px 12px;
+  overflow: auto;
+  border-top: 1px solid var(--xgv-border);
+  font-family: var(--xgv-mono-font-family);
+  font-size: var(--xgv-mono-font-size);
+  white-space: pre-wrap;
+  word-break: break-word;
+  outline: none;
 }

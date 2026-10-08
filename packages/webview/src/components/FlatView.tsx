@@ -88,6 +88,8 @@ export interface FlatViewProps {
   onInspect(pos: FlatPos): void;
 }
 
+let measureCtx: CanvasRenderingContext2D | null = null;
+
 export function FlatView(p: FlatViewProps) {
   const { skeleton: sk, rows } = p;
   const [ref, vp] = useViewport<HTMLDivElement>();
@@ -99,18 +101,33 @@ export function FlatView(p: FlatViewProps) {
   const r0 = Math.min(focusIndex, anchorIndex < 0 ? focusIndex : anchorIndex);
   const r1 = Math.max(focusIndex, anchorIndex);
 
-  // Default name column width: deepest indentation plus the longest tag name (sampled).
+  // Name column width fitted to the visible rows: indentation + twisty + measured name (sampled).
+  // Recomputed when rows expand/collapse or attribute names arrive; a manual resize overrides it.
   const autoName = useMemo(() => {
-    let maxDepth = 0;
-    let maxLen = 4;
-    const n = Math.min(sk.count, 50_000);
+    const el = ref.current;
+    const cs = el ? getComputedStyle(el) : null;
+    const mono = cs
+      ? `${cs.getPropertyValue("--xgv-mono-font-size").trim() || "12px"} ${cs.getPropertyValue("--xgv-mono-font-family").trim() || "monospace"}`
+      : "12px monospace";
+    const indent = cs ? parseFloat(cs.getPropertyValue("--xgv-tree-indent")) || 14 : 14;
+    measureCtx ??= document.createElement("canvas").getContext("2d");
+    if (measureCtx) measureCtx.font = mono;
+    const width = (s: string) => (measureCtx ? measureCtx.measureText(s).width : s.length * 7.5);
+    const cache = new Map<string, number>();
+    let w = width("Name") + 16;
+    const n = Math.min(rows.ids.length, 20_000);
     for (let i = 0; i < n; i++) {
-      if (sk.depth[i] > maxDepth) maxDepth = sk.depth[i];
-      const len = sk.names[sk.nameIdx[i]].length;
-      if (len > maxLen) maxLen = len;
+      const id = rows.ids[i];
+      const attr = rows.attrs[i];
+      const name = attr >= 0 ? "@" + (p.values.get(id)?.attrs[attr]?.name ?? "") : sk.names[sk.nameIdx[id]];
+      let tw = cache.get(name);
+      if (tw === undefined) cache.set(name, (tw = width(name)));
+      // padding-left 4 + twisty 14 + gap 4 + right padding 8 + border/slack 6
+      const depth = sk.depth[id] + (attr >= 0 ? 1 : 0);
+      w = Math.max(w, depth * indent + 36 + tw);
     }
-    return Math.min(520, Math.max(160, (Math.min(maxDepth, 12) + 1) * 14 + 28 + Math.min(maxLen + 1, 40) * 7.5));
-  }, [sk]);
+    return Math.round(Math.min(Math.max(w, 120), Math.max(240, vp.width * 0.6 || 600)));
+  }, [rows, p.values, sk, vp.width > 0]);
   const nameW = nameWidth || autoName;
 
   const first = Math.max(0, Math.floor(vp.top / FLAT_ROW_HEIGHT) - 10);
@@ -260,7 +277,8 @@ export function FlatView(p: FlatViewProps) {
     const nameSel = inRows && c0 === 0;
     const valueSel = inRows && c1 === 1;
     const isFocus = i === focusIndex;
-    const cls = "flat-row" + (isAttr ? " attr" : "") + (inRows ? " row-sel" : "") + (!isAttr && p.hits?.has(id) ? " hit" : "");
+    const cls =
+      "flat-row" + (isAttr ? " attr" : "") + (inRows ? " row-sel" : "") + (!isAttr && p.hits?.has(id) ? " hit" : "") + (i % 2 ? " odd" : "");
     const cellDown = (col: FlatCol) => (e: MouseEvent) => {
       if (e.button !== 0 || (e.target as HTMLElement).classList.contains("twisty")) return;
       ref.current?.focus({ preventScroll: true });
@@ -278,11 +296,11 @@ export function FlatView(p: FlatViewProps) {
         role="row"
         aria-selected={inRows}
         style={{ top: i * FLAT_ROW_HEIGHT }}
-        onDblClick={() => p.onActivate(posAt(i))}
       >
         <div
           class="rownum"
           style={{ width: rowNumWidth }}
+          onDblClick={() => p.onActivate(posAt(i))}
           onMouseDown={(e) => {
             if (e.button !== 0) return;
             ref.current?.focus({ preventScroll: true });
@@ -300,6 +318,7 @@ export function FlatView(p: FlatViewProps) {
           style={{ width: nameW, paddingLeft: `calc(${depth} * var(--xgv-tree-indent) + 4px)` }}
           onMouseDown={cellDown(0)}
           onMouseEnter={cellEnter(0)}
+          onDblClick={(e) => !(e.target as HTMLElement).classList.contains("twisty") && p.onActivate(posAt(i))}
         >
           <span
             class={"twisty" + (canToggle ? (open ? " open" : " closed") : "")}
@@ -320,6 +339,7 @@ export function FlatView(p: FlatViewProps) {
           title={raw && raw.length > 60 ? raw.slice(0, 2000) : undefined}
           onMouseDown={cellDown(1)}
           onMouseEnter={cellEnter(1)}
+          onDblClick={() => p.onInspect(posAt(i))}
         >
           {raw === undefined ? <span class="muted">…</span> : <Highlight text={oneLine(raw.length > 1000 ? raw.slice(0, 1000) : raw)} matcher={p.highlightValues ? p.matcher : null} />}
           {isInspectable(raw) && (

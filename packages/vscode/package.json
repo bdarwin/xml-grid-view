@@ -2,7 +2,7 @@
   "name": "xml-grid-view",
   "displayName": "XML Grid View",
   "description": "Read-only tree and grid viewer for XML files, with search and XPath.",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "publisher": "bdarwin",
   "author": {
     "name": "Darwin Baisa"

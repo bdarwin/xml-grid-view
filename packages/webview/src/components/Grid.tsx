@@ -241,7 +241,8 @@ export function Grid(p: GridProps) {
         (isFocus ? " focus" : "") +
         (hit ? " hit" : "") +
         (key === p.currentHit ? " current-hit" : "") +
-        (raw === null ? " empty" : "");
+        (raw === null ? " empty" : "") +
+        (col.kind === "attr" ? " attr-cell" : "");
       const pos = { v, c };
       let content;
       if (typeof raw === "number") {
@@ -290,14 +291,17 @@ export function Grid(p: GridProps) {
           title={typeof raw === "string" && raw.length > 40 ? raw.slice(0, 1000) : undefined}
           onMouseDown={(e) => cellDown(e, pos)}
           onMouseEnter={() => cellEnter(pos)}
-          onDblClick={() => (typeof raw === "number" ? p.onDrill(pos) : p.onActivate(pos))}
+          onDblClick={() =>
+            // Double-click: drill cells drill down, values open the inspector, empty cells go to the source.
+            typeof raw === "number" ? p.onDrill(pos) : raw !== null && p.onInspect ? p.onInspect(pos) : p.onActivate(pos)
+          }
         >
           {content}
         </div>,
       );
     }
     rows.push(
-      <div key={r} class={"grid-row" + (rowSelected ? " row-sel" : "")} role="row" style={{ top: v * ROW_HEIGHT }}>
+      <div key={r} class={"grid-row" + (rowSelected ? " row-sel" : "") + (v % 2 ? " odd" : "")} role="row" style={{ top: v * ROW_HEIGHT }}>
         <div class="rownum" style={{ width: rowNumWidth }} onMouseDown={(e) => rowHeaderDown(e, v)} onDblClick={() => p.onActivate({ v, c: -1 })}>
           {r + 1}
         </div>

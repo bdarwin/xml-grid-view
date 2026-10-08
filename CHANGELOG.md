@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.1.3
+
+VS Code gets the same improvements as IntelliJ 0.1.2:
+
+- Double-clicking a value opens the value inspector, in Grid cells and Flat
+  values.
+  - Double-clicking a Flat name or a row number goes to the source.
+  - Double-clicking a `{tag ×n}` cell drills down.
+- Flat: the Name column is measured to fit the visible names. It refits on
+  expand/collapse; double-click the column edge to refit after resizing.
+- Grid: a **Filter nodes** box above the tree. It matches tag names, attribute
+  names and values, and text, keeps matches and their ancestors, and combines
+  with Find's "show only matches".
+- Value inspector: the JSON Tree and Grid tabs have a wrapped pane showing the
+  selected item's full value.
+- More colour, from your VS Code theme:
+  - Tags (headers and tree), attribute names and attribute values are
+    coloured.
+  - The tree preview colours attribute names and values.
+  - Grid and Flat rows have subtle stripes.
+
 ## 0.1.2
 
 - IntelliJ: double-clicking a value opens the value inspector.

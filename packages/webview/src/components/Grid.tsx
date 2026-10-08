@@ -3,6 +3,8 @@ import { useEffect, useRef } from "preact/hooks";
 import { cellString, isFilterActive, type CellRange, type Filters, type SortState } from "../gridView";
 import { Highlight } from "./Highlight";
 import { isInspectable } from "../inspect";
+import { CellEditor, type EditMove } from "./CellEditor";
+import { useState } from "preact/hooks";
 import { useViewport } from "./useViewport";
 
 export const ROW_HEIGHT = 22;
@@ -49,6 +51,10 @@ export interface GridProps {
   onCopy(range: CellRange, invertHeader: boolean): void;
   /** Opens the value inspector for a cell (Shift+Enter or the inline button). */
   onInspect?(pos: CellPos): void;
+  /** Whether a cell's value can be edited in place (F2 or typing). */
+  canEdit?(pos: CellPos): boolean;
+  /** Commits an in-place edit (only called when the value changed). */
+  onEdit?(pos: CellPos, value: string): void;
 }
 
 export function Grid(p: GridProps) {
@@ -60,6 +66,28 @@ export function Grid(p: GridProps) {
   const rowNumWidth = `calc(${Math.max(2, digits)}ch + 16px)`;
 
   const range = p.sel ? selectionRange(p.sel) : null;
+  const [editing, setEditing] = useState<{ v: number; c: number; initial: string; selectAll: boolean } | null>(null);
+  const editable = (pos: CellPos) => !!p.canEdit && !!p.onEdit && p.canEdit(pos);
+  const startEdit = (pos: CellPos, typed: string | null) => {
+    const r = view[pos.v];
+    if (r === undefined || !editable(pos)) return false;
+    const current = t.cells[r * ncols + pos.c];
+    setEditing({ v: pos.v, c: pos.c, initial: typed ?? (typeof current === "string" ? current : ""), selectAll: typed === null });
+    return true;
+  };
+  const commitEdit = (value: string, move: EditMove) => {
+    const e = editing;
+    setEditing(null);
+    if (!e) return;
+    const r = view[e.v];
+    const current = r === undefined ? null : t.cells[r * ncols + e.c];
+    if (value !== (typeof current === "string" ? current : "")) p.onEdit!({ v: e.v, c: e.c }, value);
+    if (move !== "none") {
+      const c = Math.max(0, Math.min(ncols - 1, e.c + (move === "right" ? 1 : -1)));
+      p.onSelect({ anchor: { v: e.v, c }, focus: { v: e.v, c } });
+    }
+    ref.current?.focus({ preventScroll: true });
+  };
 
   // Keep the focused cell visible.
   useEffect(() => {
@@ -100,6 +128,14 @@ export function Grid(p: GridProps) {
     const mod = e.ctrlKey || e.metaKey;
     const cur = p.sel?.focus ?? { v: 0, c: 0 };
     const ext = e.shiftKey;
+    // Excel-style: F2 edits the current value, typing a character replaces it.
+    if (p.sel && !editing && (e.key === "F2" || (e.key.length === 1 && !mod && !e.altKey && e.key !== " "))) {
+      if (startEdit(p.sel.focus, e.key === "F2" ? null : e.key)) {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+    }
     switch (e.key) {
       case "ArrowDown":
         select({ v: mod ? view.length - 1 : cur.v + 1, c: cur.c }, ext);
@@ -259,6 +295,11 @@ export function Grid(p: GridProps) {
             <Highlight text={cellString(t, r, c)} matcher={p.matcher} current={key === p.currentHit} />
           </span>
         );
+      } else if (editing && editing.v === v && editing.c === c) {
+        content = <CellEditor initial={editing.initial} selectAll={editing.selectAll} onCommit={commitEdit} onCancel={() => {
+          setEditing(null);
+          ref.current?.focus({ preventScroll: true });
+        }} />;
       } else if (raw !== null) {
         content = <Highlight text={raw.length > 1000 ? raw.slice(0, 1000) : raw} matcher={p.matcher} current={key === p.currentHit} />;
         if (p.onInspect && isInspectable(raw)) {

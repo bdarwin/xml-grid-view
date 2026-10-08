@@ -1,6 +1,6 @@
 import { readFileSync, existsSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { expectedJsonOutput, expectedOutputs, listCases, listJsonCases } from "../scripts/fixtures.js";
+import { expectedEditsOutput, expectedJsonOutput, expectedOutputs, listCases, listEditCases, listJsonCases } from "../scripts/fixtures.js";
 
 describe("golden fixtures", () => {
   const cases = listCases();
@@ -26,6 +26,18 @@ describe("golden fixtures", () => {
     it(`json/${c.name}`, () => {
       expect(existsSync(c.expected), `${c.expected} is missing; run pnpm fixtures:generate`).toBe(true);
       expect(JSON.parse(expectedJsonOutput(c))).toEqual(JSON.parse(readFileSync(c.expected, "utf8")));
+    });
+  }
+  for (const c of listEditCases()) {
+    it(`edits/${c.name}`, () => {
+      const expected = JSON.parse(readFileSync(c.edits, "utf8"));
+      expect(JSON.parse(expectedEditsOutput(c))).toEqual(expected);
+      // Every successful edit must round-trip to the requested value and keep the document well-formed.
+      for (const k of expected.cases) {
+        if (k.expected.error) continue;
+        expect(k.expected.wellFormed, JSON.stringify(k.target)).toBe(true);
+        expect(k.expected.readBack, JSON.stringify(k.target)).toBe(k.value.trim());
+      }
     });
   }
 });

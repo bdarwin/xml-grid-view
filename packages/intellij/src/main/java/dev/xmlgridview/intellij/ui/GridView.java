@@ -1,5 +1,6 @@
 package dev.xmlgridview.intellij.ui;
 
+import dev.xmlgridview.intellij.model.ValueEdits;
 import com.intellij.icons.AllIcons;
 import com.intellij.ide.CopyProvider;
 import com.intellij.openapi.Disposable;
@@ -72,11 +73,23 @@ final class GridView extends JPanel implements UiDataProvider {
     void navigate(int offset);
 
     void filtersChanged();
+
+    /** Whether values can be edited now (writable document, current model). */
+    default boolean canEdit() {
+      return false;
+    }
+
+    /** Applies a value edit; returns null on success or the reason it was refused. */
+    default @Nullable String applyEdit(@NotNull ValueEdits.Target target, @NotNull String value) {
+      return "Editing is not available.";
+    }
   }
 
   private static final int AUTO_FIT_SAMPLE = 500;
 
   private final GridTableModel model = new GridTableModel();
+  /** Shows why an edit was refused; replaceable in tests. */
+  private java.util.function.Consumer<String> editErrors = this::showEditError;
   private final JBTable table = new JBTable(model);
   private final TableRowSorter<GridTableModel> sorter = new TableRowSorter<>(model);
   private final GridFilter filter = new GridFilter();
@@ -99,7 +112,23 @@ final class GridView extends JPanel implements UiDataProvider {
     table.getEmptyText().setText("No rows");
     table.setDefaultRenderer(Object.class, new CellRenderer());
     table.setDefaultRenderer(String.class, new CellRenderer());
-    table.setDefaultEditor(Object.class, null);
+    CellEditing.install(table, parent);
+    model.setEditHandler(new GridTableModel.EditHandler() {
+      @Override
+      public boolean isEditable(int row, int col) {
+        GridTable t = model.table();
+        return t != null && listener.canEdit() && ValueEdits.gridTarget(t, row, col) != null;
+      }
+
+      @Override
+      public void commit(int row, int col, String value) {
+        GridTable t = model.table();
+        ValueEdits.Target target = t == null ? null : ValueEdits.gridTarget(t, row, col);
+        if (target == null) return;
+        String error = listener.applyEdit(target, value);
+        if (error != null) editErrors.accept(error);
+      }
+    });
     sorter.setRowFilter(new RowFilter<>() {
       @Override
       public boolean include(Entry<? extends GridTableModel, ? extends Integer> entry) {
@@ -177,6 +206,16 @@ final class GridView extends JPanel implements UiDataProvider {
 
     AnAction navigate = new DumbAwareAction() {
       @Override
+      public void update(@NotNull AnActionEvent e) {
+        e.getPresentation().setEnabled(!table.isEditing());
+      }
+
+      @Override
+      public @NotNull com.intellij.openapi.actionSystem.ActionUpdateThread getActionUpdateThread() {
+        return com.intellij.openapi.actionSystem.ActionUpdateThread.EDT;
+      }
+
+      @Override
       public void actionPerformed(@NotNull AnActionEvent e) {
         int row = table.getSelectionModel().getLeadSelectionIndex();
         int col = table.getColumnModel().getSelectionModel().getLeadSelectionIndex();
@@ -186,6 +225,16 @@ final class GridView extends JPanel implements UiDataProvider {
     navigate.registerCustomShortcutSet(new CustomShortcutSet(new com.intellij.openapi.actionSystem.KeyboardShortcut(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), null),
                                                              new com.intellij.openapi.actionSystem.KeyboardShortcut(KeyStroke.getKeyStroke(KeyEvent.VK_F4, 0), null)), table, parent);
     AnAction drill = new DumbAwareAction() {
+      @Override
+      public void update(@NotNull AnActionEvent e) {
+        e.getPresentation().setEnabled(!table.isEditing());
+      }
+
+      @Override
+      public @NotNull com.intellij.openapi.actionSystem.ActionUpdateThread getActionUpdateThread() {
+        return com.intellij.openapi.actionSystem.ActionUpdateThread.EDT;
+      }
+
       @Override
       public void actionPerformed(@NotNull AnActionEvent e) {
         int row = table.getSelectionModel().getLeadSelectionIndex();
@@ -352,6 +401,19 @@ final class GridView extends JPanel implements UiDataProvider {
     boolean wholeRow = table.getColumnCount() > 1 && table.getSelectedColumnCount() == table.getColumnCount();
     int col = wholeRow || viewCol < 0 ? -1 : table.convertColumnIndexToModel(viewCol);
     return InspectTarget.ofGridCell(t, row, col);
+  }
+
+  private void showEditError(String message) {
+    com.intellij.openapi.ui.popup.JBPopupFactory.getInstance()
+      .createHtmlTextBalloonBuilder(com.intellij.openapi.util.text.StringUtil.escapeXmlEntities(message),
+                                    com.intellij.openapi.ui.MessageType.WARNING, null)
+      .setFadeoutTime(6000)
+      .createBalloon()
+      .show(com.intellij.ui.awt.RelativePoint.getCenterOf(table), com.intellij.openapi.ui.popup.Balloon.Position.above);
+  }
+
+  void setEditErrorReporter(@NotNull java.util.function.Consumer<String> reporter) {
+    editErrors = reporter;
   }
 
   /** Double-click: a value opens the inspector; drill cells drill down; empty cells go to the source. */

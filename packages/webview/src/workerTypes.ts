@@ -1,5 +1,7 @@
 import type {
   DocSearchResult,
+  EditResult,
+  EditTarget,
   FlatValues,
   GridSearchResult,
   GridTable,
@@ -16,7 +18,8 @@ export type WorkerRequest =
   | { id: number; type: "searchDoc"; gen: number; query: SearchQuery }
   | { id: number; type: "searchGrid"; gen: number; elementId: number; group: string | null; query: SearchQuery }
   | { id: number; type: "xpath"; gen: number; expr: string }
-  | { id: number; type: "flatValues"; gen: number; ids: number[] };
+  | { id: number; type: "flatValues"; gen: number; ids: number[] }
+  | { id: number; type: "edit"; gen: number; target: EditTarget; value: string };
 
 export interface LoadResult {
   /** Generation of the model now held by the worker. */
@@ -36,6 +39,7 @@ export interface WorkerResults {
   searchGrid: GridSearchResult;
   xpath: XPathEvalResult;
   flatValues: FlatValues[];
+  edit: EditResult;
 }
 
 export type WorkerResponse =

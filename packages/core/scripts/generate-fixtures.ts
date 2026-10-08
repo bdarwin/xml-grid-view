@@ -8,7 +8,7 @@
  */
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { relative } from "node:path";
-import { CASES_DIR, expectedJsonOutput, expectedOutputs, listCases, listJsonCases } from "./fixtures.js";
+import { CASES_DIR, expectedEditsOutput, expectedJsonOutput, expectedOutputs, listCases, listEditCases, listJsonCases } from "./fixtures.js";
 
 const check = process.argv.includes("--check");
 const changed: string[] = [];
@@ -26,6 +26,13 @@ for (const c of listJsonCases()) {
   if (current === content) continue;
   changed.push(relative(CASES_DIR, c.expected));
   if (!check) writeFileSync(c.expected, content);
+}
+for (const c of listEditCases()) {
+  const content = expectedEditsOutput(c);
+  const current = existsSync(c.edits) ? readFileSync(c.edits, "utf8") : null;
+  if (current === content) continue;
+  changed.push(relative(CASES_DIR, c.edits));
+  if (!check) writeFileSync(c.edits, content);
 }
 if (!changed.length) {
   console.log("Fixtures are up to date.");

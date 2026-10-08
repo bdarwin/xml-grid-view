@@ -1,5 +1,6 @@
 package dev.xmlgridview.intellij.ui;
 
+import java.util.ArrayList;
 import com.intellij.util.ui.JBUI;
 import com.intellij.openapi.application.ReadAction;
 import com.intellij.testFramework.fixtures.BasePlatformTestCase;
@@ -141,6 +142,48 @@ public class ValueInspectorTest extends BasePlatformTestCase {
     int tall = ValueInspector.gridRowHeightForTest(grid, 0, JBUI.scale(400));
     int plain = ValueInspector.gridRowHeightForTest(grid, 1, JBUI.scale(400));
     assertTrue("long value wraps (" + tall + " > " + plain + ")", tall > plain);
+  }
+
+  public void testInspectorJsonSaveIsValidated() {
+    List<String> saved = new ArrayList<>();
+    InspectTarget target = new InspectTarget("x › meta", "{\"a\": 1}", dev.xmlgridview.intellij.model.ValueEdits.Target.text("0/0"));
+    ValueInspector dialog = ValueInspector.createForTest(getProject(), target, (t, v) -> {
+      saved.add(v);
+      return null;
+    });
+    try {
+      assertTrue(dialog.canEdit());
+      dialog.startEditing();
+      assertTrue(dialog.isEditingForTest());
+      dialog.setEditTextForTest("{\"a\": 1,}");
+      String error = dialog.save();
+      assertNotNull("invalid JSON is rejected", error);
+      assertTrue(error, error.contains("line 1"));
+      assertEquals(List.of(), saved);
+      dialog.setEditTextForTest("{\"a\": 2}");
+      assertNull(dialog.save());
+      assertEquals(List.of("{\"a\": 2}"), saved);
+    }
+    finally {
+      com.intellij.openapi.util.Disposer.dispose(dialog.getDisposable());
+    }
+  }
+
+  public void testInspectorCancelRestoresAndReadOnlyHasNoEdit() {
+    InspectTarget target = new InspectTarget("x › note", "hello", dev.xmlgridview.intellij.model.ValueEdits.Target.text("0/0"));
+    ValueInspector dialog = ValueInspector.createForTest(getProject(), target, (t, v) -> null);
+    ValueInspector readOnly = ValueInspector.createForTest(getProject(), target, null);
+    try {
+      dialog.startEditing();
+      dialog.setEditTextForTest("changed");
+      dialog.doCancelAction(); // Escape while editing leaves edit mode, keeps the dialog
+      assertFalse(dialog.isEditingForTest());
+      assertFalse("no saver: no editing", readOnly.canEdit());
+    }
+    finally {
+      com.intellij.openapi.util.Disposer.dispose(dialog.getDisposable());
+      com.intellij.openapi.util.Disposer.dispose(readOnly.getDisposable());
+    }
   }
 
   public void testDialogContentBuildsForJsonAndText() {

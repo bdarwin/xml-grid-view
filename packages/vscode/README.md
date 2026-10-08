@@ -31,6 +31,9 @@ You can also use **Reopen Editor With… → XML Grid View**.
   - Attributes appear as `@name` rows under their element.
   - Collapse/expand, Expand all / Collapse all, copy as indented TSV, and
     Enter to jump to the source.
+- **Editing values:** select a cell and press F2, or just type. Enter commits
+  and Esc cancels. Edits are normal undoable changes; set
+  `xmlGridView.readOnly` to turn editing off.
 - **Value inspector (Shift+Enter or ⤢):** shows long text in full, with
   search. JSON gets Tree, Grid and Text tabs, with collapse, search and
   drill-down.

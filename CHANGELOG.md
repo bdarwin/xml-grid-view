@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.2.0
+
+- **Edit values.** Edit attribute values and leaf-element text in the Grid,
+  in Flat and in the value inspector, in VS Code and IntelliJ.
+  - **Starting an edit:** F2 or typing starts it. Enter commits, Esc cancels,
+    Tab and Shift+Tab move.
+  - **Inspector Edit mode:** JSON is validated before saving, with a Format
+    JSON button.
+  - **Escaping and CDATA:** values are escaped automatically, and CDATA is
+    preserved.
+  - **One undoable edit:** each change goes through the editor as a single
+    undoable edit and is never auto-saved.
+  - **Same edits in both editors:** shared golden fixtures (`fixtures/edits`)
+    make VS Code and IntelliJ produce byte-identical edits.
+- **VS Code:** new `xmlGridView.readOnly` setting. Files on read-only file
+  systems are never editable.
+
 ## 0.1.3
 
 VS Code gets the same improvements as IntelliJ 0.1.2:

@@ -122,13 +122,23 @@ public final class XmlGridPanel extends JPanel implements Disposable {
       }
 
       @Override
+      public boolean canEdit() {
+        return loader.canEdit();
+      }
+
+      @Override
+      public @Nullable String applyEdit(@NotNull dev.xmlgridview.intellij.model.ValueEdits.Target target, @NotNull String value) {
+        return loader.applyValueEdit(target, value);
+      }
+
+      @Override
       public void filtersChanged() {
         updateRowsLabel();
         if (findBar.isVisible() && findBar.scope() == FindBar.Scope.GRID) scheduleSearch(0);
       }
     });
-    tree.setInspector(t -> ValueInspector.show(project, t));
-    grid.setInspector(t -> ValueInspector.show(project, t));
+    tree.setInspector(t -> ValueInspector.show(project, t, loader.canEdit() ? loader::applyValueEdit : null));
+    grid.setInspector(t -> ValueInspector.show(project, t, loader.canEdit() ? loader::applyValueEdit : null));
     findBar = new FindBar(this, new FindBar.Listener() {
       @Override
       public void queryChanged() {
@@ -651,6 +661,24 @@ public final class XmlGridPanel extends JPanel implements Disposable {
   @TestOnly
   public @Nullable XmlDocumentModel model() {
     return model;
+  }
+
+  @TestOnly
+  public boolean isGridCellEditableForTest(int viewRow, int viewCol) {
+    return grid.table().isCellEditable(viewRow, viewCol);
+  }
+
+  /** Commits a value through the grid's table model, exactly as the cell editor does. */
+  @TestOnly
+  public void editGridCellForTest(int viewRow, int viewCol, String value, @NotNull java.util.function.Consumer<String> errors) {
+    grid.setEditErrorReporter(errors);
+    grid.table().setValueAt(value, viewRow, viewCol);
+  }
+
+  @TestOnly
+  public int gridColumnForTest(String key) {
+    dev.xmlgridview.intellij.model.GridTable t = grid.table().getModel() instanceof GridTableModel m ? m.table() : null;
+    return t == null ? -1 : grid.table().convertColumnIndexToView(t.columnIndex(key));
   }
 
   @TestOnly

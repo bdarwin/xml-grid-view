@@ -80,6 +80,27 @@ suite("XML Grid View", () => {
     assert.strictEqual(doc.isDirty, false, "document is not modified");
   });
 
+  test("edit applies to the document; a stale edit is rejected", async () => {
+    await vscode.commands.executeCommand("xmlGridView.openWith", fixture());
+    await waitFor(() => api.viewCount(fixture()) > 0, "view to resolve");
+    const doc = await vscode.workspace.openTextDocument(fixture());
+    const original = doc.getText();
+    const offset = original.indexOf('"b1"') + 1;
+    try {
+      // Stale version: rejected, nothing changes.
+      await api.simulateViewMessage(fixture(), { type: "edit", docVersion: doc.version - 1, edits: [{ offset, length: 2, text: "zz" }], label: "Edit @id" });
+      assert.strictEqual(doc.getText(), original);
+      // Current version: applied as a normal (undoable) document edit.
+      await api.simulateViewMessage(fixture(), { type: "edit", docVersion: doc.version, edits: [{ offset, length: 2, text: "B-1" }], label: "Edit @id" });
+      assert.ok(doc.getText().includes('id="B-1"'), "edit applied");
+      assert.strictEqual(doc.isDirty, true, "document is modified, not saved behind the user's back");
+    } finally {
+      const editor = await vscode.window.showTextDocument(doc);
+      await editor.edit((b) => b.replace(new vscode.Range(doc.positionAt(0), doc.positionAt(doc.getText().length)), original));
+      await doc.save();
+    }
+  });
+
   test("copy writes to the clipboard", async () => {
     await vscode.commands.executeCommand("xmlGridView.openWith", fixture());
     await waitFor(() => api.viewCount(fixture()) > 0, "view to resolve");

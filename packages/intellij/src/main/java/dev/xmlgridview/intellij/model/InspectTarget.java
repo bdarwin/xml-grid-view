@@ -19,12 +19,21 @@ public final class InspectTarget {
 
   private final String title;
   private final String text;
+  private final @Nullable ValueEdits.Target editTarget;
   private @Nullable Json.Detection detection;
 
   public InspectTarget(@NotNull String title, @NotNull String text) {
+    this(title, text, null);
+  }
+
+  public InspectTarget(@NotNull String title, @NotNull String text, @Nullable ValueEdits.Target editTarget) {
     this.title = title;
     this.text = text;
+    this.editTarget = editTarget;
   }
+
+  /** What saving an edited value changes, or null when the value cannot be edited. */
+  public @Nullable ValueEdits.Target editTarget() { return editTarget; }
 
   public @NotNull String title() { return title; }
 
@@ -42,11 +51,11 @@ public final class InspectTarget {
   }
 
   public static @NotNull InspectTarget ofNode(@NotNull XNode n) {
-    return new InspectTarget(pathLabel(n), n.text());
+    return new InspectTarget(pathLabel(n), n.text(), ValueEdits.isTextEditable(n) ? ValueEdits.Target.text(n.path()) : null);
   }
 
   public static @NotNull InspectTarget ofAttr(@NotNull XNode n, @NotNull XAttr a) {
-    return new InspectTarget(pathLabel(n) + " › @" + a.name(), a.value());
+    return new InspectTarget(pathLabel(n) + " › @" + a.name(), a.value(), ValueEdits.Target.attr(n.path(), a.name()));
   }
 
   public static @NotNull InspectTarget ofFlatRow(@NotNull FlatRow r) {

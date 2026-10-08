@@ -1,6 +1,7 @@
 import {
   createMatcher,
   detectJson,
+  parseJson,
   isJsonContainer,
   jsonAt,
   jsonPointer,
@@ -28,6 +29,8 @@ export interface InspectorTarget {
   /** Where the value comes from, e.g. `catalog › book[2] › description`. */
   title: string;
   text: string;
+  /** Present when the value is editable: writes the new value, resolving to an error message or null. */
+  onSave?: (value: string) => Promise<string | null>;
 }
 
 /** Full-text view with search highlighting; the current match scrolls into view. */
@@ -70,6 +73,40 @@ export function ValueInspector(p: { target: InspectorTarget; onClose(): void; on
   const [wrap, setWrap] = useState(true);
   const searchRef = useRef<HTMLInputElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
+  const editorRef = useRef<HTMLTextAreaElement>(null);
+  const [draft, setDraft] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const editingValue = draft !== null;
+
+  const startEditing = () => {
+    setDraft(p.target.text);
+    setSaveError(null);
+    requestAnimationFrame(() => editorRef.current?.focus());
+  };
+  /** JSON values must stay valid JSON; other values are saved as typed. */
+  const validate = (value: string): string | null => {
+    if (!json) return null;
+    const r = parseJson(value.trim());
+    return "error" in r ? `Not valid JSON: ${r.error.message} (line ${r.error.line}, column ${r.error.column}).` : null;
+  };
+  const save = async () => {
+    if (draft === null || !p.target.onSave) return;
+    const problem = validate(draft);
+    if (problem) {
+      setSaveError(problem);
+      return;
+    }
+    if (draft === p.target.text) {
+      setDraft(null);
+      return;
+    }
+    setSaving(true);
+    const err = await p.target.onSave(draft);
+    setSaving(false);
+    if (err) setSaveError(err);
+    else p.onClose();
+  };
 
   // JSON tree state
   const [expanded, setExpanded] = useState<Set<string>>(() => {
@@ -172,7 +209,16 @@ export function ValueInspector(p: { target: InspectorTarget; onClose(): void; on
 
   const onKeyDown = (e: KeyboardEvent) => {
     const mod = e.ctrlKey || e.metaKey;
-    if (e.key === "Escape") {
+    if (editingValue && mod && e.key === "Enter") {
+      e.preventDefault();
+      e.stopPropagation();
+      void save();
+    } else if (editingValue && e.key === "Escape") {
+      e.preventDefault();
+      e.stopPropagation();
+      setDraft(null);
+      setSaveError(null);
+    } else if (e.key === "Escape") {
       e.preventDefault();
       e.stopPropagation();
       if (filterPopup) setFilterPopup(null);
@@ -228,6 +274,11 @@ export function ValueInspector(p: { target: InspectorTarget; onClose(): void; on
             {p.target.text.length.toLocaleString()} chars · {lines.toLocaleString()} line{lines === 1 ? "" : "s"}
           </span>
           <span class="spacer" />
+          {p.target.onSave && !editingValue && (
+            <button class="small" onClick={startEditing} title="Edit this value">
+              Edit
+            </button>
+          )}
           <button class="secondary small" onClick={copyCurrent} title="Copy (selection in Grid, otherwise the whole value)">
             Copy
           </button>
@@ -235,12 +286,54 @@ export function ValueInspector(p: { target: InspectorTarget; onClose(): void; on
             ×
           </button>
         </div>
-        {detection.kind === "text" && detection.jsonError && (
+        {editingValue && (
+          <div class="inspector-edit">
+            <textarea
+              ref={editorRef}
+              class="inspector-editor"
+              value={draft ?? ""}
+              spellcheck={false}
+              aria-label="Edit value"
+              onInput={(e) => {
+                setDraft((e.target as HTMLTextAreaElement).value);
+                setSaveError(null);
+              }}
+            />
+            {saveError && (
+              <div class="find-error" role="alert">
+                {saveError}
+              </div>
+            )}
+            <div class="popup-actions">
+              {json && (
+                <button
+                  class="secondary"
+                  title="Pretty-print the JSON"
+                  onClick={() => {
+                    const r = parseJson((draft ?? "").trim());
+                    if ("error" in r) setSaveError(validate(draft ?? ""));
+                    else setDraft(prettyJson(r.value));
+                  }}
+                >
+                  Format JSON
+                </button>
+              )}
+              <span class="spacer" />
+              <button class="secondary" onClick={() => (setDraft(null), setSaveError(null))}>
+                Cancel
+              </button>
+              <button onClick={() => void save()} disabled={saving} title="Save (Ctrl/Cmd+Enter)">
+                {saving ? "Saving…" : "Save"}
+              </button>
+            </div>
+          </div>
+        )}
+        {!editingValue && detection.kind === "text" && detection.jsonError && (
           <div class="banner static">
             Looks like JSON but could not be parsed: {detection.jsonError.message} (line {detection.jsonError.line}, column {detection.jsonError.column}).
           </div>
         )}
-        <div class="inspector-bar">
+        <div class="inspector-bar" style={editingValue ? { display: "none" } : undefined}>
           {json && (
             <div class="segmented" role="tablist">
               {(["tree", "grid", "text"] as const).map((t) => (
@@ -308,7 +401,7 @@ export function ValueInspector(p: { target: InspectorTarget; onClose(): void; on
             <input class="quick-filter" type="search" placeholder="Filter rows" value={quick} onInput={(e) => setQuick((e.target as HTMLInputElement).value)} />
           )}
         </div>
-        {json && tab === "grid" && (
+        {!editingValue && json && tab === "grid" && (
           <nav class="breadcrumb inspector-crumbs" aria-label="JSON path">
             {crumbs.map((c, i) => (
               <span key={i} class="crumb-wrap">
@@ -329,7 +422,7 @@ export function ValueInspector(p: { target: InspectorTarget; onClose(): void; on
             ))}
           </nav>
         )}
-        <div class={"inspector-body" + (json && tab !== "text" ? " with-detail" : "")}>
+        <div class={"inspector-body" + (json && tab !== "text" ? " with-detail" : "")} style={editingValue ? { display: "none" } : undefined}>
           {json && tab === "tree" && (
             <JsonTree
               root={json.value}
@@ -372,7 +465,7 @@ export function ValueInspector(p: { target: InspectorTarget; onClose(): void; on
           )}
           {(tab === "text" || !json) && <TextView text={textForTab} matcher={matcher} current={current} wrap={wrap} />}
         </div>
-        {json && tab !== "text" && (
+        {!editingValue && json && tab !== "text" && (
           <pre class="inspector-detail" aria-label="Selected value" tabIndex={0}>
             {detailText ?? <span class="muted">Select an item to see its full value.</span>}
           </pre>

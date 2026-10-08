@@ -8,6 +8,7 @@ import {
   pathOfId,
   parsePathKey,
   type DocSearchResult,
+  type EditTarget,
   type FlatValues,
   type GridTable,
   type HostToView,
@@ -121,6 +122,11 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
   const [flatValues, setFlatValues] = useState<Map<number, FlatValues>>(new Map());
   const flatPending = useRef(new Set<number>());
   const [inspector, setInspector] = useState<InspectorTarget | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+  const docVersionRef = useRef<number | undefined>(undefined);
+  /** Host document version of the text the current model was parsed from. */
+  const modelDocVersion = useRef<number | undefined>(undefined);
+  const pendingEdit = useRef<((r: { ok: boolean; message?: string }) => void) | null>(null);
   const [nodeFilter, setNodeFilter] = useState("");
   const [nodeFilterHits, setNodeFilterHits] = useState<Set<number> | null>(null);
 
@@ -217,6 +223,7 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
 
   const load = useCallback(async () => {
     const text = textRef.current;
+    const version = docVersionRef.current;
     const snap = takeSnapshot();
     setPhase((p) => (p === "ready" ? p : "loading"));
     try {
@@ -226,6 +233,7 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
         setKeptOld(false);
         applySnapshot(r.skeleton, snap);
         pendingRestore.current = null;
+        modelDocVersion.current = version;
         setSkeleton(r.skeleton);
         setGen(r.gen);
       } else {
@@ -262,6 +270,7 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
           setFileName(msg.fileName);
           applyTheme(msg.theme);
           textRef.current = msg.text;
+          docVersionRef.current = msg.docVersion;
           const saved = host.getState()?.snapshot as Snapshot | undefined;
           if (saved && !stateRef.current.skeleton) {
             pendingRestore.current = saved;
@@ -273,8 +282,14 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
         }
         case "update":
           textRef.current = msg.text;
+          docVersionRef.current = msg.docVersion;
           if (msg.text.length > settingsRef.current.largeFileThreshold && !largeConfirmed.current) setPhase("large");
-          else scheduleLoad(false);
+          else scheduleLoad(!!msg.fromEdit); // our own edits re-parse immediately
+          break;
+        case "editResult":
+          pendingEdit.current?.(msg);
+          pendingEdit.current = null;
+          if (!msg.ok && msg.message) setToast(msg.message);
           break;
         case "theme":
           applyTheme(msg.vars);
@@ -515,6 +530,75 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
     requestAnimationFrame(() => (document.querySelector(m === "flat" ? ".flat" : ".grid, .tree") as HTMLElement | null)?.focus());
   };
 
+  // ----- value editing --------------------------------------------------------
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 5000);
+    return () => clearTimeout(t);
+  }, [toast]);
+
+  const canEditDoc = !settings.readOnly && errors.length === 0;
+
+  /** Computes the text edit in the worker and asks the host to apply it (one undoable step). */
+  const requestEdit = async (target: EditTarget, value: string, label: string): Promise<string | null> => {
+    try {
+      const r = await worker.request<"edit">({ type: "edit", gen, target, value });
+      if ("error" in r) {
+        setToast(r.error);
+        return r.error;
+      }
+      const result = await new Promise<{ ok: boolean; message?: string }>((resolve) => {
+        pendingEdit.current = resolve;
+        host.post({ type: "edit", docVersion: modelDocVersion.current, edits: [r.edit], label });
+        setTimeout(() => resolve({ ok: false, message: "The editor did not respond to the edit." }), 10_000);
+      });
+      return result.ok ? null : (result.message ?? "The edit was not applied.");
+    } catch (e) {
+      const message = e instanceof StaleError ? "The document changed while editing; please try again." : String((e as Error).message ?? e);
+      setToast(message);
+      return message;
+    }
+  };
+
+  /** The child element of `parent` named `name` (leaf columns have at most one). */
+  const childNamed = (parent: number, name: string): number => {
+    if (!skeleton) return -1;
+    for (let c = skeleton.firstChild[parent]; c >= 0; c = skeleton.nextSibling[c]) if (skeleton.names[skeleton.nameIdx[c]] === name) return c;
+    return -1;
+  };
+
+  /** Edit target for a grid cell, or null when it is not editable (absent, complex, has child elements). */
+  const gridEditTarget = (pos: CellPos): { target: EditTarget; label: string } | null => {
+    if (!table || !skeleton || !canEditDoc || pos.c < 0) return null;
+    const r = view[pos.v];
+    if (r === undefined) return null;
+    const col = table.columns[pos.c];
+    const raw = table.cells[r * table.columns.length + pos.c];
+    const rowId = table.rowIds[r];
+    if (col.kind === "attr" && typeof raw === "string") {
+      return { target: { kind: "attr", path: pathOfId(skeleton, rowId), name: col.label.slice(1) }, label: `Edit ${col.label}` };
+    }
+    if (col.kind === "leaf" && typeof raw === "string") {
+      const child = childNamed(rowId, col.label);
+      if (child >= 0 && skeleton.childCount[child] === 0) return { target: { kind: "text", path: pathOfId(skeleton, child) }, label: `Edit ${col.label}` };
+    }
+    if (col.kind === "text" && skeleton.childCount[rowId] === 0) {
+      return { target: { kind: "text", path: pathOfId(skeleton, rowId) }, label: `Edit ${skeleton.names[skeleton.nameIdx[rowId]]}` };
+    }
+    return null;
+  };
+
+  const flatEditTarget = (pos: FlatPos): { target: EditTarget; label: string } | null => {
+    if (!skeleton || !canEditDoc) return null;
+    if (pos.attr >= 0) {
+      const name = flatValues.get(pos.id)?.attrs[pos.attr]?.name;
+      return name ? { target: { kind: "attr", path: pathOfId(skeleton, pos.id), name }, label: `Edit @${name}` } : null;
+    }
+    if (skeleton.childCount[pos.id] > 0) return null;
+    return { target: { kind: "text", path: pathOfId(skeleton, pos.id) }, label: `Edit ${skeleton.names[skeleton.nameIdx[pos.id]]}` };
+  };
+
   // ----- value inspector -----------------------------------------------------
 
   /** e.g. `catalog › book[2] › description` */
@@ -538,19 +622,30 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
     const raw = table.cells[r * table.columns.length + pos.c];
     if (typeof raw !== "string") return;
     const rowId = table.rowIds[r];
-    setInspector({ title: col.kind === "text" ? elementTitle(rowId) : `${elementTitle(rowId)} › ${col.label}`, text: raw });
+    const editable = gridEditTarget(pos);
+    setInspector({
+      title: col.kind === "text" ? elementTitle(rowId) : `${elementTitle(rowId)} › ${col.label}`,
+      text: raw,
+      onSave: editable ? (value) => requestEdit(editable.target, value, editable.label) : undefined,
+    });
   };
 
   const inspectFlat = async (pos: FlatPos) => {
     const v = await elementValues(pos.id);
     if (!v) return;
     const a = pos.attr >= 0 ? v.attrs[pos.attr] : null;
-    setInspector({ title: a ? `${elementTitle(pos.id)} › @${a.name}` : elementTitle(pos.id), text: a ? a.value : v.text });
+    const editable = flatEditTarget(pos);
+    setInspector({
+      title: a ? `${elementTitle(pos.id)} › @${a.name}` : elementTitle(pos.id),
+      text: a ? a.value : v.text,
+      onSave: editable ? (value) => requestEdit(editable.target, value, editable.label) : undefined,
+    });
   };
 
   const inspectElement = async (id: number) => {
     const v = await elementValues(id);
-    if (v) setInspector({ title: elementTitle(id), text: v.text });
+    const editable = flatEditTarget({ id, attr: -1 });
+    if (v) setInspector({ title: elementTitle(id), text: v.text, onSave: editable ? (value) => requestEdit(editable.target, value, editable.label) : undefined });
   };
 
   // ----- find --------------------------------------------------------------
@@ -907,6 +1002,11 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
           onActivate={(pos) => void activateFlat(pos)}
           onCopy={(sel) => void copyFlat(sel, rowsForFlat)}
           onInspect={(pos) => void inspectFlat(pos)}
+          canEdit={(pos) => flatEditTarget(pos) !== null}
+          onEdit={(pos, value) => {
+            const e = flatEditTarget(pos);
+            if (e) void requestEdit(e.target, value, e.label);
+          }}
         />
       )}
       {mode === "grid" && <Split
@@ -1049,6 +1149,11 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
                 onDrill={drill}
                 onCopy={copy}
                 onInspect={inspectCell}
+                canEdit={(pos) => gridEditTarget(pos) !== null}
+                onEdit={(pos, value) => {
+                  const e = gridEditTarget(pos);
+                  if (e) void requestEdit(e.target, value, e.label);
+                }}
               />
             ) : (
               <div class="grid-empty">Select an element.</div>
@@ -1075,6 +1180,11 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
           </div>
         }
       />}
+      {toast && (
+        <div class="toast" role="status" onClick={() => setToast(null)}>
+          {toast}
+        </div>
+      )}
       {inspector && (
         <ValueInspector
           target={inspector}

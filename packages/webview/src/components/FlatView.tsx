@@ -2,6 +2,7 @@ import type { FlatValues, Matcher, TreeSkeleton } from "@xmlgridview/core";
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { Highlight } from "./Highlight";
 import { isInspectable } from "../inspect";
+import { CellEditor } from "./CellEditor";
 import { useViewport } from "./useViewport";
 
 export const FLAT_ROW_HEIGHT = 22;
@@ -86,6 +87,10 @@ export interface FlatViewProps {
   onCopy(sel: FlatSelection): void;
   /** Opens the value inspector for a row (Shift+Enter or the inline button). */
   onInspect(pos: FlatPos): void;
+  /** Whether a row's value can be edited in place. */
+  canEdit?(pos: FlatPos): boolean;
+  /** Commits an in-place edit (only called when the value changed). */
+  onEdit?(pos: FlatPos, value: string): void;
 }
 
 let measureCtx: CanvasRenderingContext2D | null = null;
@@ -94,6 +99,11 @@ export function FlatView(p: FlatViewProps) {
   const { skeleton: sk, rows } = p;
   const [ref, vp] = useViewport<HTMLDivElement>();
   const [nameWidth, setNameWidth] = useState(0);
+  const [editing, setEditing] = useState<{ id: number; attr: number; initial: string; selectAll: boolean } | null>(null);
+  const currentValue = (pos: FlatPos) => {
+    const v = p.values.get(pos.id);
+    return (pos.attr >= 0 ? v?.attrs[pos.attr]?.value : v?.text) ?? "";
+  };
   const dragging = useRef(false);
 
   const focusIndex = useMemo(() => (p.sel ? rowIndexOf(rows, p.sel.focus) : -1), [rows, p.sel?.focus.id, p.sel?.focus.attr]);
@@ -188,6 +198,15 @@ export function FlatView(p: FlatViewProps) {
     const mod = e.ctrlKey || e.metaKey;
     const i = focusIndex;
     const pos = i >= 0 ? posAt(i) : null;
+    // Excel-style editing of the Value column: F2 edits, typing replaces.
+    if (pos && !editing && p.canEdit?.(pos) && p.onEdit && p.values.has(pos.id) &&
+        (e.key === "F2" || (e.key.length === 1 && !mod && !e.altKey && e.key !== " " && curCol === 1))) {
+      setEditing({ id: pos.id, attr: pos.attr, initial: e.key === "F2" ? currentValue(pos) : e.key, selectAll: e.key === "F2" });
+      if (curCol !== 1) p.onSelect({ anchor: { ...pos, col: 1 }, focus: { ...pos, col: 1 } });
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
     switch (e.key) {
       case "ArrowDown":
         select(mod ? rows.ids.length - 1 : i + 1, e.shiftKey);
@@ -341,7 +360,26 @@ export function FlatView(p: FlatViewProps) {
           onMouseEnter={cellEnter(1)}
           onDblClick={() => p.onInspect(posAt(i))}
         >
-          {raw === undefined ? <span class="muted">…</span> : <Highlight text={oneLine(raw.length > 1000 ? raw.slice(0, 1000) : raw)} matcher={p.highlightValues ? p.matcher : null} />}
+          {editing && editing.id === id && editing.attr === attr ? (
+            <CellEditor
+              initial={editing.initial}
+              selectAll={editing.selectAll}
+              onCommit={(value) => {
+                const pos = { id, attr };
+                setEditing(null);
+                if (value !== currentValue(pos)) p.onEdit?.(pos, value);
+                ref.current?.focus({ preventScroll: true });
+              }}
+              onCancel={() => {
+                setEditing(null);
+                ref.current?.focus({ preventScroll: true });
+              }}
+            />
+          ) : raw === undefined ? (
+            <span class="muted">…</span>
+          ) : (
+            <Highlight text={oneLine(raw.length > 1000 ? raw.slice(0, 1000) : raw)} matcher={p.highlightValues ? p.matcher : null} />
+          )}
           {isInspectable(raw) && (
             <button
               class="inspect-btn"

@@ -1,5 +1,6 @@
 package dev.xmlgridview.intellij.ui;
 
+import dev.xmlgridview.intellij.model.ValueEdits;
 import com.intellij.icons.AllIcons;
 import com.intellij.ide.CopyProvider;
 import com.intellij.openapi.Disposable;
@@ -82,6 +83,8 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
   private final Project project;
   private final InspectAction inspectAction;
   private boolean userSizedName;
+  /** Shows why an edit was refused; replaceable in tests. */
+  private java.util.function.Consumer<String> editErrors = this::showEditError;
   /** Opens the value inspector; replaceable in tests. */
   private java.util.function.Consumer<InspectTarget> inspectorOpener;
   private boolean fittingName;
@@ -176,7 +179,7 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
       }
     });
     table.setDefaultRenderer(Object.class, new Renderer());
-    table.setDefaultEditor(Object.class, null);
+    CellEditing.install(table, this);
     table.addMouseListener(new MouseAdapter() {
       @Override
       public void mousePressed(MouseEvent e) {
@@ -207,7 +210,7 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
     action(this::left, new KeyboardShortcut(KeyStroke.getKeyStroke(KeyEvent.VK_LEFT, 0), null));
     action(this::right, new KeyboardShortcut(KeyStroke.getKeyStroke(KeyEvent.VK_RIGHT, 0), null));
 
-    inspectorOpener = t -> ValueInspector.show(this.project, t);
+    inspectorOpener = t -> ValueInspector.show(this.project, t, loader.canEdit() ? loader::applyValueEdit : null);
     inspectAction = InspectAction.install(table, this, this::inspectTarget, t -> inspectorOpener.accept(t));
     PopupHandler.installPopupMenu(table, popupActions(), "XmlGridView.Flat");
     JScrollPane scroll = ScrollPaneFactory.createScrollPane(table, true);
@@ -262,7 +265,27 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
       public void actionPerformed(@NotNull AnActionEvent e) {
         r.run();
       }
+
+      // Arrow keys, Enter and F4 belong to the cell editor while a value is being edited.
+      @Override
+      public void update(@NotNull AnActionEvent e) {
+        e.getPresentation().setEnabled(!table.isEditing());
+      }
+
+      @Override
+      public @NotNull com.intellij.openapi.actionSystem.ActionUpdateThread getActionUpdateThread() {
+        return com.intellij.openapi.actionSystem.ActionUpdateThread.EDT;
+      }
     }.registerCustomShortcutSet(new CustomShortcutSet(shortcuts), table, this);
+  }
+
+  private void showEditError(String message) {
+    com.intellij.openapi.ui.popup.JBPopupFactory.getInstance()
+      .createHtmlTextBalloonBuilder(com.intellij.openapi.util.text.StringUtil.escapeXmlEntities(message),
+                                    com.intellij.openapi.ui.MessageType.WARNING, null)
+      .setFadeoutTime(6000)
+      .createBalloon()
+      .show(com.intellij.ui.awt.RelativePoint.getCenterOf(table), com.intellij.openapi.ui.popup.Balloon.Position.above);
   }
 
   public JComponent getPreferredFocusedComponent() {
@@ -779,7 +802,7 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
     }
   }
 
-  private static final class RowsModel extends AbstractTableModel {
+  private final class RowsModel extends AbstractTableModel {
     private List<FlatRow> rows = List.of();
 
     void setRows(List<FlatRow> rows) {
@@ -807,6 +830,24 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
       FlatRow r = rows.get(row);
       return column == NAME_COL ? r.name() : r.value();
     }
+
+    /** Values of attribute rows and of elements without element children are editable. */
+    @Override
+    public boolean isCellEditable(int row, int column) {
+      return column == VALUE_COL && row >= 0 && row < rows.size() && loader.canEdit() && ValueEdits.flatTarget(rows.get(row)) != null;
+    }
+
+    @Override
+    public void setValueAt(Object value, int row, int column) {
+      if (column != VALUE_COL || row < 0 || row >= rows.size()) return;
+      FlatRow r = rows.get(row);
+      String v = value == null ? "" : value.toString();
+      if (v.equals(r.value())) return;
+      ValueEdits.Target target = ValueEdits.flatTarget(r);
+      if (target == null) return;
+      String error = loader.applyValueEdit(target, v);
+      if (error != null) editErrors.accept(error);
+    }
   }
 
   // ---- Test hooks ----------------------------------------------------------------------------
@@ -819,6 +860,18 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
   @TestOnly
   public List<FlatRow> visibleRows() {
     return rowsModel.rows;
+  }
+
+  @TestOnly
+  public boolean isValueEditableForTest(int row) {
+    return table.isCellEditable(row, table.convertColumnIndexToView(VALUE_COL));
+  }
+
+  /** Commits a value through the table model, exactly as the cell editor does. */
+  @TestOnly
+  public void editValueForTest(int row, String value, @NotNull java.util.function.Consumer<String> errors) {
+    editErrors = errors;
+    table.setValueAt(value, row, table.convertColumnIndexToView(VALUE_COL));
   }
 
   @TestOnly

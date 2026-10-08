@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<catalog>
+  <book id="bk101" lang='en' note="say &quot;hi&quot;">
+    <title>XML Developer's Guide</title>
+    <price currency="USD">44.95</price>
+    <empty/>
+    <spaced />
+    <blank></blank>
+    <script><![CDATA[if (a < b) go();]]></script>
+    <mixed>one<!-- c -->two</mixed>
+    <emoji>😀 smile</emoji>
+    <parent><child>x</child></parent>
+  </book>
+</catalog>

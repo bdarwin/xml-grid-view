@@ -307,3 +307,61 @@ array indices as strings, or object keys.
   - `{ "drill": "object" | "array", "count": n }`: a nested container, where
     `n` is its number of keys or items. The UI labels these `{ n keys }` and
     `[ n items ]`, with singular forms for 1.
+
+## Value edits: `edits/<name>.xml` + `edits/<name>.edits.json`
+
+Editing a value means setting an existing attribute's value, or the text of a
+leaf element (an element with no element children). Each edit becomes **one
+text replacement** `{ offset, length, text }` on the source, in UTF-16 units.
+Hosts apply it as a single undoable edit.
+
+```json
+{ "target": { "kind": "attr", "path": [0, 0], "name": "id" }, "value": "A & B",
+  "expected": { "edit": { "offset": 44, "length": 5, "text": "A &amp; B" }, "readBack": "A & B", "wellFormed": true } }
+```
+
+Inputs are `target` and `value`. `kind` is `attr` (with the attribute's
+qualified `name`) or `text`. `path` is the element's childIndexPath as an
+array. The generator fills in `expected`. Implementations must produce the same
+`edit`, or `{ "error": true }` when the edit is refused. `readBack` (the value
+parsed back after applying the edit) and `wellFormed` are self-checks of the
+reference implementation.
+
+### Refused (error)
+
+- The element or attribute doesn't exist.
+- The document has parse errors.
+- A `text` edit on an element that has element children.
+- A `text` edit whose current content contains a comment (`<!--`) or a
+  processing instruction (`<?`). Replacing it would silently drop them.
+
+### Attribute values
+
+The edit replaces the characters between the attribute's quotes. The original
+quote character is kept. The new value is escaped as follows:
+
+| Character | Written as |
+| --- | --- |
+| `&` | `&amp;` |
+| `<` | `&lt;` |
+| the quote character in use | `&quot;` (for `"`) or `&apos;` (for `'`) |
+| tab, LF, CR | `&#9;`, `&#10;`, `&#13;` (so attribute-value normalization keeps them) |
+
+Everything else, including the other quote character and `>`, is written
+literally.
+
+### Element text
+
+- **Normal element:** the edit replaces everything between the end of the
+  start tag and the `</` of the end tag. The new text is escaped as `&` →
+  `&amp;`, `<` → `&lt;`, `>` → `&gt;`.
+- **CDATA kept:** if the current content, trimmed of whitespace, is a single
+  CDATA section (`<![CDATA[…]]>` with no second `<![CDATA[`), the new value is
+  written as one CDATA section, unescaped. Every `]]>` in it becomes
+  `]]]]><![CDATA[>`.
+- **Empty-element tag `<t …/>`:**
+  - With a non-empty value, the edit replaces the closing `/>` (2
+    characters) with `>` + escaped text + `</t>`. Whitespace before the `/`
+    is kept, so `<t />` becomes `<t >value</t>`.
+  - With an empty value, it is a no-op edit: offset is the tag's end, length
+    0, empty text.

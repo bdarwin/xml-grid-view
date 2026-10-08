@@ -30,6 +30,7 @@ final class InspectAction extends DumbAwareAction {
 
   private final Supplier<@Nullable InspectTarget> target;
   private final Consumer<InspectTarget> open;
+  private @Nullable JComponent component;
 
   InspectAction(@NotNull Supplier<@Nullable InspectTarget> target, @NotNull Consumer<InspectTarget> open) {
     super("Inspect Value", "Show the full value; JSON gets Tree, Grid and Text views", AllIcons.Actions.Show);
@@ -41,6 +42,7 @@ final class InspectAction extends DumbAwareAction {
   static InspectAction install(@NotNull JComponent component, @NotNull Disposable parent,
                                @NotNull Supplier<@Nullable InspectTarget> target, @NotNull Consumer<InspectTarget> open) {
     InspectAction a = new InspectAction(target, open);
+    a.component = component;
     a.registerCustomShortcutSet(SHORTCUT, component, parent);
     return a;
   }
@@ -66,7 +68,8 @@ final class InspectAction extends DumbAwareAction {
 
   @Override
   public void update(@NotNull AnActionEvent e) {
-    e.getPresentation().setEnabled(target.get() != null);
+    // While a cell is being edited, Shift+Enter belongs to the editor.
+    e.getPresentation().setEnabled(!CellEditing.isEditing(component) && target.get() != null);
   }
 
   @Override

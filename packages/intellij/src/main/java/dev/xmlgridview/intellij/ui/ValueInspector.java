@@ -1,5 +1,6 @@
 package dev.xmlgridview.intellij.ui;
 
+import dev.xmlgridview.intellij.model.ValueEdits;
 import com.intellij.icons.AllIcons;
 import com.intellij.ide.CopyProvider;
 import com.intellij.openapi.actionSystem.ActionManager;
@@ -102,6 +103,22 @@ public final class ValueInspector extends DialogWrapper {
 
   private final Project project;
   private final InspectTarget target;
+  /** Applies an edited value (returns null or the reason it was refused); null when editing is unavailable. */
+  private final @Nullable java.util.function.BiFunction<ValueEdits.Target, String, String> saver;
+  private @Nullable Editor textEditor;
+  private boolean editing;
+  private final Action editAction = new AbstractAction("Edit") {
+    @Override
+    public void actionPerformed(ActionEvent e) {
+      startEditing();
+    }
+  };
+  private final Action saveAction = new AbstractAction("Save") {
+    @Override
+    public void actionPerformed(ActionEvent e) {
+      save();
+    }
+  };
   private @Nullable JBTabbedPane tabs;
   private @Nullable JComponent preferredFocus;
   private boolean errorBanner;
@@ -110,6 +127,12 @@ public final class ValueInspector extends DialogWrapper {
   private static final java.util.Map<String, ValueInspector> OPEN = new java.util.HashMap<>();
 
   public static void show(@NotNull Project project, @Nullable InspectTarget target) {
+    show(project, target, null);
+  }
+
+  /** Shows the inspector; with a {@code saver}, editable values get Edit/Save. */
+  public static void show(@NotNull Project project, @Nullable InspectTarget target,
+                          @Nullable java.util.function.BiFunction<ValueEdits.Target, String, String> saver) {
     if (target == null) return;
     String key = project.getLocationHash() + "\u0000" + target.title() + "\u0000" + target.text();
     ValueInspector existing = OPEN.get(key);
@@ -117,19 +140,106 @@ public final class ValueInspector extends DialogWrapper {
       existing.toFront();
       return;
     }
-    ValueInspector dialog = new ValueInspector(project, target);
+    ValueInspector dialog = new ValueInspector(project, target, saver);
     OPEN.put(key, dialog);
     com.intellij.openapi.util.Disposer.register(dialog.getDisposable(), () -> OPEN.remove(key, dialog));
     dialog.show();
   }
 
-  private ValueInspector(@NotNull Project project, @NotNull InspectTarget target) {
+  private ValueInspector(@NotNull Project project, @NotNull InspectTarget target,
+                         @Nullable java.util.function.BiFunction<ValueEdits.Target, String, String> saver) {
     super(project, true, IdeModalityType.MODELESS);
     this.project = project;
     this.target = target;
+    this.saver = target.editTarget() == null ? null : saver;
     setTitle("Value: " + target.title());
     setCancelButtonText("Close");
+    saveAction.setEnabled(false);
     init();
+  }
+
+  boolean canEdit() {
+    return saver != null && textEditor != null;
+  }
+
+  /** Switches to the Text tab and makes it editable. */
+  void startEditing() {
+    if (!canEdit() || editing) return;
+    Editor ed = Objects.requireNonNull(textEditor);
+    if (tabs != null) tabs.setSelectedIndex(tabs.getTabCount() - 1);
+    setFileWritable(ed, true);
+    ed.getDocument().setReadOnly(false);
+    if (ed instanceof com.intellij.openapi.editor.ex.EditorEx ex) ex.setViewer(false);
+    editing = true;
+    editAction.setEnabled(false);
+    saveAction.setEnabled(true);
+    setErrorText(null);
+    ed.getContentComponent().requestFocusInWindow();
+  }
+
+  /** Leaves edit mode and restores the original text. */
+  void cancelEditing() {
+    if (!editing) return;
+    Editor ed = Objects.requireNonNull(textEditor);
+    String original = target.detection().isJson() ? Objects.requireNonNull(target.detection().pretty()) : target.text();
+    com.intellij.openapi.application.WriteAction.run(() -> ed.getDocument().setText(original));
+    if (ed instanceof com.intellij.openapi.editor.ex.EditorEx ex) ex.setViewer(true);
+    ed.getDocument().setReadOnly(true);
+    setFileWritable(ed, false);
+    editing = false;
+    editAction.setEnabled(true);
+    saveAction.setEnabled(false);
+    setErrorText(null);
+  }
+
+  /** Validates (JSON values must still parse) and applies the edit; returns null on success or the error shown. */
+  @Nullable String save() {
+    if (!editing || saver == null || textEditor == null) return "Not editing.";
+    String value = textEditor.getDocument().getText();
+    if (target.detection().isJson()) {
+      try {
+        Json.parse(value.strip());
+      }
+      catch (Json.ParseException e) {
+        String[] lc = lineCol(value.strip(), e.offset());
+        String msg = "Invalid JSON: " + e.getMessage() + " (line " + lc[0] + ", column " + lc[1] + "). Fix it or press Esc to cancel.";
+        setErrorText(msg, textEditor.getContentComponent());
+        return msg;
+      }
+    }
+    String error = saver.apply(Objects.requireNonNull(target.editTarget()), value);
+    if (error != null) {
+      setErrorText(error, textEditor.getContentComponent());
+      return error;
+    }
+    editing = false;
+    close(OK_EXIT_CODE);
+    return null;
+  }
+
+  /** The text lives in a light virtual file; typing checks the file's writability too. */
+  private static void setFileWritable(Editor ed, boolean writable) {
+    if (FileDocumentManager.getInstance().getFile(ed.getDocument()) instanceof LightVirtualFile f) f.setWritable(writable);
+  }
+
+  private static String[] lineCol(String s, int offset) {
+    int line = 1;
+    int col = 1;
+    for (int i = 0; i < Math.min(offset, s.length()); i++) {
+      if (s.charAt(i) == '\n') {
+        line++;
+        col = 1;
+      }
+      else col++;
+    }
+    return new String[]{String.valueOf(line), String.valueOf(col)};
+  }
+
+  @Override
+  public void doCancelAction() {
+    // Escape while editing leaves edit mode instead of closing the window.
+    if (editing) cancelEditing();
+    else super.doCancelAction();
   }
 
   @Override
@@ -152,7 +262,8 @@ public final class ValueInspector extends DialogWrapper {
         CopyPasteManager.getInstance().setContents(new StringSelection(pretty ? Objects.requireNonNull(d.pretty()) : target.text()));
       }
     };
-    return new Action[]{copy, getCancelAction()};
+    if (saver == null) return new Action[]{copy, getCancelAction()};
+    return new Action[]{editAction, saveAction, copy, getCancelAction()};
   }
 
   @Override
@@ -166,12 +277,14 @@ public final class ValueInspector extends DialogWrapper {
       tabs.addTab(InspectTarget.TAB_TREE, tree);
       tabs.addTab(InspectTarget.TAB_GRID, new JsonGridPanel(Objects.requireNonNull(d.value())));
       Editor text = createViewer(Objects.requireNonNull(d.pretty()), jsonFileType());
+      textEditor = text;
       tabs.addTab(InspectTarget.TAB_TEXT, text.getComponent());
       root.add(tabs, BorderLayout.CENTER);
       preferredFocus = tree.tree;
     }
     else {
       Editor editor = createViewer(target.text(), FileTypes.PLAIN_TEXT);
+      textEditor = editor;
       Json.SyntaxError err = d.error();
       if (err != null) {
         EditorNotificationPanel banner = new EditorNotificationPanel(EditorNotificationPanel.Status.Warning);
@@ -188,6 +301,23 @@ public final class ValueInspector extends DialogWrapper {
       root.add(editor.getComponent(), BorderLayout.CENTER);
       preferredFocus = editor.getContentComponent();
     }
+    // Ctrl/Cmd+Enter saves while editing.
+    new com.intellij.openapi.project.DumbAwareAction() {
+      @Override
+      public void actionPerformed(@NotNull AnActionEvent e) {
+        save();
+      }
+
+      @Override
+      public void update(@NotNull AnActionEvent e) {
+        e.getPresentation().setEnabled(editing);
+      }
+
+      @Override
+      public @NotNull com.intellij.openapi.actionSystem.ActionUpdateThread getActionUpdateThread() {
+        return com.intellij.openapi.actionSystem.ActionUpdateThread.EDT;
+      }
+    }.registerCustomShortcutSet(com.intellij.openapi.actionSystem.CommonShortcuts.getCtrlEnter(), root, getDisposable());
     return root;
   }
 
@@ -809,7 +939,23 @@ public final class ValueInspector extends DialogWrapper {
   /** Builds the content panels without showing the dialog (for tests). */
   @TestOnly
   static ValueInspector createForTest(@NotNull Project project, @NotNull InspectTarget target) {
-    return new ValueInspector(project, target);
+    return new ValueInspector(project, target, null);
+  }
+
+  @TestOnly
+  static ValueInspector createForTest(@NotNull Project project, @NotNull InspectTarget target,
+                                      @Nullable java.util.function.BiFunction<ValueEdits.Target, String, String> saver) {
+    return new ValueInspector(project, target, saver);
+  }
+
+  @TestOnly
+  void setEditTextForTest(String text) {
+    com.intellij.openapi.application.WriteAction.run(() -> Objects.requireNonNull(textEditor).getDocument().setText(text));
+  }
+
+  @TestOnly
+  boolean isEditingForTest() {
+    return editing;
   }
 
   @TestOnly

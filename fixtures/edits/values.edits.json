@@ -1,0 +1,260 @@
+{
+  "cases": [
+    {
+      "target": {
+        "kind": "attr",
+        "path": [0, 0],
+        "name": "id"
+      },
+      "value": "bk999",
+      "expected": {
+        "edit": { "offset": 44, "length": 5, "text": "bk999" },
+        "readBack": "bk999",
+        "wellFormed": true
+      }
+    },
+    {
+      "target": {
+        "kind": "attr",
+        "path": [0, 0],
+        "name": "id"
+      },
+      "value": "A & B < C",
+      "expected": {
+        "edit": { "offset": 44, "length": 5, "text": "A &amp; B &lt; C" },
+        "readBack": "A & B < C",
+        "wellFormed": true
+      }
+    },
+    {
+      "target": {
+        "kind": "attr",
+        "path": [0, 0],
+        "name": "id"
+      },
+      "value": "it's \"quoted\"",
+      "expected": {
+        "edit": { "offset": 44, "length": 5, "text": "it's &quot;quoted&quot;" },
+        "readBack": "it's \"quoted\"",
+        "wellFormed": true
+      }
+    },
+    {
+      "target": {
+        "kind": "attr",
+        "path": [0, 0],
+        "name": "lang"
+      },
+      "value": "it's \"quoted\"",
+      "expected": {
+        "edit": { "offset": 57, "length": 2, "text": "it&apos;s \"quoted\"" },
+        "readBack": "it's \"quoted\"",
+        "wellFormed": true
+      }
+    },
+    {
+      "target": {
+        "kind": "attr",
+        "path": [0, 0],
+        "name": "note"
+      },
+      "value": "line1\nline2\ttab",
+      "expected": {
+        "edit": { "offset": 67, "length": 18, "text": "line1&#10;line2&#9;tab" },
+        "readBack": "line1\nline2\ttab",
+        "wellFormed": true
+      }
+    },
+    {
+      "target": {
+        "kind": "attr",
+        "path": [0, 0],
+        "name": "note"
+      },
+      "value": "",
+      "expected": {
+        "edit": { "offset": 67, "length": 18, "text": "" },
+        "readBack": "",
+        "wellFormed": true
+      }
+    },
+    {
+      "target": {
+        "kind": "attr",
+        "path": [0, 0],
+        "name": "missing"
+      },
+      "value": "x",
+      "expected": { "error": true }
+    },
+    {
+      "target": {
+        "kind": "text",
+        "path": [0, 0, 0]
+      },
+      "value": "Learning XML",
+      "expected": {
+        "edit": { "offset": 99, "length": 21, "text": "Learning XML" },
+        "readBack": "Learning XML",
+        "wellFormed": true
+      }
+    },
+    {
+      "target": {
+        "kind": "text",
+        "path": [0, 0, 0]
+      },
+      "value": "<b> & </b>",
+      "expected": {
+        "edit": { "offset": 99, "length": 21, "text": "&lt;b&gt; &amp; &lt;/b&gt;" },
+        "readBack": "<b> & </b>",
+        "wellFormed": true
+      }
+    },
+    {
+      "target": {
+        "kind": "text",
+        "path": [0, 0, 0]
+      },
+      "value": "",
+      "expected": {
+        "edit": { "offset": 99, "length": 21, "text": "" },
+        "readBack": "",
+        "wellFormed": true
+      }
+    },
+    {
+      "target": {
+        "kind": "text",
+        "path": [0, 0, 1]
+      },
+      "value": "50.00",
+      "expected": {
+        "edit": { "offset": 155, "length": 5, "text": "50.00" },
+        "readBack": "50.00",
+        "wellFormed": true
+      }
+    },
+    {
+      "target": {
+        "kind": "attr",
+        "path": [0, 0, 1],
+        "name": "currency"
+      },
+      "value": "EUR",
+      "expected": {
+        "edit": { "offset": 150, "length": 3, "text": "EUR" },
+        "readBack": "EUR",
+        "wellFormed": true
+      }
+    },
+    {
+      "target": {
+        "kind": "text",
+        "path": [0, 0, 2]
+      },
+      "value": "now filled",
+      "expected": {
+        "edit": { "offset": 179, "length": 2, "text": ">now filled</empty>" },
+        "readBack": "now filled",
+        "wellFormed": true
+      }
+    },
+    {
+      "target": {
+        "kind": "text",
+        "path": [0, 0, 2]
+      },
+      "value": "",
+      "expected": {
+        "edit": { "offset": 181, "length": 0, "text": "" },
+        "readBack": "",
+        "wellFormed": true
+      }
+    },
+    {
+      "target": {
+        "kind": "text",
+        "path": [0, 0, 3]
+      },
+      "value": "spaced <value>",
+      "expected": {
+        "edit": { "offset": 194, "length": 2, "text": ">spaced &lt;value&gt;</spaced>" },
+        "readBack": "spaced <value>",
+        "wellFormed": true
+      }
+    },
+    {
+      "target": {
+        "kind": "text",
+        "path": [0, 0, 4]
+      },
+      "value": "was blank",
+      "expected": {
+        "edit": { "offset": 208, "length": 0, "text": "was blank" },
+        "readBack": "was blank",
+        "wellFormed": true
+      }
+    },
+    {
+      "target": {
+        "kind": "text",
+        "path": [0, 0, 5]
+      },
+      "value": "if (a > b && c) stop();",
+      "expected": {
+        "edit": { "offset": 229, "length": 28, "text": "<![CDATA[if (a > b && c) stop();]]>" },
+        "readBack": "if (a > b && c) stop();",
+        "wellFormed": true
+      }
+    },
+    {
+      "target": {
+        "kind": "text",
+        "path": [0, 0, 5]
+      },
+      "value": "tricky ]]> inside",
+      "expected": {
+        "edit": { "offset": 229, "length": 28, "text": "<![CDATA[tricky ]]]]><![CDATA[> inside]]>" },
+        "readBack": "tricky ]]> inside",
+        "wellFormed": true
+      }
+    },
+    {
+      "target": {
+        "kind": "text",
+        "path": [0, 0, 6]
+      },
+      "value": "nope",
+      "expected": { "error": true }
+    },
+    {
+      "target": {
+        "kind": "text",
+        "path": [0, 0, 7]
+      },
+      "value": "🎉 party",
+      "expected": {
+        "edit": { "offset": 314, "length": 8, "text": "🎉 party" },
+        "readBack": "🎉 party",
+        "wellFormed": true
+      }
+    },
+    {
+      "target": {
+        "kind": "text",
+        "path": [0, 0, 8]
+      },
+      "value": "nope",
+      "expected": { "error": true }
+    },
+    {
+      "target": {
+        "kind": "text",
+        "path": [0, 9]
+      },
+      "value": "no such element",
+      "expected": { "error": true }
+    }
+  ]
+}

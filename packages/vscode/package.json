@@ -2,7 +2,7 @@
   "name": "xml-grid-view",
   "displayName": "XML Grid View",
   "description": "Read-only tree and grid viewer for XML files, with search and XPath.",
-  "version": "0.1.3",
+  "version": "0.2.0",
   "publisher": "bdarwin",
   "author": {
     "name": "Darwin Baisa"
@@ -125,6 +125,11 @@
           "default": 50,
           "minimum": 1,
           "description": "Files larger than this (in MB) show a notice and are only parsed after clicking \"Load anyway\"."
+        },
+        "xmlGridView.readOnly": {
+          "type": "boolean",
+          "default": false,
+          "description": "Disable value editing in XML Grid View (the view never changes the document)."
         }
       }
     }

@@ -8,9 +8,10 @@
 | **Value inspector: JSON as a grid** | **Value inspector: JSON tree (IntelliJ)** |
 | ![Inspector JSON grid](docs/view-inspector-grid.png) | ![IntelliJ inspector JSON tree](docs/intellij-inspector.png) |
 
-A read-only XML viewer for VS Code and IntelliJ. It shows the document as a
-tree on the left and a grid on the right, with search and XPath. It never
-modifies the document.
+An XML viewer and value editor for VS Code and IntelliJ. It shows the document
+as a tree and a grid, plus a Flat outline, with search and XPath. You can edit
+attribute values and element text in place. Edits go through the editor's own
+undo history and are never saved behind your back.
 
 | Package | What it is |
 | --- | --- |
@@ -100,6 +101,22 @@ limitations.
     - Grid: the same drill-down grid as XML, with sort and filters.
     - Text: pretty-printed.
   - Big numbers are shown exactly as written.
+- **Editing values:** you can edit existing attribute values and the text of
+  leaf elements, in the Grid, in Flat and in the value inspector.
+  - **Starting an edit:** select a cell, then press **F2** or just start
+    typing. **Enter** commits, **Esc** cancels, and **Tab**/**Shift+Tab**
+    commit and move to the next or previous cell.
+  - **Inspector:** has an **Edit** button for long text and JSON. JSON must
+    parse before it can be saved, and a Format button pretty-prints it.
+  - **Escaping:** values are escaped automatically. CDATA stays CDATA, and an
+    empty `<tag/>` expands when it gets a value.
+  - **Undo and save:** each edit is one normal, undoable change to the
+    document. Saving is up to you.
+  - **Not supported:** structural changes, meaning adding or removing
+    attributes and elements, or renaming. Values that contain comments are
+    left to the text editor.
+  - **Read-only:** set `xmlGridView.readOnly` in VS Code to turn editing off.
+    Read-only files can't be edited.
 - **Find (Ctrl/Cmd+F):**
   - Match case, whole word and regex.
   - Scope: the current grid or the whole document.
@@ -154,7 +171,8 @@ CI never accepts regenerated output on its own.
 
 ## Known limitations
 
-- **Read-only by design:** there is no editing in the grid.
+- **Values only:** structure (elements and attributes) can't be added,
+  removed or renamed from the views.
 - **Grid model:**
   - Only elements without attributes and without element children count as
     text-only columns. Elements with attributes, such as

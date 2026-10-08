@@ -1077,3 +1077,59 @@ button.icon {
   word-break: break-word;
   outline: none;
 }
+
+/* Value editing */
+.cell-editor {
+  width: calc(100% + 12px);
+  margin: 0 -6px;
+  height: calc(var(--xgv-row-height) - 1px);
+  min-height: 0;
+  border: 1px solid var(--xgv-focus-border);
+  border-radius: 0;
+  padding: 0 5px;
+  font: inherit;
+  background: var(--xgv-input-bg);
+  color: var(--xgv-input-fg);
+  outline: none;
+}
+.flat-value .cell-editor {
+  margin: 0 -8px;
+  width: calc(100% + 16px);
+}
+.inspector-edit {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+}
+.inspector-editor {
+  flex: 1;
+  min-height: 0;
+  resize: none;
+  font-family: var(--xgv-mono-font-family);
+  font-size: var(--xgv-mono-font-size);
+  background: var(--xgv-input-bg);
+  color: var(--xgv-input-fg);
+  border: 1px solid var(--xgv-input-border);
+  padding: 8px;
+  outline: none;
+}
+.inspector-editor:focus {
+  border-color: var(--xgv-focus-border);
+}
+.toast {
+  position: fixed;
+  right: 12px;
+  bottom: 32px;
+  z-index: 30;
+  max-width: 420px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  background: var(--xgv-warning-bg);
+  color: var(--xgv-warning-fg);
+  border: 1px solid var(--xgv-border);
+  box-shadow: 0 2px 8px color-mix(in srgb, CanvasText 25%, transparent);
+  cursor: pointer;
+}

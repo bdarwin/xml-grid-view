@@ -4,6 +4,10 @@ import com.intellij.openapi.Disposable;
 import com.intellij.openapi.application.ModalityState;
 import com.intellij.openapi.application.ReadAction;
 import com.intellij.openapi.editor.Document;
+import java.util.Objects;
+import dev.xmlgridview.intellij.model.ValueEdits;
+import com.intellij.openapi.fileEditor.FileDocumentManager;
+import com.intellij.openapi.command.WriteCommandAction;
 import com.intellij.openapi.editor.event.DocumentEvent;
 import com.intellij.openapi.editor.event.DocumentListener;
 import com.intellij.openapi.project.Project;
@@ -89,6 +93,35 @@ final class ModelLoader implements Disposable {
   private void scheduleRefresh(int delay) {
     refreshAlarm.cancelAllRequests();
     refreshAlarm.addRequest(this::refresh, delay);
+  }
+
+  /** Whether value editing is possible now: a writable document and an up-to-date, well-formed model. */
+  boolean canEdit() {
+    XmlDocumentModel m = model;
+    return m != null && !m.hasErrors() && document.isWritable() && m.text().contentEquals(document.getImmutableCharSequence());
+  }
+
+  /**
+   * Applies a value edit to the document as one undoable command and refreshes immediately.
+   * Returns null on success, or the reason the edit was refused.
+   */
+  @Nullable String applyValueEdit(@NotNull ValueEdits.Target target, @NotNull String value) {
+    XmlDocumentModel m = model;
+    if (m == null) return "The view is still loading.";
+    if (!m.text().contentEquals(document.getImmutableCharSequence())) {
+      return "The document changed since the view was last updated; try again in a moment.";
+    }
+    ValueEdits.Result r = ValueEdits.compute(m, target, value);
+    if (!r.isOk()) return r.error();
+    ValueEdits.TextEdit e = Objects.requireNonNull(r.edit());
+    if (e.length() == 0 && e.text().isEmpty()) return null;
+    if (!FileDocumentManager.getInstance().requestWriting(document, project)) return "The file is read-only.";
+    WriteCommandAction.runWriteCommandAction(project, ValueEdits.label(m, target), null,
+                                             () -> document.replaceString(e.offset(), e.offset() + e.length(), e.text()));
+    // Our own edit: rebuild now rather than after the typing debounce.
+    refreshAlarm.cancelAllRequests();
+    refresh();
+    return null;
   }
 
   /** Rebuilds the model in a non-blocking read action; stale builds are cancelled by coalescing. */

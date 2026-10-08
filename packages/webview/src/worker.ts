@@ -2,6 +2,7 @@
 import {
   XmlModel,
   XmlParser,
+  computeValueEdit,
   evaluateXPath,
   jsBackend,
   searchDocument,
@@ -80,6 +81,9 @@ export function createWorkerHandler(post: (r: WorkerResponse, transfer?: Transfe
           return;
         case "searchGrid":
           post({ id: req.id, ok: true, result: searchGrid(model.table(req.elementId, req.group), req.query) });
+          return;
+        case "edit":
+          post({ id: req.id, ok: true, result: computeValueEdit(modelText, model, req.target, req.value) });
           return;
         case "flatValues":
           post({ id: req.id, ok: true, result: model.flatValues(req.ids) });

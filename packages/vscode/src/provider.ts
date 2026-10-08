@@ -61,8 +61,9 @@ export class XmlGridEditorProvider implements vscode.CustomTextEditorProvider {
         version: PROTOCOL_VERSION,
         fileName: vscode.workspace.asRelativePath(document.uri, false),
         text: document.getText(),
+        docVersion: document.version,
         theme: themeVars(),
-        settings: readSettings(),
+        settings: { ...readSettings(), readOnly: readSettings().readOnly || isReadOnly(document) },
       });
 
     const entry: ViewEntry = {
@@ -87,6 +88,27 @@ export class XmlGridEditorProvider implements vscode.CustomTextEditorProvider {
           case "error":
             this.log.appendLine(`[${document.uri.fsPath}] ${msg.message}`);
             break;
+          case "edit": {
+            // Applied through the text document, so undo/redo, dirty state and save work as usual.
+            const reject = (message: string) => post({ type: "editResult", ok: false, message });
+            if (readSettings().readOnly || isReadOnly(document)) return reject("This document is read-only.");
+            if (msg.docVersion !== undefined && msg.docVersion !== document.version) {
+              return reject("The document changed while editing; please try again.");
+            }
+            const edit = new vscode.WorkspaceEdit();
+            for (const e of msg.edits) {
+              edit.replace(document.uri, new vscode.Range(document.positionAt(e.offset), document.positionAt(e.offset + e.length)), e.text, {
+                label: msg.label,
+                needsConfirmation: false,
+              });
+            }
+            const ok = await vscode.workspace.applyEdit(edit);
+            if (!ok) return reject("VS Code could not apply the edit.");
+            clearTimeout(timer);
+            post({ type: "update", text: document.getText(), docVersion: document.version, fromEdit: true });
+            post({ type: "editResult", ok: true });
+            break;
+          }
         }
       },
     };
@@ -100,7 +122,7 @@ export class XmlGridEditorProvider implements vscode.CustomTextEditorProvider {
       vscode.workspace.onDidChangeTextDocument((e) => {
         if (e.document.uri.toString() !== document.uri.toString() || !ready || e.contentChanges.length === 0) return;
         clearTimeout(timer);
-        timer = setTimeout(() => post({ type: "update", text: document.getText() }), UPDATE_DEBOUNCE_MS);
+        timer = setTimeout(() => post({ type: "update", text: document.getText(), docVersion: document.version }), UPDATE_DEBOUNCE_MS);
       }),
       panel.onDidChangeViewState((e) => {
         if (e.webviewPanel.active) this.activeView = entry;
@@ -144,13 +166,19 @@ export class XmlGridEditorProvider implements vscode.CustomTextEditorProvider {
   }
 }
 
-function readSettings(): Partial<ViewSettings> {
+function readSettings(): ViewSettings {
   const cfg = vscode.workspace.getConfiguration("xmlGridView");
   return {
     copyWithHeader: cfg.get<boolean>("copyWithHeader", false),
     largeFileThreshold: Math.round(cfg.get<number>("largeFileThresholdMB", 50) * 1024 * 1024),
     debounceMs: UPDATE_DEBOUNCE_MS,
+    readOnly: cfg.get<boolean>("readOnly", false),
   };
+}
+
+/** Documents on read-only file systems (e.g. git: diffs, extension resources) can't be edited. */
+function isReadOnly(document: vscode.TextDocument): boolean {
+  return vscode.workspace.fs.isWritableFileSystem(document.uri.scheme) === false;
 }
 
 /** Opens (or focuses) the text editor beside the view, selects the range and centers it. */

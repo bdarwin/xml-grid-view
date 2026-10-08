@@ -13,9 +13,25 @@
       // Standalone harness: acts as the host. Open with ?file=<url> or drop a file onto the page.
       const send = (msg) => window.postMessage(msg, "*");
       let initialized = false;
+      let doc = "";
+      let docVersion = 1;
       async function start(text, name) {
-        send({ type: initialized ? "update" : "init", version: 1, fileName: name, text, theme: {}, settings: {} });
+        doc = text;
+        docVersion++;
+        send({ type: initialized ? "update" : "init", version: 1, fileName: name, text, docVersion, theme: {}, settings: {} });
         initialized = true;
+      }
+      // Acts like an editing host: applies edits, bumps the version, sends the new text.
+      function applyEdits(msg) {
+        if (msg.docVersion !== undefined && msg.docVersion !== docVersion) {
+          send({ type: "editResult", ok: false, message: "The document changed while editing; please try again." });
+          return;
+        }
+        for (const e of [...msg.edits].sort((a, b) => b.offset - a.offset)) doc = doc.slice(0, e.offset) + e.text + doc.slice(e.offset + e.length);
+        docVersion++;
+        window.__doc = doc;
+        send({ type: "update", text: doc, docVersion, fromEdit: true });
+        send({ type: "editResult", ok: true });
       }
       window.addEventListener("xgv-host", (e) => {
         const msg = e.detail;
@@ -23,6 +39,8 @@
           const file = new URLSearchParams(location.search).get("file");
           if (file) fetch(file).then((r) => r.text()).then((t) => start(t, file));
           else start('<catalog>\n  <book id="1"><title>Example</title><price>10</price></book>\n  <book id="2"><title>Drop an XML file here</title><price>20</price></book>\n</catalog>', "sample.xml");
+        } else if (msg.type === "edit") {
+          applyEdits(msg);
         } else if (msg.type === "copy") {
           navigator.clipboard?.writeText(msg.text).catch(() => {});
           console.log("host <- copy", JSON.stringify(msg.text));

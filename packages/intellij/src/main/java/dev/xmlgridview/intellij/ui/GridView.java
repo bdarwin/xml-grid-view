@@ -118,6 +118,11 @@ final class GridView extends JPanel implements UiDataProvider {
         String key = t == null || column < 0 ? null : t.columns().get(tbl.convertColumnIndexToModel(column)).key();
         boolean filtered = key != null && filter.get(key) != null;
         l.setIcon(filtered ? AllIcons.General.Filter : null);
+        if (t != null && column >= 0) {
+          GridColumn gc = t.columns().get(tbl.convertColumnIndexToModel(column));
+          l.setForeground(gc.kind() == GridColumn.Kind.ATTR ? XmlColors.attrName() : gc.kind() == GridColumn.Kind.TEXT ? l.getForeground() : XmlColors.tag());
+          l.setFont(l.getFont().deriveFont(java.awt.Font.BOLD));
+        }
         l.setHorizontalTextPosition(SwingConstants.LEADING);
         l.setToolTipText("Click to sort; right-click to filter");
       }
@@ -143,7 +148,7 @@ final class GridView extends JPanel implements UiDataProvider {
     table.addMouseListener(new MouseAdapter() {
       @Override
       public void mousePressed(MouseEvent e) {
-        if (e.getButton() != MouseEvent.BUTTON1 || e.isShiftDown() || e.isControlDown() || e.isMetaDown() || inspector == null) return;
+        if (e.getButton() != MouseEvent.BUTTON1 || e.getClickCount() != 1 || e.isShiftDown() || e.isControlDown() || e.isMetaDown() || inspector == null) return;
         int viewRow = table.rowAtPoint(e.getPoint());
         int viewCol = table.columnAtPoint(e.getPoint());
         GridTable t = model.table();
@@ -166,6 +171,18 @@ final class GridView extends JPanel implements UiDataProvider {
         int viewRow = table.rowAtPoint(e.getPoint());
         int viewCol = table.columnAtPoint(e.getPoint());
         if (viewRow < 0 || viewCol < 0) return;
+        GridTable t = model.table();
+        if (t != null && inspector != null && !t.columns().isEmpty()) {
+          int row = table.convertRowIndexToModel(viewRow);
+          int col = table.convertColumnIndexToModel(viewCol);
+          boolean value = t.columns().get(col).kind() != GridColumn.Kind.COMPLEX && t.cell(row, col) != null;
+          if (value) {
+            // Double-click a value: inspect it. Drill cells drill down; empty cells go to the source.
+            InspectTarget target = InspectTarget.ofGridCell(t, row, col);
+            if (target != null) inspector.accept(target);
+            return;
+          }
+        }
         activate(viewRow, viewCol, true);
       }
     });
@@ -504,7 +521,9 @@ final class GridView extends JPanel implements UiDataProvider {
       boolean current = here.equals(fs.currentCell());
       SimpleTextAttributes attrs = c.kind() == GridColumn.Kind.COMPLEX && t.cell(row, col) != null
                                    ? SimpleTextAttributes.LINK_PLAIN_ATTRIBUTES
-                                   : SimpleTextAttributes.REGULAR_ATTRIBUTES;
+                                   : c.kind() == GridColumn.Kind.ATTR && !selected
+                                     ? XmlColors.attrValueAttrs(SimpleTextAttributes.STYLE_PLAIN)
+                                     : SimpleTextAttributes.REGULAR_ATTRIBUTES;
       if (current) attrs = attrs.derive(SimpleTextAttributes.STYLE_BOLD, null, null, null);
       boolean enabled = SearchEngine.columnEnabled(c, fs.targets());
       if (fs.matcher() != null && enabled) {
@@ -525,7 +544,8 @@ final class GridView extends JPanel implements UiDataProvider {
       setIcon(inspect ? InspectAction.CELL_ICON : null);
       setIconOnTheRight(true);
       if (c.kind() == GridColumn.Kind.COMPLEX && t.cell(row, col) != null) setToolTipText("Double-click or Alt+Down to drill down");
-      else setToolTipText(inspect ? "Shift+Enter or click the icon to inspect the full value" : null);
+      else setToolTipText(inspect ? "Double-click, Shift+Enter or click the icon to inspect the full value" : null);
+      if (!selected) setBackground(XmlColors.stripe(viewRow, tbl.getBackground()));
     }
   }
 }

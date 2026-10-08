@@ -1,5 +1,6 @@
 package dev.xmlgridview.intellij.ui;
 
+import com.intellij.util.ui.JBUI;
 import com.intellij.openapi.application.ReadAction;
 import com.intellij.testFramework.fixtures.BasePlatformTestCase;
 import dev.xmlgridview.intellij.model.FlatRow;
@@ -119,6 +120,27 @@ public class ValueInspectorTest extends BasePlatformTestCase {
     assertEquals(List.of(0, "lines"), panel.pathForTest());
     assertEquals(2, panel.currentTable().rowCount());
     assertEquals("2", panel.currentTable().cell(1, 0));
+  }
+
+  public void testSelectedValueShownWrappedInDetailPane() throws Exception {
+    String story = "Once upon a time ".repeat(40).trim();
+    Object v = Json.parse("{\"story\": \"" + story + "\", \"n\": 1}");
+    ValueInspector.JsonTreePanel tree = ValueInspector.treePanelForTest(v);
+    tree.runSearch("story");
+    tree.step(1);
+    assertEquals(story, ValueInspector.treeDetailForTest(tree));
+
+    ValueInspector.JsonGridPanel grid = ValueInspector.gridPanelForTest(v);
+    assertEquals(story, ValueInspector.gridDetailForTest(grid, 0, 1));
+  }
+
+  public void testLongGridValuesWrapIntoTallerRows() throws Exception {
+    String story = "Once upon a time ".repeat(40).trim();
+    Object v = Json.parse("{\"story\": \"" + story + "\", \"n\": 1}");
+    ValueInspector.JsonGridPanel grid = ValueInspector.gridPanelForTest(v);
+    int tall = ValueInspector.gridRowHeightForTest(grid, 0, JBUI.scale(400));
+    int plain = ValueInspector.gridRowHeightForTest(grid, 1, JBUI.scale(400));
+    assertTrue("long value wraps (" + tall + " > " + plain + ")", tall > plain);
   }
 
   public void testDialogContentBuildsForJsonAndText() {

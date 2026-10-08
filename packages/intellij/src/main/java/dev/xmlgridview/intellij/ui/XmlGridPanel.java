@@ -654,6 +654,34 @@ public final class XmlGridPanel extends JPanel implements Disposable {
   }
 
   @TestOnly
+  public void setInspectorForTest(@NotNull java.util.function.Consumer<dev.xmlgridview.intellij.model.InspectTarget> opener) {
+    tree.setInspector(opener);
+    grid.setInspector(opener);
+  }
+
+  @TestOnly
+  public @Nullable java.util.Set<String> treeFilterForTest(String query) {
+    return tree.applyBoxFilterForTest(query);
+  }
+
+  /** Sends a real double-click to a grid cell (view coordinates). */
+  @TestOnly
+  public void doubleClickGridForTest(int viewRow, int viewCol) {
+    com.intellij.ui.table.JBTable t = grid.table();
+    t.setSize(com.intellij.util.ui.JBUI.scale(900), com.intellij.util.ui.JBUI.scale(600));
+    t.doLayout();
+    java.awt.Rectangle r = t.getCellRect(viewRow, viewCol, false);
+    int x = r.x + r.width / 2;
+    int y = r.y + r.height / 2;
+    for (int n = 1; n <= 2; n++) {
+      long time = System.currentTimeMillis();
+      t.dispatchEvent(new java.awt.event.MouseEvent(t, java.awt.event.MouseEvent.MOUSE_PRESSED, time, java.awt.event.InputEvent.BUTTON1_DOWN_MASK, x, y, n, false, java.awt.event.MouseEvent.BUTTON1));
+      t.dispatchEvent(new java.awt.event.MouseEvent(t, java.awt.event.MouseEvent.MOUSE_RELEASED, time, 0, x, y, n, false, java.awt.event.MouseEvent.BUTTON1));
+      t.dispatchEvent(new java.awt.event.MouseEvent(t, java.awt.event.MouseEvent.MOUSE_CLICKED, time, 0, x, y, n, false, java.awt.event.MouseEvent.BUTTON1));
+    }
+  }
+
+  @TestOnly
   public void showGridForTest(@NotNull XNode node, @Nullable String group) {
     showGrid(node, group, Map.of(), Map.of());
   }

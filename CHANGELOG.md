@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.1.2
+
+- IntelliJ: double-clicking a value opens the value inspector.
+  - It opens one window per value, and another double-click brings that
+    window to the front instead of opening a second.
+  - Double-clicking a name goes to the source, and double-clicking a
+    `{tag ×n}` cell drills down.
+- IntelliJ Flat: the Name column fits its content. It refits on
+  expand/collapse until you resize it; double-click the header to refit.
+- IntelliJ Grid: a **Filter nodes** box above the tree. It matches tag names,
+  attribute names and values, and text, and keeps matching nodes and their
+  ancestors.
+- IntelliJ value inspector: long text values wrap.
+  - Grid cells wrap, up to six lines.
+  - The Tree and Grid tabs have a wrapped pane showing the selected value in
+    full.
+- IntelliJ: more colour. Tags, attribute names and attribute values use your
+  scheme's XML colours, with distinct fallbacks when a theme leaves them close
+  to plain text. Rows have subtle stripes that keep the grid lines visible.
+
 ## 0.1.1
 
 - First marketplace release for VS Code, Open VSX and JetBrains.

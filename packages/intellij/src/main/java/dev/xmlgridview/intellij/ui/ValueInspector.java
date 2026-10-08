@@ -106,9 +106,21 @@ public final class ValueInspector extends DialogWrapper {
   private @Nullable JComponent preferredFocus;
   private boolean errorBanner;
 
+  /** Open inspectors by value, so a second request for the same value brings the window forward. */
+  private static final java.util.Map<String, ValueInspector> OPEN = new java.util.HashMap<>();
+
   public static void show(@NotNull Project project, @Nullable InspectTarget target) {
     if (target == null) return;
-    new ValueInspector(project, target).show();
+    String key = project.getLocationHash() + "\u0000" + target.title() + "\u0000" + target.text();
+    ValueInspector existing = OPEN.get(key);
+    if (existing != null && !existing.isDisposed() && existing.isShowing()) {
+      existing.toFront();
+      return;
+    }
+    ValueInspector dialog = new ValueInspector(project, target);
+    OPEN.put(key, dialog);
+    com.intellij.openapi.util.Disposer.register(dialog.getDisposable(), () -> OPEN.remove(key, dialog));
+    dialog.show();
   }
 
   private ValueInspector(@NotNull Project project, @NotNull InspectTarget target) {
@@ -310,6 +322,7 @@ public final class ValueInspector extends DialogWrapper {
     private final Object value;
     private final SearchTextField search = new SearchTextField(false);
     private final JBLabel counter = new JBLabel();
+    final ValueDetail detail = new ValueDetail();
     private @Nullable Matcher matcher;
     private final List<List<Object>> matches = new ArrayList<>();
     private int current = -1;
@@ -350,7 +363,11 @@ public final class ValueInspector extends DialogWrapper {
       right.add(toolbar.getComponent());
       north.add(right, BorderLayout.EAST);
       add(north, BorderLayout.NORTH);
-      add(ScrollPaneFactory.createScrollPane(tree, true), BorderLayout.CENTER);
+      add(detail.wrap(ScrollPaneFactory.createScrollPane(tree, true), "XmlGridView.JsonTree.detail"), BorderLayout.CENTER);
+      tree.addTreeSelectionListener(e -> {
+        Object last = e.getNewLeadSelectionPath() == null ? null : e.getNewLeadSelectionPath().getLastPathComponent();
+        if (last instanceof JsonNode n) detail.show(Json.isContainer(n.value) ? Json.pretty(n.value) : Json.primitiveText(n.value));
+      });
 
       search.addDocumentListener(new DocumentAdapter() {
         @Override
@@ -491,6 +508,9 @@ public final class ValueInspector extends DialogWrapper {
     private final Model model = new Model();
     private final JBTable table = new JBTable(model);
     private final TableRowSorter<Model> sorter = new TableRowSorter<>(model);
+    final ValueDetail detail = new ValueDetail();
+    private boolean rowHeightsPending;
+    private static final int MAX_WRAP_LINES = 6;
 
     JsonGridPanel(Object root) {
       super(new BorderLayout());
@@ -500,7 +520,7 @@ public final class ValueInspector extends DialogWrapper {
       table.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
       table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
       table.getTableHeader().setReorderingAllowed(false);
-      table.setDefaultRenderer(Object.class, new CellRenderer());
+      table.setDefaultRenderer(Object.class, new WrapRenderer());
       table.setDefaultEditor(Object.class, null);
       GridLines.apply(table);
       sorter.setRowFilter(new RowFilter<>() {
@@ -547,8 +567,18 @@ public final class ValueInspector extends DialogWrapper {
       north.add(filter);
       add(north, BorderLayout.NORTH);
       JScrollPane scroll = ScrollPaneFactory.createScrollPane(table, true);
+      table.getSelectionModel().addListSelectionListener(e -> showSelectedCell());
+      table.getColumnModel().getSelectionModel().addListSelectionListener(e -> showSelectedCell());
+      table.getColumnModel().addColumnModelListener(new javax.swing.event.TableColumnModelListener() {
+        @Override public void columnAdded(javax.swing.event.TableColumnModelEvent e) { }
+        @Override public void columnRemoved(javax.swing.event.TableColumnModelEvent e) { }
+        @Override public void columnMoved(javax.swing.event.TableColumnModelEvent e) { }
+        @Override public void columnMarginChanged(javax.swing.event.ChangeEvent e) { scheduleRowHeights(); }
+        @Override public void columnSelectionChanged(javax.swing.event.ListSelectionEvent e) { }
+      });
+      model.addTableModelListener(e -> scheduleRowHeights());
       scroll.setRowHeaderView(new RowNumberHeader(table));
-      add(scroll, BorderLayout.CENTER);
+      add(detail.wrap(scroll, "XmlGridView.JsonGrid.detail"), BorderLayout.CENTER);
       show(List.of());
     }
 
@@ -573,6 +603,51 @@ public final class ValueInspector extends DialogWrapper {
       }
       breadcrumb.revalidate();
       breadcrumb.repaint();
+    }
+
+    private void showSelectedCell() {
+      int row = table.getSelectionModel().getLeadSelectionIndex();
+      int col = table.getColumnModel().getSelectionModel().getLeadSelectionIndex();
+      if (model.table == null || row < 0 || col < 0 || row >= table.getRowCount() || col >= table.getColumnCount()) return;
+      Object cell = model.table.cell(table.convertRowIndexToModel(row), table.convertColumnIndexToModel(col));
+      if (cell instanceof JsonTable.Drill d) detail.show(d.label() + "  (double-click or Enter to open)");
+      else detail.show(cell == null ? "" : cell.toString());
+    }
+
+    /** Long values wrap inside their cells (up to a few lines); row heights follow column widths. */
+    private void scheduleRowHeights() {
+      if (rowHeightsPending) return;
+      rowHeightsPending = true;
+      javax.swing.SwingUtilities.invokeLater(() -> {
+        rowHeightsPending = false;
+        updateRowHeights();
+      });
+    }
+
+    private void updateRowHeights() {
+      if (model.table == null) return;
+      javax.swing.JTextArea probe = new javax.swing.JTextArea();
+      probe.setLineWrap(true);
+      probe.setWrapStyleWord(true);
+      probe.setFont(table.getFont());
+      int lineH = table.getFontMetrics(table.getFont()).getHeight();
+      int base = JBUI.scale(22);
+      int maxH = Math.max(base, lineH * MAX_WRAP_LINES + JBUI.scale(6));
+      int rows = Math.min(table.getRowCount(), 5_000); // keep this cheap for huge arrays
+      for (int vr = 0; vr < rows; vr++) {
+        int h = base;
+        int r = table.convertRowIndexToModel(vr);
+        for (int vc = 0; vc < table.getColumnCount(); vc++) {
+          Object cell = model.table.cell(r, table.convertColumnIndexToModel(vc));
+          if (!(cell instanceof String str) || str.length() < 20) continue;
+          int w = table.getColumnModel().getColumn(vc).getWidth() - JBUI.scale(8);
+          if (w <= 0) continue;
+          probe.setText(str);
+          probe.setSize(w, Short.MAX_VALUE);
+          h = Math.max(h, Math.min(maxH, probe.getPreferredSize().height + JBUI.scale(4)));
+        }
+        if (table.getRowHeight(vr) != h) table.setRowHeight(vr, h);
+      }
     }
 
     private void drill(int viewRow, int viewCol) {
@@ -687,10 +762,35 @@ public final class ValueInspector extends DialogWrapper {
       }
     }
 
+    /** Renders long plain values word-wrapped; everything else goes to the colored renderer. */
+    private final class WrapRenderer implements javax.swing.table.TableCellRenderer {
+      private final CellRenderer colored = new CellRenderer();
+      private final javax.swing.JTextArea area = new javax.swing.JTextArea();
+
+      WrapRenderer() {
+        area.setLineWrap(true);
+        area.setWrapStyleWord(true);
+        area.setBorder(JBUI.Borders.empty(2, 4));
+      }
+
+      @Override
+      public java.awt.Component getTableCellRendererComponent(JTable tbl, Object value, boolean selected, boolean hasFocus, int row, int column) {
+        Object cell = model.table == null ? null : model.table.cell(tbl.convertRowIndexToModel(row), tbl.convertColumnIndexToModel(column));
+        boolean wraps = cell instanceof String str && tbl.getRowHeight(row) > JBUI.scale(22) && str.length() >= 20;
+        if (!wraps) return colored.getTableCellRendererComponent(tbl, value, selected, hasFocus, row, column);
+        area.setText((String)cell);
+        area.setFont(tbl.getFont());
+        area.setForeground(selected ? tbl.getSelectionForeground() : tbl.getForeground());
+        area.setBackground(selected ? tbl.getSelectionBackground() : XmlColors.stripe(row, tbl.getBackground()));
+        return area;
+      }
+    }
+
     private final class CellRenderer extends ColoredTableCellRenderer {
       @Override
       protected void customizeCellRenderer(@NotNull JTable tbl, @Nullable Object value, boolean selected, boolean hasFocus, int row,
                                            int column) {
+        if (!selected) setBackground(XmlColors.stripe(row, tbl.getBackground()));
         if (model.table == null) return;
         int r = tbl.convertRowIndexToModel(row);
         int c = tbl.convertColumnIndexToModel(column);
@@ -728,6 +828,25 @@ public final class ValueInspector extends DialogWrapper {
   @TestOnly
   static JsonTreePanel treePanelForTest(@NotNull Object json) {
     return new JsonTreePanel(json);
+  }
+
+  @TestOnly
+  static String treeDetailForTest(@NotNull JsonTreePanel panel) {
+    return panel.detail.textForTest();
+  }
+
+  @TestOnly
+  static String gridDetailForTest(@NotNull JsonGridPanel panel, int viewRow, int viewCol) {
+    panel.table.changeSelection(viewRow, viewCol, false, false);
+    return panel.detail.textForTest();
+  }
+
+  @TestOnly
+  static int gridRowHeightForTest(@NotNull JsonGridPanel panel, int viewRow, int width) {
+    panel.table.setSize(width, JBUI.scale(400));
+    for (int c = 0; c < panel.table.getColumnCount(); c++) panel.table.getColumnModel().getColumn(c).setWidth(width / panel.table.getColumnCount());
+    panel.updateRowHeights();
+    return panel.table.getRowHeight(viewRow);
   }
 
   @TestOnly

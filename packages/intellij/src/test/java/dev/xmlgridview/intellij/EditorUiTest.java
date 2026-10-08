@@ -86,6 +86,23 @@ public class EditorUiTest extends BasePlatformTestCase {
     assertEquals(book2.start(), textEditor.getCaretModel().getOffset());
   }
 
+  public void testDoubleClickGridValueOpensInspector() {
+    XmlGridPanel panel = open(XML);
+    panel.showGridForTest(panel.model().root(), "book");
+    java.util.List<dev.xmlgridview.intellij.model.InspectTarget> opened = new java.util.ArrayList<>();
+    panel.setInspectorForTest(opened::add);
+    panel.doubleClickGridForTest(1, 2); // row b2, column "title"
+    assertEquals("double-click a value opens exactly one inspector", 1, opened.size());
+    assertEquals("Le Chat", opened.get(0).text());
+  }
+
+  public void testTreeFilterKeepsMatchesAndAncestors() {
+    XmlGridPanel panel = open(XML);
+    assertEquals(java.util.Set.of("0", "0/1", "0/1/0"), panel.treeFilterForTest("chat"));
+    assertEquals("attribute values match too", java.util.Set.of("0", "0/0", "0/2"), panel.treeFilterForTest("en"));
+    assertNull("empty filter shows everything", panel.treeFilterForTest(""));
+  }
+
   public void testColumnFiltersCombineWithAnd() {
     XmlGridPanel panel = open(XML);
     XNode root = panel.model().root();

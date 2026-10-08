@@ -1,5 +1,10 @@
 package dev.xmlgridview.intellij.ui;
 
+import com.intellij.util.ui.JBUI;
+import com.intellij.util.Alarm;
+import com.intellij.ui.SearchTextField;
+import com.intellij.ui.DocumentAdapter;
+import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.icons.AllIcons;
 import com.intellij.ide.util.treeView.AbstractTreeStructure;
 import com.intellij.ide.util.treeView.NodeDescriptor;
@@ -60,6 +65,12 @@ final class XmlTreeView extends JPanel {
   private final Tree tree;
   private final Supplier<FindState> findState;
   private boolean suppressSelectionEvents;
+  private final SearchTextField filterField = new SearchTextField(false);
+  private final Alarm filterAlarm;
+  /** Nodes kept by the Find bar's "show only matches", or null. */
+  private @Nullable Collection<XNode> findFilter;
+  /** Nodes matching the filter box, or null when it is empty. */
+  private @Nullable Collection<XNode> boxFilter;
   private @Nullable Consumer<InspectTarget> inspector;
 
   XmlTreeView(@NotNull Disposable parent, @NotNull Supplier<FindState> findState,
@@ -108,6 +119,81 @@ final class XmlTreeView extends JPanel {
     });
     PopupHandler.installPopupMenu(tree, menu, "XmlGridView.Tree");
     add(ScrollPaneFactory.createScrollPane(tree, true), BorderLayout.CENTER);
+
+    // "Filter nodes": keeps elements whose tag, attribute names/values or text contain the text.
+    filterAlarm = new Alarm(Alarm.ThreadToUse.POOLED_THREAD, parent);
+    filterField.getTextEditor().getEmptyText().setText("Filter nodes (tag, attribute, text)");
+    filterField.addDocumentListener(new DocumentAdapter() {
+      @Override
+      protected void textChanged(@NotNull javax.swing.event.DocumentEvent e) {
+        scheduleBoxFilter();
+      }
+    });
+    filterField.setBorder(JBUI.Borders.empty(2, 4));
+    add(filterField, BorderLayout.NORTH);
+  }
+
+  private void scheduleBoxFilter() {
+    String q = filterField.getText().trim().toLowerCase(java.util.Locale.ROOT);
+    filterAlarm.cancelAllRequests();
+    filterAlarm.addRequest(() -> {
+      XmlDocumentModel m = structure.model;
+      List<XNode> hits = null;
+      if (!q.isEmpty() && m != null && m.root() != null) {
+        hits = new ArrayList<>();
+        java.util.ArrayDeque<XNode> stack = new java.util.ArrayDeque<>();
+        stack.push(m.root());
+        while (!stack.isEmpty()) {
+          XNode n = stack.pop();
+          if (matchesBox(n, q)) hits.add(n);
+          for (int i = n.children().size() - 1; i >= 0; i--) stack.push(n.children().get(i));
+        }
+      }
+      List<XNode> result = hits;
+      ApplicationManager.getApplication().invokeLater(() -> {
+        boxFilter = result;
+        applyFilters().whenComplete((x, err) -> ApplicationManager.getApplication().invokeLater(() -> {
+          if (result != null && !result.isEmpty()) {
+            expandPaths(result.stream().limit(500).map(n -> n.parent() == null ? n.path() : n.parent().path()).toList());
+          }
+        }));
+      });
+    }, 200);
+  }
+
+  private static boolean matchesBox(XNode n, String q) {
+    if (n.tag().toLowerCase(java.util.Locale.ROOT).contains(q)) return true;
+    for (XAttr a : n.attrs()) {
+      if (a.name().toLowerCase(java.util.Locale.ROOT).contains(q) || a.value().toLowerCase(java.util.Locale.ROOT).contains(q)) return true;
+    }
+    return n.text().toLowerCase(java.util.Locale.ROOT).contains(q);
+  }
+
+  /** Visible nodes: the filter box and Find's "show only matches", combined (both must match). */
+  private CompletableFuture<?> applyFilters() {
+    Set<XNode> box = closeOverAncestors(boxFilter);
+    Set<XNode> find = closeOverAncestors(findFilter);
+    Set<XNode> visible;
+    if (box == null) visible = find;
+    else if (find == null) visible = box;
+    else {
+      visible = new HashSet<>(box);
+      visible.retainAll(find);
+    }
+    if (visible == null && structure.visible == null) return CompletableFuture.completedFuture(null);
+    structure.visible = visible;
+    return structureModel.invalidateAsync();
+  }
+
+  private static @Nullable Set<XNode> closeOverAncestors(@Nullable Collection<XNode> nodes) {
+    if (nodes == null) return null;
+    Set<XNode> out = new HashSet<>();
+    for (XNode n : nodes) {
+      for (XNode a = n; a != null && out.add(a); a = a.parent()) {
+        // the node and its ancestors
+      }
+    }
+    return out;
   }
 
   void setInspector(@NotNull Consumer<InspectTarget> inspector) {
@@ -126,25 +212,18 @@ final class XmlTreeView extends JPanel {
   CompletableFuture<?> setModel(@Nullable XmlDocumentModel model) {
     structure.model = model;
     structure.visible = null;
-    return structureModel.invalidateAsync();
+    findFilter = null;
+    boxFilter = null;
+    CompletableFuture<?> f = structureModel.invalidateAsync();
+    // Re-apply the filter box to the new model.
+    if (!filterField.getText().isBlank()) f.whenComplete((x, err) -> ApplicationManager.getApplication().invokeLater(this::scheduleBoxFilter));
+    return f;
   }
 
-  /** Restricts the tree to {@code nodes} and their ancestors, or shows everything when null. */
+  /** Find's "show only matches": restricts the tree to {@code nodes} and their ancestors (null = off). */
   CompletableFuture<?> setFilter(@Nullable Collection<XNode> nodes) {
-    if (nodes == null) {
-      if (structure.visible == null) return CompletableFuture.completedFuture(null);
-      structure.visible = null;
-    }
-    else {
-      Set<XNode> visible = new HashSet<>();
-      for (XNode n : nodes) {
-        for (XNode a = n; a != null && visible.add(a); a = a.parent()) {
-          // add the node and its ancestors
-        }
-      }
-      structure.visible = visible;
-    }
-    return structureModel.invalidateAsync();
+    findFilter = nodes;
+    return applyFilters();
   }
 
   @Nullable XNode selected() {
@@ -239,7 +318,9 @@ final class XmlTreeView extends JPanel {
       if (n == null) return;
       FindState fs = findState.get();
       boolean hit = fs.matchedNodes().contains(n);
-      SimpleTextAttributes tagAttrs = hit ? SimpleTextAttributes.REGULAR_BOLD_ATTRIBUTES : SimpleTextAttributes.REGULAR_ATTRIBUTES;
+      SimpleTextAttributes tagAttrs = selected && tree.hasFocus()
+                                      ? new SimpleTextAttributes(hit ? SimpleTextAttributes.STYLE_BOLD : SimpleTextAttributes.STYLE_PLAIN, null)
+                                      : XmlColors.tagAttrs(hit ? SimpleTextAttributes.STYLE_BOLD : SimpleTextAttributes.STYLE_PLAIN);
       if (n == fs.currentNode()) {
         tagAttrs = new SimpleTextAttributes(tagAttrs.getStyle() | SimpleTextAttributes.STYLE_SEARCH_MATCH, null);
       }
@@ -247,8 +328,11 @@ final class XmlTreeView extends JPanel {
       for (String k : KEY_ATTRS) {
         XAttr a = n.attr(k);
         if (a == null) continue;
-        append(" " + k + "=", SimpleTextAttributes.GRAYED_ATTRIBUTES);
-        Highlight.append(this, a.value(), SimpleTextAttributes.GRAYED_ATTRIBUTES, fs.targets().attrValues() ? fs.matcher() : null);
+        boolean plain = selected && tree.hasFocus();
+        append(" " + k, plain ? SimpleTextAttributes.REGULAR_ATTRIBUTES : XmlColors.attrNameAttrs(SimpleTextAttributes.STYLE_PLAIN));
+        append("=", SimpleTextAttributes.GRAYED_ATTRIBUTES);
+        Highlight.append(this, a.value(), plain ? SimpleTextAttributes.REGULAR_ATTRIBUTES : XmlColors.attrValueAttrs(SimpleTextAttributes.STYLE_PLAIN),
+                         fs.targets().attrValues() ? fs.matcher() : null);
       }
       if (!n.children().isEmpty()) append("  (" + n.children().size() + ")", SimpleTextAttributes.GRAYED_SMALL_ATTRIBUTES);
       else if (!n.text().isEmpty()) {
@@ -328,5 +412,30 @@ final class XmlTreeView extends JPanel {
     public Object getElement() {
       return element;
     }
+  }
+
+  /** Applies the filter box synchronously (tests). Returns the visible nodes' paths, or null when unfiltered. */
+  @org.jetbrains.annotations.TestOnly
+  @Nullable Set<String> applyBoxFilterForTest(String query) {
+    String q = query.trim().toLowerCase(java.util.Locale.ROOT);
+    XmlDocumentModel m = structure.model;
+    List<XNode> hits = null;
+    if (!q.isEmpty() && m != null && m.root() != null) {
+      hits = new ArrayList<>();
+      java.util.ArrayDeque<XNode> stack = new java.util.ArrayDeque<>();
+      stack.push(m.root());
+      while (!stack.isEmpty()) {
+        XNode n = stack.pop();
+        if (matchesBox(n, q)) hits.add(n);
+        n.children().forEach(stack::push);
+      }
+    }
+    boxFilter = hits;
+    applyFilters();
+    Set<XNode> v = structure.visible;
+    if (v == null) return null;
+    Set<String> out = new java.util.TreeSet<>();
+    for (XNode n : v) out.add(n.path());
+    return out;
   }
 }

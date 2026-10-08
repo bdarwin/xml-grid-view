@@ -154,6 +154,27 @@ public class FlatViewTest extends BasePlatformTestCase {
     assertTrue(panel.inspectTargetForTest().title().endsWith("› @id"));
   }
 
+  public void testDoubleClickValueOpensInspectorAndNameNavigates() {
+    FlatPanel panel = open(XML);
+    java.util.List<dev.xmlgridview.intellij.model.InspectTarget> opened = new java.util.ArrayList<>();
+    panel.setInspectorOpenerForTest(opened::add);
+    panel.doubleClickForTest(3, 1); // author value
+    assertEquals("double-click a value opens exactly one inspector", 1, opened.size());
+    assertEquals("Gambardella, Matthew", opened.get(0).text());
+
+    panel.doubleClickForTest(3, 0); // author name -> source
+    assertEquals("double-click a name does not inspect", 1, opened.size());
+    Editor text = FileEditorManager.getInstance(getProject()).getSelectedTextEditor();
+    assertNotNull(text);
+    assertEquals(XML.indexOf("<author>"), text.getCaretModel().getOffset());
+  }
+
+  public void testNameColumnFitsItsContent() {
+    FlatPanel panel = open(XML);
+    assertTrue("name column (" + panel.nameColumnWidthForTest() + ") fits the deepest name (" + panel.nameContentWidthForTest() + ")",
+               panel.nameColumnWidthForTest() >= panel.nameContentWidthForTest());
+  }
+
   public void testMalformedUpdateKeepsLastGoodModel() {
     FlatPanel panel = open(XML);
     XmlDocumentModel good = panel.model();

@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<catalog>
+  <book id="bk101">
+    <title>XML Developer's Guide</title>
+    <description>An in-depth look at creating applications with XML. Chapter one begins on a rainy night in Zürich,
+      where a lone developer discovers that every configuration file in the company is secretly XML.
+      Chapter two follows her quest to tame them all with grids, trees and the occasional regular expression.</description>
+    <metadata><![CDATA[{"isbn": "978-0-13-468599-1", "id": 12345678901234567890, "price": {"amount": 44.95, "currency": "USD"},
+      "reviews": [{"user": "ann", "stars": 5, "text": "Great"}, {"user": "bob", "stars": 4, "text": "Solid", "verified": true}],
+      "tags": ["xml", "guide"], "draft": false, "notes": null}]]></metadata>
+    <broken>{"a": 1, "b": [1, 2,]}</broken>
+  </book>
+</catalog>

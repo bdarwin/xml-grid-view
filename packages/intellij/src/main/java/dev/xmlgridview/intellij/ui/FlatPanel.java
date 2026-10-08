@@ -81,6 +81,10 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
   private final IntConsumer navigator;
   private final Project project;
   private final InspectAction inspectAction;
+  private boolean userSizedName;
+  /** Opens the value inspector; replaceable in tests. */
+  private java.util.function.Consumer<InspectTarget> inspectorOpener;
+  private boolean fittingName;
   private final ModelLoader loader;
   private final Alarm searchAlarm = new Alarm(Alarm.ThreadToUse.SWING_THREAD, this);
   private final FindBar findBar;
@@ -149,17 +153,35 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
     // Spreadsheet-style rectangular cell selection (any rows x Name and/or Value).
     table.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
     table.setCellSelectionEnabled(true);
-    table.setAutoResizeMode(JTable.AUTO_RESIZE_LAST_COLUMN);
+    // Columns are sized explicitly: Name fits its content, Value fills the rest (see fitColumns).
+    table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
     GridLines.apply(table);
     table.getEmptyText().setText("No XML elements");
     table.getTableHeader().setReorderingAllowed(false);
+    // A manual drag of the Name column's edge stops automatic fitting.
+    table.getTableHeader().addMouseListener(new MouseAdapter() {
+      @Override
+      public void mouseReleased(MouseEvent e) {
+        javax.swing.table.TableColumn resized = table.getTableHeader().getResizingColumn();
+        if (resized != null && !fittingName && resized.getModelIndex() == NAME_COL) userSizedName = true;
+      }
+
+      @Override
+      public void mouseClicked(MouseEvent e) {
+        // Double-click the header to fit again.
+        if (e.getClickCount() == 2) {
+          userSizedName = false;
+          fitNameColumn();
+        }
+      }
+    });
     table.setDefaultRenderer(Object.class, new Renderer());
     table.setDefaultEditor(Object.class, null);
     table.addMouseListener(new MouseAdapter() {
       @Override
       public void mousePressed(MouseEvent e) {
         if (e.getButton() != MouseEvent.BUTTON1) return;
-        if (clickedInspectIcon(e)) return;
+        if (e.getClickCount() == 1 && clickedInspectIcon(e)) return;
         int row = table.rowAtPoint(e.getPoint());
         if (row >= 0 && table.columnAtPoint(e.getPoint()) == NAME_COL && inTwisty(row, e.getX())) {
           toggle(row);
@@ -171,8 +193,15 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
       public void mouseClicked(MouseEvent e) {
         if (e.getClickCount() != 2 || e.getButton() != MouseEvent.BUTTON1) return;
         int row = table.rowAtPoint(e.getPoint());
-        if (row < 0 || (table.columnAtPoint(e.getPoint()) == NAME_COL && inTwisty(row, e.getX()))) return;
-        navigateRow(row);
+        int viewCol = table.columnAtPoint(e.getPoint());
+        if (row < 0 || viewCol < 0) return;
+        if (table.convertColumnIndexToModel(viewCol) == VALUE_COL) {
+          // Double-click a value: inspect it (one window per value).
+          inspectorOpener.accept(InspectTarget.ofFlatRow(rowsModel.rows.get(row)));
+        }
+        else if (!inTwisty(row, e.getX())) {
+          navigateRow(row);
+        }
       }
     });
 
@@ -184,10 +213,31 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
     action(this::left, new KeyboardShortcut(KeyStroke.getKeyStroke(KeyEvent.VK_LEFT, 0), null));
     action(this::right, new KeyboardShortcut(KeyStroke.getKeyStroke(KeyEvent.VK_RIGHT, 0), null));
 
-    inspectAction = InspectAction.install(table, this, this::inspectTarget, t -> ValueInspector.show(this.project, t));
+    inspectorOpener = t -> ValueInspector.show(this.project, t);
+    inspectAction = InspectAction.install(table, this, this::inspectTarget, t -> inspectorOpener.accept(t));
     PopupHandler.installPopupMenu(table, popupActions(), "XmlGridView.Flat");
     JScrollPane scroll = ScrollPaneFactory.createScrollPane(table, true);
     scroll.setRowHeaderView(new RowNumberHeader(table));
+    scroll.getViewport().addComponentListener(new java.awt.event.ComponentAdapter() {
+      @Override
+      public void componentResized(java.awt.event.ComponentEvent e) {
+        fillValueColumn();
+      }
+    });
+    // Dragging the Name edge also re-fills the Value column.
+    table.getColumnModel().addColumnModelListener(new javax.swing.event.TableColumnModelListener() {
+      @Override public void columnAdded(javax.swing.event.TableColumnModelEvent e) { }
+      @Override public void columnRemoved(javax.swing.event.TableColumnModelEvent e) { }
+      @Override public void columnMoved(javax.swing.event.TableColumnModelEvent e) { }
+      @Override public void columnSelectionChanged(javax.swing.event.ListSelectionEvent e) { }
+      @Override
+      public void columnMarginChanged(javax.swing.event.ChangeEvent e) {
+        if (!fittingName && table.getTableHeader().getResizingColumn() != null
+            && table.getTableHeader().getResizingColumn().getModelIndex() == NAME_COL) {
+          javax.swing.SwingUtilities.invokeLater(FlatPanel.this::fillValueColumn);
+        }
+      }
+    });
     add(scroll, BorderLayout.CENTER);
 
     new DumbAwareAction() {
@@ -240,12 +290,11 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
 
   private void modelChanged(@NotNull XmlDocumentModel built) {
     String selected = selectedKey();
-    boolean first = model == null;
     model = built;
     // Collapsed paths that no longer exist are dropped; the rest carry over.
     collapsed.removeIf(p -> built.byPath(p) == null);
     rebuildRows(selected);
-    if (first) fitNameColumn();
+    fitNameColumn();
     if (findBar.isVisible()) scheduleSearch(0);
   }
 
@@ -268,22 +317,47 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
       rows = FlatRow.build(m, n -> collapsed.contains(n.path()), null);
     }
     rowsModel.setRows(rows);
+    fitNameColumn();
     if (selectKey != null) selectKey(selectKey);
   }
 
+  /** Sizes the Name column to its visible content (sampled), unless the user has resized it. */
   private void fitNameColumn() {
+    if (userSizedName) return;
     FontMetrics fm = table.getFontMetrics(table.getFont());
+    FontMetrics bold = table.getFontMetrics(table.getFont().deriveFont(java.awt.Font.BOLD));
     int indent = indentWidth();
     int icon = AllIcons.General.ArrowDown.getIconWidth();
-    int w = fm.stringWidth("Name");
+    int w = bold.stringWidth("Name");
     List<FlatRow> rows = rowsModel.rows;
     for (int i = 0; i < Math.min(rows.size(), WIDTH_SAMPLE); i++) {
       FlatRow r = rows.get(i);
-      w = Math.max(w, r.depth() * indent + icon + fm.stringWidth(r.name()));
+      // Current find hits are bold, so measure with the bold font to be safe.
+      w = Math.max(w, r.depth() * indent + icon + Math.max(fm.stringWidth(r.name()), bold.stringWidth(r.name())));
     }
-    w = Math.min(w + JBUI.scale(24), JBUI.scale(480));
-    table.getColumnModel().getColumn(NAME_COL).setPreferredWidth(w);
-    table.getColumnModel().getColumn(VALUE_COL).setPreferredWidth(Math.max(JBUI.scale(200), getWidth() - w));
+    // Icon-text gap, cell insets and a little air.
+    w = Math.min(w + JBUI.scale(28), Math.max(JBUI.scale(160), (int)(getWidth() * 0.6)));
+    javax.swing.table.TableColumn col = table.getColumnModel().getColumn(table.convertColumnIndexToView(NAME_COL));
+    fittingName = true;
+    try {
+      col.setPreferredWidth(w);
+      col.setWidth(w);
+    }
+    finally {
+      fittingName = false;
+    }
+    fillValueColumn();
+  }
+
+  /** The Value column takes the remaining viewport width (at least a readable minimum). */
+  private void fillValueColumn() {
+    javax.swing.table.TableColumn name = table.getColumnModel().getColumn(table.convertColumnIndexToView(NAME_COL));
+    javax.swing.table.TableColumn value = table.getColumnModel().getColumn(table.convertColumnIndexToView(VALUE_COL));
+    java.awt.Container viewport = table.getParent();
+    int available = viewport != null ? viewport.getWidth() : getWidth();
+    int w = Math.max(JBUI.scale(240), available - name.getWidth());
+    value.setPreferredWidth(w);
+    value.setWidth(w);
   }
 
   private static int indentWidth() {
@@ -496,7 +570,7 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
     Rectangle cell = table.getCellRect(row, viewCol, false);
     if (!InspectAction.hitsCellIcon(e.getX(), cell.x, cell.width)) return false;
     table.changeSelection(row, viewCol, false, false);
-    ValueInspector.show(project, InspectTarget.ofFlatRow(r));
+    inspectorOpener.accept(InspectTarget.ofFlatRow(r));
     e.consume();
     return true;
   }
@@ -671,8 +745,9 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
         boolean filtering = findBar.isVisible() && findBar.showOnlyMatches() && fs.active();
         if (r.expandable() && !filtering) setIcon(isExpanded(r) ? AllIcons.General.ArrowDown : AllIcons.General.ArrowRight);
         else setIcon(EmptyIcon.create(icon));
-        SimpleTextAttributes base = attr ? SimpleTextAttributes.GRAYED_ATTRIBUTES : SimpleTextAttributes.REGULAR_ATTRIBUTES;
-        if (isCurrent) base = base.derive(SimpleTextAttributes.STYLE_BOLD, null, null, null);
+        int style = isCurrent ? SimpleTextAttributes.STYLE_BOLD : SimpleTextAttributes.STYLE_PLAIN;
+        SimpleTextAttributes base = selected ? new SimpleTextAttributes(style, null)
+                                             : attr ? XmlColors.attrNameAttrs(style) : XmlColors.tagAttrs(style);
         boolean highlight = attr ? fs.targets().attrNames() : fs.targets().names();
         if (attr) {
           append("@", base);
@@ -685,7 +760,8 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
       }
       else {
         setIpad(JBUI.emptyInsets());
-        SimpleTextAttributes base = isCurrent ? SimpleTextAttributes.REGULAR_BOLD_ATTRIBUTES : SimpleTextAttributes.REGULAR_ATTRIBUTES;
+        int style = isCurrent ? SimpleTextAttributes.STYLE_BOLD : SimpleTextAttributes.STYLE_PLAIN;
+        SimpleTextAttributes base = attr && !selected ? XmlColors.attrValueAttrs(style) : new SimpleTextAttributes(style, null);
         String raw = r.value();
         String shown = oneLine(raw);
         boolean highlight = attr ? fs.targets().attrValues() : fs.targets().text();
@@ -693,8 +769,9 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
         boolean inspect = InspectAction.worthInspecting(raw);
         setIcon(inspect ? InspectAction.CELL_ICON : null);
         setIconOnTheRight(true);
-        setToolTipText(inspect ? "Shift+Enter or click the icon to inspect the full value" : null);
+        setToolTipText(inspect ? "Double-click, Shift+Enter or click the icon to inspect the full value" : null);
       }
+      if (!selected) setBackground(XmlColors.stripe(row, tbl.getBackground()));
     }
 
     private boolean currentKeyIs(String key) {
@@ -742,6 +819,41 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
   @TestOnly
   public List<FlatRow> visibleRows() {
     return rowsModel.rows;
+  }
+
+  @TestOnly
+  public void setInspectorOpenerForTest(java.util.function.Consumer<InspectTarget> opener) {
+    inspectorOpener = opener;
+  }
+
+  /** Sends a real double-click to the cell (layout is forced so cell geometry is valid). */
+  @TestOnly
+  public void doubleClickForTest(int row, int modelCol) {
+    table.setSize(JBUI.scale(900), JBUI.scale(600));
+    table.doLayout();
+    int viewCol = table.convertColumnIndexToView(modelCol);
+    java.awt.Rectangle r = table.getCellRect(row, viewCol, false);
+    int x = r.x + r.width / 2;
+    int y = r.y + r.height / 2;
+    for (int n = 1; n <= 2; n++) {
+      long t = System.currentTimeMillis();
+      table.dispatchEvent(new MouseEvent(table, MouseEvent.MOUSE_PRESSED, t, MouseEvent.BUTTON1_DOWN_MASK, x, y, n, false, MouseEvent.BUTTON1));
+      table.dispatchEvent(new MouseEvent(table, MouseEvent.MOUSE_RELEASED, t, 0, x, y, n, false, MouseEvent.BUTTON1));
+      table.dispatchEvent(new MouseEvent(table, MouseEvent.MOUSE_CLICKED, t, 0, x, y, n, false, MouseEvent.BUTTON1));
+    }
+  }
+
+  @TestOnly
+  public int nameColumnWidthForTest() {
+    return table.getColumnModel().getColumn(table.convertColumnIndexToView(NAME_COL)).getWidth();
+  }
+
+  @TestOnly
+  public int nameContentWidthForTest() {
+    java.awt.FontMetrics fm = table.getFontMetrics(table.getFont());
+    int w = 0;
+    for (FlatRow r : rowsModel.rows) w = Math.max(w, r.depth() * indentWidth() + AllIcons.General.ArrowDown.getIconWidth() + fm.stringWidth(r.name()));
+    return w;
   }
 
   @TestOnly

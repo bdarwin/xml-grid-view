@@ -12,6 +12,16 @@ Releases are tag-driven. When you push `vX.Y.Z`, the
 5. Publishes to each marketplace whose token secret is set. Marketplaces
    without a token are skipped.
 
+## Publishing an existing release
+
+After adding a token, publish an existing tag without cutting a new version.
+Go to the **Actions tab → Publish release → Run workflow**, or run
+`gh workflow run publish.yml -f tag=v0.1.1`.
+
+This downloads the release's `.vsix` and signed plugin zip, then uploads them
+to every store whose token is set. It also creates the Open VSX `bdarwin`
+namespace the first time.
+
 ## Cutting a release
 
 ```sh

@@ -1,0 +1,53 @@
+name: Publish release
+
+# Publishes the assets of an existing GitHub release to the marketplaces, e.g. after
+# adding a token secret. Run from the Actions tab (or `gh workflow run publish.yml -f tag=v0.1.1`).
+# Each store is skipped when its token secret is not set.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to publish (e.g. v0.1.1)
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ inputs.tag }}
+      GH_TOKEN: ${{ github.token }}
+      VSCE_PAT: ${{ secrets.VSCE_PAT }}
+      OVSX_PAT: ${{ secrets.OVSX_PAT }}
+      JETBRAINS_PUBLISH_TOKEN: ${{ secrets.JETBRAINS_PUBLISH_TOKEN }}
+    steps:
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Download release assets
+        run: |
+          gh release download "$TAG" -R "$GITHUB_REPOSITORY" -D assets
+          ls -la assets
+      - name: Publish to VS Code Marketplace
+        if: env.VSCE_PAT != ''
+        run: npx --yes @vscode/vsce@3 publish --packagePath assets/*.vsix
+      - name: Publish to Open VSX
+        if: env.OVSX_PAT != ''
+        run: |
+          # The namespace has to exist once; "already exists" is fine.
+          npx --yes ovsx@0.10 create-namespace bdarwin || true
+          npx --yes ovsx@0.10 publish assets/*.vsix
+      - name: Publish to JetBrains Marketplace
+        if: env.JETBRAINS_PUBLISH_TOKEN != ''
+        run: |
+          zip=$(ls assets/*-signed.zip 2>/dev/null || ls assets/*.zip)
+          code=$(curl -sS -o response.txt -w '%{http_code}' \
+            -H "Authorization: Bearer $JETBRAINS_PUBLISH_TOKEN" \
+            -F pluginId=io.github.bdarwin.xmlgridview \
+            -F file=@"$zip" \
+            https://plugins.jetbrains.com/plugin/uploadPlugin)
+          cat response.txt; echo
+          test "$code" -ge 200 && test "$code" -lt 300

@@ -26,7 +26,9 @@ export function isFilterActive(f: ColumnFilter | undefined): boolean {
 /** Display string of a cell. */
 export function cellString(t: GridTable, row: number, col: number): string {
   const ncols = t.columns.length;
-  return cellText(t.columns[col], t.cells[row * ncols + col]);
+  // JSON tables carry their own labels for drill cells ("{ 3 keys }").
+  const label = (t as GridTable & { labels?: (string | null)[] }).labels?.[row * ncols + col];
+  return label ?? cellText(t.columns[col], t.cells[row * ncols + col]);
 }
 
 /**
@@ -165,7 +167,9 @@ export const MIN_COL = 48;
 export const MAX_COL = 480;
 
 /** Width that fits the header and a sample of cells (first rows of the view). */
-export function autoFitWidth(t: GridTable, view: Int32Array, col: number, font: string, headerFont: string): number {
+export function autoFitWidth(t: GridTable, view: Int32Array, col: number, font: string, headerFont: string, monoFont = font): number {
+  // Complex `{tag ×n}` cells render in the monospace font.
+  if (t.columns[col].kind === "complex") font = monoFont;
   // Header carries the sort indicator and filter button.
   let w = textWidth(t.columns[col].label, headerFont) + 44;
   const n = Math.min(view.length, 1000);

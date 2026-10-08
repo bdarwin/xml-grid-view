@@ -3,7 +3,11 @@
     "groups": [{ "tag": "p", "count": 4 }],
     "grids": {
       "p": {
-        "columns": [{ "key": "b", "kind": "complex" }, { "key": "i", "kind": "leaf" }, { "key": "#text", "kind": "text" }],
+        "columns": [
+          { "key": "b", "kind": "complex" },
+          { "key": "i", "kind": "leaf" },
+          { "key": "#text", "kind": "text" }
+        ],
         "rows": [
           [{ "drill": "b", "count": 1 }, "italic", "Hello  and  text."],
           [null, null, "Plain paragraph."],
@@ -14,7 +18,10 @@
     }
   },
   "0/0": {
-    "groups": [{ "tag": "b", "count": 1 }, { "tag": "i", "count": 1 }],
+    "groups": [
+      { "tag": "b", "count": 1 },
+      { "tag": "i", "count": 1 }
+    ],
     "grids": {
       "b": {
         "columns": [{ "key": "#text", "kind": "text" }],

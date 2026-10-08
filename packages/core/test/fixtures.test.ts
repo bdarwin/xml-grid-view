@@ -1,6 +1,6 @@
 import { readFileSync, existsSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { expectedOutputs, listCases } from "../scripts/fixtures.js";
+import { expectedJsonOutput, expectedOutputs, listCases, listJsonCases } from "../scripts/fixtures.js";
 
 describe("golden fixtures", () => {
   const cases = listCases();
@@ -20,6 +20,12 @@ describe("golden fixtures", () => {
           expect(actual).toEqual(expected);
         }
       }
+    });
+  }
+  for (const c of listJsonCases()) {
+    it(`json/${c.name}`, () => {
+      expect(existsSync(c.expected), `${c.expected} is missing; run pnpm fixtures:generate`).toBe(true);
+      expect(JSON.parse(expectedJsonOutput(c))).toEqual(JSON.parse(readFileSync(c.expected, "utf8")));
     });
   }
 });

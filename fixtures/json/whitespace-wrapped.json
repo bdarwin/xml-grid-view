@@ -1,0 +1,11 @@
+{
+  "kind": "json",
+  "pretty": "[\n  \"padded\",\n  42\n]",
+  "grids": {
+    "": {
+      "columns": [{ "key": "(value)", "kind": "leaf" }],
+      "keys": ["0", "1"],
+      "rows": [["padded"], ["42"]]
+    }
+  }
+}

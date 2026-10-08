@@ -8,6 +8,7 @@ import { elementText, type XmlModel } from "./model.js";
 import { pathKey, pathOfElement } from "./paths.js";
 import { evaluateXPath, type XPathBackend } from "./xpath.js";
 import type { XElement } from "./types.js";
+import { detectJson, forEachJsonContainer, jsonPointer, jsonTable } from "./json.js";
 
 export interface CanonicalAttr {
   name: string;
@@ -77,6 +78,16 @@ export type XPathExpected =
 export interface SearchFile {
   cases: SearchCase[];
   xpath: XPathCase[];
+}
+
+/** One row of the Flat view: an element, or one of its attributes (listed right after it). */
+export interface FlatRow {
+  depth: number;
+  kind: "element" | "attr";
+  name: string;
+  value: string;
+  /** Path of the element (the owner element for attributes). */
+  path: string;
 }
 
 export interface ErrorsFile {
@@ -191,9 +202,59 @@ function elementByPath(model: XmlModel, key: string): XElement | null {
   return el ?? null;
 }
 
+/**
+ * The Flat view's rows in document order, fully expanded: each element, then its
+ * attributes (one level deeper, source order), then its element children.
+ */
+export function canonicalFlat(model: XmlModel): FlatRow[] {
+  const rows: FlatRow[] = [];
+  const visit = (el: XElement, depth: number) => {
+    const path = pathKey(pathOfElement(el));
+    rows.push({ depth, kind: "element", name: el.name, value: elementText(el), path });
+    for (const a of el.attrs) rows.push({ depth: depth + 1, kind: "attr", name: "@" + a.name, value: a.value, path });
+    for (const c of el.elements) visit(c, depth + 1);
+  };
+  for (const r of model.doc.roots) visit(r, 0);
+  return rows;
+}
+
 export function canonicalErrors(model: XmlModel): ErrorsFile | null {
   const e = model.errors[0];
   return e ? { hasErrors: true, firstError: { line: e.line, column: e.column } } : null;
+}
+
+export interface CanonicalJsonValue {
+  kind: "json" | "text";
+  /** For "text": whether it looked like JSON (starts with { or [) but failed to parse. */
+  hasError?: boolean;
+  pretty?: string;
+  /** Grid for every object/array, keyed by JSON Pointer ("" = root). */
+  grids?: Record<string, { columns: { key: string; kind: string }[]; keys: string[]; rows: CanonicalJsonCell[][] }>;
+}
+
+export type CanonicalJsonCell = string | null | { drill: "object" | "array"; count: number };
+
+/** Canonical form of the value inspector's JSON handling for one node text. */
+export function canonicalJsonValue(text: string): CanonicalJsonValue {
+  const d = detectJson(text);
+  if (d.kind === "text") return { kind: "text", hasError: !!d.jsonError };
+  const grids: NonNullable<CanonicalJsonValue["grids"]> = {};
+  forEachJsonContainer(d.value, (node, path) => {
+    const t = jsonTable(node);
+    const n = t.columns.length;
+    const rows: CanonicalJsonCell[][] = [];
+    for (let r = 0; r < t.rowKeys.length; r++) {
+      const row: CanonicalJsonCell[] = [];
+      for (let c = 0; c < n; c++) {
+        const i = r * n + c;
+        const v = t.cells[i];
+        row.push(typeof v === "number" ? { drill: t.drillKinds[i]!, count: v } : v);
+      }
+      rows.push(row);
+    }
+    grids[jsonPointer(path)] = { columns: t.columns.map((c) => ({ key: c.key, kind: c.kind })), keys: t.rowKeys, rows };
+  });
+  return { kind: "json", pretty: d.pretty, grids };
 }
 
 /**
@@ -215,11 +276,13 @@ function write(v: unknown, indent: string): string {
   const inner = indent + "  ";
   if (Array.isArray(v)) {
     if (v.length === 0) return "[]";
-    if (v.every(isFlat)) return "[" + v.map((x) => write(x, inner)).join(", ") + "]";
+    const objects = v.every((x) => x !== null && typeof x === "object" && !Array.isArray(x));
+    // Arrays of objects (rows, attributes, hits) get one object per line.
+    if (v.every(isFlat) && !(objects && v.length > 1)) return "[" + v.map((x) => write(x, inner)).join(", ") + "]";
     return "[\n" + v.map((x) => inner + write(x, inner)).join(",\n") + "\n" + indent + "]";
   }
   const entries = Object.entries(v).filter(([, x]) => x !== undefined);
   if (entries.length === 0) return "{}";
-  if (isFlat(v) && entries.length <= 4) return "{ " + entries.map(([k, x]) => `${JSON.stringify(k)}: ${JSON.stringify(x)}`).join(", ") + " }";
+  if (isFlat(v) && entries.length <= 6) return "{ " + entries.map(([k, x]) => `${JSON.stringify(k)}: ${JSON.stringify(x)}`).join(", ") + " }";
   return "{\n" + entries.map(([k, x]) => `${inner}${JSON.stringify(k)}: ${write(x, inner)}`).join(",\n") + "\n" + indent + "}";
 }

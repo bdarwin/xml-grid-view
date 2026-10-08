@@ -1,0 +1,14 @@
+[
+  { "depth": 0, "kind": "element", "name": "catalog", "value": "", "path": "0" },
+  { "depth": 1, "kind": "element", "name": "book", "value": "", "path": "0/0" },
+  { "depth": 2, "kind": "attr", "name": "@id", "value": "bk101", "path": "0/0" },
+  { "depth": 2, "kind": "element", "name": "author", "value": "Gambardella, Matthew", "path": "0/0/0" },
+  { "depth": 2, "kind": "element", "name": "title", "value": "XML Developer's Guide", "path": "0/0/1" },
+  { "depth": 2, "kind": "element", "name": "genre", "value": "Computer", "path": "0/0/2" },
+  { "depth": 2, "kind": "element", "name": "price", "value": "44.95", "path": "0/0/3" },
+  { "depth": 2, "kind": "element", "name": "publish_date", "value": "2000-10-01", "path": "0/0/4" },
+  { "depth": 2, "kind": "element", "name": "description", "value": "An in-depth look at creating applications\n            with XML.", "path": "0/0/5" },
+  { "depth": 2, "kind": "element", "name": "items", "value": "", "path": "0/0/6" },
+  { "depth": 3, "kind": "element", "name": "it", "value": "Item1", "path": "0/0/6/0" },
+  { "depth": 3, "kind": "element", "name": "it", "value": "Item2", "path": "0/0/6/1" }
+]

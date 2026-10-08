@@ -1,0 +1,113 @@
+{
+  "tag": "catalog",
+  "ns": "",
+  "path": "0",
+  "start": 22,
+  "end": 462,
+  "attrs": [],
+  "text": "",
+  "children": [
+    {
+      "tag": "book",
+      "ns": "",
+      "path": "0/0",
+      "start": 36,
+      "end": 451,
+      "attrs": [{ "name": "id", "value": "bk101", "start": 42, "end": 52 }],
+      "text": "",
+      "children": [
+        {
+          "tag": "author",
+          "ns": "",
+          "path": "0/0/0",
+          "start": 62,
+          "end": 99,
+          "attrs": [],
+          "text": "Gambardella, Matthew",
+          "children": []
+        },
+        {
+          "tag": "title",
+          "ns": "",
+          "path": "0/0/1",
+          "start": 108,
+          "end": 144,
+          "attrs": [],
+          "text": "XML Developer's Guide",
+          "children": []
+        },
+        {
+          "tag": "genre",
+          "ns": "",
+          "path": "0/0/2",
+          "start": 153,
+          "end": 176,
+          "attrs": [],
+          "text": "Computer",
+          "children": []
+        },
+        {
+          "tag": "price",
+          "ns": "",
+          "path": "0/0/3",
+          "start": 185,
+          "end": 205,
+          "attrs": [],
+          "text": "44.95",
+          "children": []
+        },
+        {
+          "tag": "publish_date",
+          "ns": "",
+          "path": "0/0/4",
+          "start": 214,
+          "end": 253,
+          "attrs": [],
+          "text": "2000-10-01",
+          "children": []
+        },
+        {
+          "tag": "description",
+          "ns": "",
+          "path": "0/0/5",
+          "start": 262,
+          "end": 352,
+          "attrs": [],
+          "text": "An in-depth look at creating applications\n            with XML.",
+          "children": []
+        },
+        {
+          "tag": "items",
+          "ns": "",
+          "path": "0/0/6",
+          "start": 361,
+          "end": 439,
+          "attrs": [],
+          "text": "",
+          "children": [
+            {
+              "tag": "it",
+              "ns": "",
+              "path": "0/0/6/0",
+              "start": 381,
+              "end": 395,
+              "attrs": [],
+              "text": "Item1",
+              "children": []
+            },
+            {
+              "tag": "it",
+              "ns": "",
+              "path": "0/0/6/1",
+              "start": 408,
+              "end": 422,
+              "attrs": [],
+              "text": "Item2",
+              "children": []
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

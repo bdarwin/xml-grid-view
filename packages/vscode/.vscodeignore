@@ -3,3 +3,6 @@
 !dist/webview/**
 !package.json
 !README.md
+!media/icon.png
+!LICENSE
+!CHANGELOG.md

@@ -15,6 +15,8 @@ export interface TreeSkeleton {
   firstChild: Int32Array;
   nextSibling: Int32Array;
   childCount: Int32Array;
+  /** Number of attributes (namespace declarations excluded). */
+  attrCount: Int32Array;
   /** Index among element siblings. */
   index: Int32Array;
   depth: Int32Array;
@@ -39,6 +41,14 @@ export interface GridColumn {
 export interface GroupInfo {
   name: string;
   count: number;
+}
+
+/** Values for the Flat view rows of one element (fetched lazily for visible rows). */
+export interface FlatValues {
+  id: number;
+  /** Element text (trimmed; interior whitespace kept). */
+  text: string;
+  attrs: { name: string; value: string; start: number; end: number }[];
 }
 
 /** A grid of the child elements of `elementId` that share the tag `group`. */
@@ -123,6 +133,21 @@ export class XmlModel {
     return buildSkeleton(this.doc, this.index.texts);
   }
 
+  /** Flat view values for the given element ids. */
+  flatValues(ids: number[]): FlatValues[] {
+    const out: FlatValues[] = [];
+    for (const id of ids) {
+      const el = this.doc.elements[id];
+      if (!el) continue;
+      out.push({
+        id,
+        text: this.index.texts[id],
+        attrs: el.attrs.map((a) => ({ name: a.name, value: a.value, start: a.start, end: a.end })),
+      });
+    }
+    return out;
+  }
+
   /** Child tag groups of an element in first-seen order. */
   groups(el: XElement): GroupInfo[] {
     const map = new Map<string, GroupInfo>();
@@ -187,6 +212,7 @@ function buildSkeleton(doc: XDocument, texts: string[]): TreeSkeleton {
   const firstChild = new Int32Array(n).fill(-1);
   const nextSibling = new Int32Array(n).fill(-1);
   const childCount = new Int32Array(n);
+  const attrCount = new Int32Array(n);
   const index = new Int32Array(n);
   const depth = new Int32Array(n);
   const nameIdx = new Int32Array(n);
@@ -204,6 +230,7 @@ function buildSkeleton(doc: XDocument, texts: string[]): TreeSkeleton {
     depth[i] = p ? depth[p.id] + 1 : 0;
     index[i] = el.index;
     childCount[i] = el.elements.length;
+    attrCount[i] = el.attrs.length;
     if (el.elements.length) firstChild[i] = el.elements[0].id;
     const sibs = p ? p.elements : doc.roots;
     const next = sibs[el.index + 1];
@@ -227,6 +254,7 @@ function buildSkeleton(doc: XDocument, texts: string[]): TreeSkeleton {
     firstChild,
     nextSibling,
     childCount,
+    attrCount,
     index,
     depth,
     nameIdx,

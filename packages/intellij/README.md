@@ -28,13 +28,18 @@ generates the expected files; see `fixtures/SCHEMA.md`.
 ## Using it
 
 1. Open any `*.xml` file. It opens in the text editor as usual.
-2. Use the **Editor / Split / Viewer** toggle in the editor's top-right toolbar
-   to show the grid.
+2. Click the **Grid** or **Flat** tab at the bottom of the editor. The tabs
+   read **Text | Grid | Flat**, with Text selected by default. **Enter**/**F4**
+   in either view switches back to Text with the caret on the element. To see
+   source and a view side by side, use the editor tab's **Split Right** and pick
+   a different bottom tab in each half.
 
 | Area | Behavior |
 | --- | --- |
 | Tree | Each node shows the tag, key attributes (`id`, `name`, `key`) and the number of element children. Type to speed-search. **Enter**/**F4** jumps to the element in the text editor. |
 | Grid | Shows the selected element's children for one tag group; pick the group in the combo box when there is more than one. Click a header to sort. Right-click a header to filter: text and a distinct-values checklist capped at 1,000 values. Filters combine with AND. A funnel icon marks filtered columns, and **Clear filters** resets them. Rows are numbered, and the grid supports multi-cell selection and **Copy** as TSV (context menu: *Copy with Header*). Double-click a `{tag ×n}` cell, or press **Alt+Down**, to drill down. **Enter**/**F4** jumps to the source. |
+| Flat | An outline sheet of the whole document with **Name** and **Value** columns, fully expanded at first. Each element row is followed by its attributes (`@name`, shown muted) and then its children, indented by depth. Click the arrow or press **Left**/**Right** to collapse or expand; the context menu has *Expand All* / *Collapse All*. Values are shown on one line, with the full text in the tooltip. Multi-row selection, and **Copy** as TSV (`name<TAB>value`, two spaces of indentation per level). **Enter**/**F4** or double-click jumps to the element or attribute in the source. Find works the same as in the Grid tab, always across the whole document; *Show only matches* filters the sheet to matching rows and their ancestors. |
+| Value inspector | **Shift+Enter** (or *Inspect Value* in the context menu) on a Grid cell, a Flat row or a tree node opens a resizable, non-modal window with the full value; long, multi-line or JSON-looking values also show a trailing icon in Grid and Flat cells that opens it on click. Plain text appears in a read-only, soft-wrapped editor (the editor's own **Ctrl/Cmd+F** works there); text that looks like JSON but doesn't parse gets a banner with the error location and *Go to error*. JSON gets three tabs: **Tree** (collapsible; search keys and values with "n of m", **Enter**/**Shift+Enter** and **F3**/**Shift+F3**; speed search; *Expand All* / *Collapse All*), **Grid** (arrays of objects as rows, nested objects/arrays as `{ n keys }` / `[ n items ]` cells; double-click or **Enter** drills in, the `$ › …` breadcrumb goes back; sort, quick filter, multi-cell copy) and **Text** (pretty-printed, read-only editor with JSON highlighting, folding and Find). Number literals are shown exactly as written. *Copy* copies the raw value, or the pretty JSON on the Text tab. |
 | Find (**Ctrl/Cmd+F**) | Search history; case, words and regex toggles; scope (current grid or whole document); target checkboxes; "n of m" counter; **Enter**/**Shift+Enter** and **F3**/**Shift+F3** to step through matches; a collapsible results list; *Show only matches* to filter the tree. XPath mode reports errors inline; the default namespace is bound to prefix `d`. |
 | Malformed XML | The view keeps the last valid model and shows a warning banner with the error location. *Go to error* jumps there. |
 | Files over 50 MB | The view asks for **Load anyway** before building. Tree children are always loaded lazily. |
@@ -48,13 +53,20 @@ sort order and filters are restored by element path after each refresh.
 
 - `model/`: pure Java, no Swing. Contains the immutable node model built from
   PSI, the grid builder, search, XPath (`javax.xml.xpath` on a namespace-aware
-  DOM, mapped back by child-index path), column filters, and the canonical JSON
-  serializer used by the tests.
-- `editor/`: the `FileEditorProvider`, which wraps the text editor in a
-  `TextEditorWithPreview`, and the viewer `FileEditor`.
-- `ui/`: the panel (`OnePixelSplitter`, banners), the tree
-  (`StructureTreeModel` + `AsyncTreeModel`), the grid (`JBTable`), the find bar
-  and the filter popup.
+  DOM, mapped back by child-index path), column filters, the Flat rows
+  (`FlatRow`), the value inspector's JSON support (`Json`: a strict parser that
+  keeps number literals verbatim, detection and pretty printing; `JsonTable`: JSON
+  grids; `InspectTarget`: what to inspect for a cell/row/node), and the canonical
+  JSON serializer used by the tests (including `fixtures/json`).
+- `editor/`: two `FileEditorProvider`s, both `PLACE_AFTER_DEFAULT_EDITOR`: "Grid"
+  and "Flat" (ordered after Grid via `order="after xmlGridView.grid"` in
+  plugin.xml), their viewer `FileEditor`s, and the shared navigation to the
+  Text tab.
+- `ui/`: `ModelLoader` (lazy, debounced, non-blocking model builds, plus the
+  malformed and large-file banners) shared by both views; the Grid panel
+  (`OnePixelSplitter`), the tree (`StructureTreeModel` + `AsyncTreeModel`), the
+  grid (`JBTable`), the filter popup; the Flat panel (`JBTable` with an indented,
+  collapsible Name column); and the find bar.
 
 ## Known limitations
 

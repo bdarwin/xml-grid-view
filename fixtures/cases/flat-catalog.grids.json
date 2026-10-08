@@ -1,0 +1,74 @@
+{
+  "0": {
+    "groups": [{ "tag": "book", "count": 1 }],
+    "grids": {
+      "book": {
+        "columns": [
+          { "key": "@id", "kind": "attr" },
+          { "key": "author", "kind": "leaf" },
+          { "key": "title", "kind": "leaf" },
+          { "key": "genre", "kind": "leaf" },
+          { "key": "price", "kind": "leaf" },
+          { "key": "publish_date", "kind": "leaf" },
+          { "key": "description", "kind": "leaf" },
+          { "key": "items", "kind": "complex" }
+        ],
+        "rows": [
+          ["bk101", "Gambardella, Matthew", "XML Developer's Guide", "Computer", "44.95", "2000-10-01", "An in-depth look at creating applications\n            with XML.", { "drill": "items", "count": 1 }]
+        ]
+      }
+    }
+  },
+  "0/0": {
+    "groups": [
+      { "tag": "author", "count": 1 },
+      { "tag": "title", "count": 1 },
+      { "tag": "genre", "count": 1 },
+      { "tag": "price", "count": 1 },
+      { "tag": "publish_date", "count": 1 },
+      { "tag": "description", "count": 1 },
+      { "tag": "items", "count": 1 }
+    ],
+    "grids": {
+      "author": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [["Gambardella, Matthew"]]
+      },
+      "title": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [["XML Developer's Guide"]]
+      },
+      "genre": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [["Computer"]]
+      },
+      "price": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [["44.95"]]
+      },
+      "publish_date": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [["2000-10-01"]]
+      },
+      "description": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [["An in-depth look at creating applications\n            with XML."]]
+      },
+      "items": {
+        "columns": [{ "key": "it", "kind": "complex" }],
+        "rows": [
+          [{ "drill": "it", "count": 2 }]
+        ]
+      }
+    }
+  },
+  "0/0/6": {
+    "groups": [{ "tag": "it", "count": 2 }],
+    "grids": {
+      "it": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [["Item1"], ["Item2"]]
+      }
+    }
+  }
+}

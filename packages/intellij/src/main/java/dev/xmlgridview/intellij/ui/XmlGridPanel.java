@@ -8,8 +8,6 @@ import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.application.ModalityState;
 import com.intellij.openapi.application.ReadAction;
 import com.intellij.openapi.editor.Document;
-import com.intellij.openapi.editor.event.DocumentEvent;
-import com.intellij.openapi.editor.event.DocumentListener;
 import com.intellij.openapi.progress.ProgressManager;
 import com.intellij.openapi.project.DumbAwareAction;
 import com.intellij.openapi.project.Project;
@@ -17,10 +15,8 @@ import com.intellij.openapi.ui.ComboBox;
 import com.intellij.openapi.util.Disposer;
 import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.ui.ColoredListCellRenderer;
-import com.intellij.ui.EditorNotificationPanel;
 import com.intellij.ui.OnePixelSplitter;
 import com.intellij.ui.ScrollPaneFactory;
-import com.intellij.ui.SimpleListCellRenderer;
 import com.intellij.ui.SimpleTextAttributes;
 import com.intellij.ui.components.JBLabel;
 import com.intellij.ui.components.JBList;
@@ -38,13 +34,11 @@ import dev.xmlgridview.intellij.model.GridTable;
 import dev.xmlgridview.intellij.model.GroupInfo;
 import dev.xmlgridview.intellij.model.InvalidQueryException;
 import dev.xmlgridview.intellij.model.Matcher;
-import dev.xmlgridview.intellij.model.ParseError;
 import dev.xmlgridview.intellij.model.SearchEngine;
 import dev.xmlgridview.intellij.model.SearchTargets;
 import dev.xmlgridview.intellij.model.XNode;
 import dev.xmlgridview.intellij.model.XPathEngine;
 import dev.xmlgridview.intellij.model.XmlDocumentModel;
-import dev.xmlgridview.intellij.model.XmlModelBuilder;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.TestOnly;
@@ -59,7 +53,6 @@ import javax.swing.ListSelectionModel;
 import javax.swing.SortOrder;
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
-import java.awt.event.HierarchyEvent;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
@@ -80,16 +73,13 @@ import java.util.function.IntConsumer;
  * (debounced) and swapped in on the EDT, preserving view state by path.
  */
 public final class XmlGridPanel extends JPanel implements Disposable {
-  public static final long LARGE_FILE_CHARS = 50L * 1024 * 1024;
-  static final int DEBOUNCE_MS = 300;
+  public static final long LARGE_FILE_CHARS = ModelLoader.LARGE_FILE_CHARS;
+  static final int DEBOUNCE_MS = ModelLoader.DEBOUNCE_MS;
 
-  private final Project project;
-  private final Document document;
   private final IntConsumer navigator;
-  private final Alarm refreshAlarm = new Alarm(Alarm.ThreadToUse.SWING_THREAD, this);
   private final Alarm searchAlarm = new Alarm(Alarm.ThreadToUse.SWING_THREAD, this);
+  private final ModelLoader loader;
 
-  private final JPanel banners = new JPanel();
   private final FindBar findBar;
   private final XmlTreeView tree;
   private final GridView grid;
@@ -108,20 +98,15 @@ public final class XmlGridPanel extends JPanel implements Disposable {
   private List<Object> matches = List.of();
   private boolean matchesTruncated;
   private int current = -1;
-  private boolean dirty = true;
-  private boolean largeFileAccepted;
   private boolean updatingGroups;
-  private @Nullable EditorNotificationPanel errorBanner;
-  private @Nullable EditorNotificationPanel largeBanner;
   private int modelVersion;
 
   public XmlGridPanel(@NotNull Project project, @NotNull Document document, @NotNull IntConsumer navigator,
                       @NotNull Disposable parent) {
     super(new BorderLayout());
-    this.project = project;
-    this.document = document;
     this.navigator = navigator;
     Disposer.register(parent, this);
+    loader = new ModelLoader(project, document, this, navigator, (previous, built) -> modelChanged(built), this);
 
     tree = new XmlTreeView(this, () -> findState, this::onTreeSelect, n -> navigator.accept(n.start()));
     grid = new GridView(this, () -> findState, new GridView.Listener() {
@@ -142,6 +127,8 @@ public final class XmlGridPanel extends JPanel implements Disposable {
         if (findBar.isVisible() && findBar.scope() == FindBar.Scope.GRID) scheduleSearch(0);
       }
     });
+    tree.setInspector(t -> ValueInspector.show(project, t));
+    grid.setInspector(t -> ValueInspector.show(project, t));
     findBar = new FindBar(this, new FindBar.Listener() {
       @Override
       public void queryChanged() {
@@ -177,14 +164,13 @@ public final class XmlGridPanel extends JPanel implements Disposable {
     });
     findBar.setVisible(false);
 
-    banners.setLayout(new BoxLayout(banners, BoxLayout.Y_AXIS));
     JPanel north = new JPanel();
     north.setLayout(new BoxLayout(north, BoxLayout.Y_AXIS));
-    north.add(banners);
+    north.add(loader.banners());
     north.add(findBar);
     add(north, BorderLayout.NORTH);
 
-    groupCombo.setRenderer(SimpleListCellRenderer.create("", g -> g.tag() + " (" + g.count() + ")"));
+    groupCombo.setRenderer(new TextListRenderer<GroupInfo>(g -> g.tag() + " (" + g.count() + ")"));
     groupCombo.addActionListener(e -> {
       if (updatingGroups || gridNode == null) return;
       GroupInfo g = (GroupInfo)groupCombo.getSelectedItem();
@@ -261,17 +247,6 @@ public final class XmlGridPanel extends JPanel implements Disposable {
       }
     }.registerCustomShortcutSet(new CustomShortcutSet(KeyStroke.getKeyStroke(KeyEvent.VK_F3, InputEvent.SHIFT_DOWN_MASK)), this, this);
 
-    document.addDocumentListener(new DocumentListener() {
-      @Override
-      public void documentChanged(@NotNull DocumentEvent event) {
-        dirty = true;
-        if (isShowing()) scheduleRefresh(DEBOUNCE_MS);
-      }
-    }, this);
-    // Build lazily: only once the viewer is actually shown (Split or Viewer layout).
-    addHierarchyListener(e -> {
-      if ((e.getChangeFlags() & HierarchyEvent.SHOWING_CHANGED) != 0 && isShowing() && dirty) scheduleRefresh(0);
-    });
     updateRowsLabel();
   }
 
@@ -281,36 +256,18 @@ public final class XmlGridPanel extends JPanel implements Disposable {
 
   // ---- Model refresh -------------------------------------------------------------------------
 
-  private void scheduleRefresh(int delay) {
-    refreshAlarm.cancelAllRequests();
-    refreshAlarm.addRequest(this::refresh, delay);
-  }
-
-  /** Rebuilds the model in a non-blocking read action; stale builds are cancelled by coalescing. */
+  /** Rebuilds the model off the EDT (see {@link ModelLoader#refresh()}). */
   public void refresh() {
-    if (document.getTextLength() > LARGE_FILE_CHARS && !largeFileAccepted) {
-      showLargeFileBanner();
-      return;
-    }
-    dirty = false;
-    CharSequence text = document.getImmutableCharSequence();
-    ReadAction.nonBlocking(() -> XmlModelBuilder.build(project, text))
-      .coalesceBy(this, document)
-      .expireWith(this)
-      .finishOnUiThread(ModalityState.any(), this::apply)
-      .submit(AppExecutorUtil.getAppExecutorService());
+    loader.refresh();
   }
 
   /** Swaps in a newly built model. Malformed documents keep the last good model. */
   @TestOnly
   public void apply(@NotNull XmlDocumentModel built) {
-    if (built.hasErrors()) {
-      showErrorBanner(built.errors().get(0), model != null);
-      if (model != null) return;
-    }
-    else {
-      hideErrorBanner();
-    }
+    loader.apply(built);
+  }
+
+  private void modelChanged(@NotNull XmlDocumentModel built) {
     ViewState state = model == null ? null : captureState();
     model = built;
     modelVersion++;
@@ -363,53 +320,14 @@ public final class XmlGridPanel extends JPanel implements Disposable {
                          gridGroup, grid.sortKeys(), grid.filters(), selectedRow);
   }
 
-  // ---- Banners -------------------------------------------------------------------------------
-
-  private void showErrorBanner(ParseError e, boolean keptLastGood) {
-    hideErrorBanner();
-    EditorNotificationPanel p = new EditorNotificationPanel(EditorNotificationPanel.Status.Warning);
-    p.setText("XML is not well-formed at line " + e.line() + ", column " + e.column() + ": "
-              + StringUtil.trimLog(e.message(), 200) + (keptLastGood ? " Showing the last valid version." : ""));
-    p.createActionLabel("Go to error", () -> navigator.accept(Math.min(e.offset(), document.getTextLength())));
-    errorBanner = p;
-    banners.add(p);
-    banners.revalidate();
-  }
-
-  private void hideErrorBanner() {
-    if (errorBanner != null) {
-      banners.remove(errorBanner);
-      errorBanner = null;
-      banners.revalidate();
-      banners.repaint();
-    }
-  }
-
-  private void showLargeFileBanner() {
-    if (largeBanner != null) return;
-    EditorNotificationPanel p = new EditorNotificationPanel(EditorNotificationPanel.Status.Info);
-    p.setText("This file is " + StringUtil.formatFileSize(document.getTextLength())
-              + ". Building the grid view may take a while and use a lot of memory.");
-    p.createActionLabel("Load anyway", () -> {
-      largeFileAccepted = true;
-      banners.remove(p);
-      largeBanner = null;
-      banners.revalidate();
-      refresh();
-    });
-    largeBanner = p;
-    banners.add(p);
-    banners.revalidate();
-  }
-
   @TestOnly
   public boolean isShowingLargeFileNotice() {
-    return largeBanner != null;
+    return loader.isShowingLargeFileNotice();
   }
 
   @TestOnly
   public boolean isShowingErrorBanner() {
-    return errorBanner != null;
+    return loader.isShowingErrorBanner();
   }
 
   // ---- Grid ----------------------------------------------------------------------------------

@@ -13,7 +13,10 @@
       "path": "0/0",
       "start": 51,
       "end": 174,
-      "attrs": [{ "name": "id", "value": "b1", "start": 57, "end": 64 }, { "name": "lang", "value": "en", "start": 65, "end": 74 }],
+      "attrs": [
+        { "name": "id", "value": "b1", "start": 57, "end": 64 },
+        { "name": "lang", "value": "en", "start": 65, "end": 74 }
+      ],
       "text": "",
       "children": [
         {
@@ -54,7 +57,10 @@
       "path": "0/1",
       "start": 177,
       "end": 306,
-      "attrs": [{ "name": "id", "value": "b2", "start": 183, "end": 190 }, { "name": "lang", "value": "fr", "start": 191, "end": 200 }],
+      "attrs": [
+        { "name": "id", "value": "b2", "start": 183, "end": 190 },
+        { "name": "lang", "value": "fr", "start": 191, "end": 200 }
+      ],
       "text": "",
       "children": [
         {
@@ -95,7 +101,10 @@
       "path": "0/2",
       "start": 309,
       "end": 436,
-      "attrs": [{ "name": "id", "value": "b3", "start": 315, "end": 322 }, { "name": "lang", "value": "en", "start": 323, "end": 332 }],
+      "attrs": [
+        { "name": "id", "value": "b3", "start": 315, "end": 322 },
+        { "name": "lang", "value": "en", "start": 323, "end": 332 }
+      ],
       "text": "",
       "children": [
         {

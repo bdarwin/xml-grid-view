@@ -32,7 +32,10 @@
           "path": "0/0/1",
           "start": 62,
           "end": 110,
-          "attrs": [{ "name": "sku", "value": "X", "start": 68, "end": 75 }, { "name": "qty", "value": "2", "start": 76, "end": 83 }],
+          "attrs": [
+            { "name": "sku", "value": "X", "start": 68, "end": 75 },
+            { "name": "qty", "value": "2", "start": 76, "end": 83 }
+          ],
           "text": "",
           "children": [
             {
@@ -53,7 +56,10 @@
           "path": "0/0/2",
           "start": 115,
           "end": 163,
-          "attrs": [{ "name": "sku", "value": "Y", "start": 121, "end": 128 }, { "name": "qty", "value": "1", "start": 129, "end": 136 }],
+          "attrs": [
+            { "name": "sku", "value": "Y", "start": 121, "end": 128 },
+            { "name": "qty", "value": "1", "start": 129, "end": 136 }
+          ],
           "text": "",
           "children": [
             {
@@ -115,7 +121,10 @@
           "path": "0/1/1",
           "start": 268,
           "end": 336,
-          "attrs": [{ "name": "sku", "value": "Z", "start": 274, "end": 281 }, { "name": "qty", "value": "5", "start": 282, "end": 289 }],
+          "attrs": [
+            { "name": "sku", "value": "Z", "start": 274, "end": 281 },
+            { "name": "qty", "value": "5", "start": 282, "end": 289 }
+          ],
           "text": "",
           "children": [
             {

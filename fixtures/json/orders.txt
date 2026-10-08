@@ -1,0 +1,6 @@
+[
+  {"id": 12345678901234567890, "customer": "Ann", "total": 1.50, "paid": true,
+   "lines": [{"sku": "X", "qty": 2}, {"sku": "Y", "qty": 1, "note": null}],
+   "address": {"city": "Zürich", "zip": "8001"}},
+  {"id": 2, "customer": "Bob", "total": 1e3, "paid": false, "lines": [], "coupon": "SAVE10"}
+]

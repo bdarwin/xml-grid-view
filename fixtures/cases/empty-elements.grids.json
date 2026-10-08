@@ -3,13 +3,23 @@
     "groups": [{ "tag": "row", "count": 3 }],
     "grids": {
       "row": {
-        "columns": [{ "key": "a", "kind": "leaf" }, { "key": "b", "kind": "leaf" }, { "key": "c", "kind": "leaf" }, { "key": "d", "kind": "leaf" }],
+        "columns": [
+          { "key": "a", "kind": "leaf" },
+          { "key": "b", "kind": "leaf" },
+          { "key": "c", "kind": "leaf" },
+          { "key": "d", "kind": "leaf" }
+        ],
         "rows": [["", "", "x", ""], ["1", null, "", null], [null, null, null, null]]
       }
     }
   },
   "0/0": {
-    "groups": [{ "tag": "a", "count": 1 }, { "tag": "b", "count": 1 }, { "tag": "c", "count": 1 }, { "tag": "d", "count": 1 }],
+    "groups": [
+      { "tag": "a", "count": 1 },
+      { "tag": "b", "count": 1 },
+      { "tag": "c", "count": 1 },
+      { "tag": "d", "count": 1 }
+    ],
     "grids": {
       "a": {
         "columns": [],
@@ -30,7 +40,10 @@
     }
   },
   "0/1": {
-    "groups": [{ "tag": "a", "count": 1 }, { "tag": "c", "count": 1 }],
+    "groups": [
+      { "tag": "a", "count": 1 },
+      { "tag": "c", "count": 1 }
+    ],
     "grids": {
       "a": {
         "columns": [{ "key": "#text", "kind": "text" }],

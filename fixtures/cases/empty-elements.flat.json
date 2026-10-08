@@ -1,0 +1,12 @@
+[
+  { "depth": 0, "kind": "element", "name": "rows", "value": "", "path": "0" },
+  { "depth": 1, "kind": "element", "name": "row", "value": "", "path": "0/0" },
+  { "depth": 2, "kind": "element", "name": "a", "value": "", "path": "0/0/0" },
+  { "depth": 2, "kind": "element", "name": "b", "value": "", "path": "0/0/1" },
+  { "depth": 2, "kind": "element", "name": "c", "value": "x", "path": "0/0/2" },
+  { "depth": 2, "kind": "element", "name": "d", "value": "", "path": "0/0/3" },
+  { "depth": 1, "kind": "element", "name": "row", "value": "", "path": "0/1" },
+  { "depth": 2, "kind": "element", "name": "a", "value": "1", "path": "0/1/0" },
+  { "depth": 2, "kind": "element", "name": "c", "value": "", "path": "0/1/1" },
+  { "depth": 1, "kind": "element", "name": "row", "value": "", "path": "0/2" }
+]

@@ -1,0 +1,14 @@
+{
+  "kind": "json",
+  "pretty": "{\n  \"s\": \"line\\nbreak \\\"q\\\" é 😀 tab\\t slash/ back\\\\\",\n  \"ctl\": \"\\u0001\"\n}",
+  "grids": {
+    "": {
+      "columns": [
+        { "key": "(key)", "kind": "leaf" },
+        { "key": "(value)", "kind": "leaf" }
+      ],
+      "keys": ["s", "ctl"],
+      "rows": [["s", "line\nbreak \"q\" é 😀 tab\t slash/ back\\"], ["ctl", "\u0001"]]
+    }
+  }
+}

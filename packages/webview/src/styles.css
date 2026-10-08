@@ -29,6 +29,10 @@
   --xgv-error-fg: #d33;
   --xgv-tag-fg: var(--xgv-fg);
   --xgv-attr-fg: var(--xgv-muted-fg);
+  --xgv-json-key-fg: #9b46b0;
+  --xgv-json-string-fg: #a31515;
+  --xgv-json-number-fg: #098658;
+  --xgv-json-keyword-fg: #0000ff;
   --xgv-font-family: system-ui, sans-serif;
   --xgv-font-size: 13px;
   --xgv-mono-font-family: ui-monospace, Menlo, Consolas, monospace;
@@ -714,4 +718,287 @@ button.icon {
   display: flex;
   justify-content: flex-end;
   gap: 6px;
+}
+
+/* View mode tabs */
+.modebar {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  padding: 0 6px;
+  border-bottom: 1px solid var(--xgv-border);
+  min-height: 28px;
+}
+.modetab {
+  background: transparent;
+  color: var(--xgv-muted-fg);
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  padding: 4px 12px 3px;
+}
+.modetab:hover:not(:disabled) {
+  background: var(--xgv-hover-bg);
+  color: var(--xgv-fg);
+}
+.modetab.active {
+  color: var(--xgv-fg);
+  border-bottom-color: var(--xgv-focus-border);
+}
+.modebar-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 6px;
+  align-self: center;
+}
+
+/* Flat view */
+.flat {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  outline: none;
+  position: relative;
+}
+.flat-header,
+.flat-row {
+  display: flex;
+  min-width: 100%;
+  width: max-content;
+}
+.flat-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--xgv-header-bg);
+  color: var(--xgv-header-fg);
+  font-weight: 600;
+}
+.flat-body {
+  position: relative;
+}
+.flat-row {
+  position: absolute;
+  left: 0;
+  height: var(--xgv-row-height);
+}
+.flat-row:hover {
+  background: var(--xgv-hover-bg);
+}
+.flat-name,
+.flat-value {
+  height: var(--xgv-row-height);
+  line-height: calc(var(--xgv-row-height) - 1px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border-bottom: 1px solid var(--xgv-border);
+  padding-right: 8px;
+}
+.flat-name {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border-right: 1px solid var(--xgv-border);
+  position: relative;
+}
+.flat-value {
+  flex: 1 0 320px;
+  padding-left: 8px;
+}
+.hcell-flat {
+  padding-left: 8px;
+}
+.flat-header .flat-name {
+  padding-left: 8px;
+}
+.attr-name {
+  color: var(--xgv-attr-fg);
+  font-family: var(--xgv-mono-font-family);
+  font-size: var(--xgv-mono-font-size);
+}
+.flat-row.attr .flat-value {
+  color: var(--xgv-attr-fg);
+}
+.flat-row.hit .tag {
+  text-decoration: underline dotted;
+}
+/* Flat view: spreadsheet-style cell range selection */
+.flat-row.row-sel .rownum {
+  color: var(--xgv-fg);
+  font-weight: 600;
+}
+.flat-name.sel,
+.flat-value.sel {
+  background: var(--xgv-selection-inactive-bg);
+}
+.flat:focus .flat-name.sel,
+.flat:focus .flat-value.sel {
+  background: var(--xgv-selection-bg);
+  color: var(--xgv-selection-fg);
+}
+.flat:focus .flat-name.sel .tag,
+.flat:focus .flat-name.sel .attr-name,
+.flat:focus .flat-value.sel {
+  color: var(--xgv-selection-fg);
+}
+.flat-name.focus,
+.flat-value.focus {
+  outline: 1px solid var(--xgv-focus-border);
+  outline-offset: -1px;
+}
+.flat-value {
+  user-select: none;
+}
+.flat-name {
+  user-select: none;
+}
+.rownum {
+  cursor: default;
+}
+
+/* Value inspector */
+.inspect-btn {
+  float: right;
+  margin: 2px -2px 0 4px;
+  padding: 0 4px;
+  height: 16px;
+  line-height: 14px;
+  font-size: 11px;
+  border: 1px solid var(--xgv-border);
+  background: var(--xgv-bg);
+  color: var(--xgv-link-fg);
+  opacity: 0;
+}
+.cell:hover .inspect-btn,
+.cell.focus .inspect-btn,
+.flat-value:hover .inspect-btn,
+.flat-value.focus .inspect-btn {
+  opacity: 1;
+}
+.flat-value {
+  position: relative;
+}
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  background: color-mix(in srgb, var(--xgv-bg) 40%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.inspector {
+  width: min(1100px, 92vw);
+  height: min(760px, 88vh);
+  min-width: 360px;
+  min-height: 240px;
+  resize: both;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: var(--xgv-bg);
+  color: var(--xgv-fg);
+  border: 1px solid var(--xgv-border);
+  border-radius: 4px;
+  box-shadow: 0 8px 28px color-mix(in srgb, CanvasText 35%, transparent);
+}
+.inspector-head,
+.inspector-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--xgv-border);
+}
+.inspector-head {
+  background: var(--xgv-header-bg);
+}
+.inspector-title {
+  font-family: var(--xgv-mono-font-family);
+  font-size: var(--xgv-mono-font-size);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.badge {
+  border: 1px solid var(--xgv-border);
+  border-radius: 8px;
+  padding: 0 6px;
+  font-size: 0.85em;
+  color: var(--xgv-muted-fg);
+}
+.small {
+  font-size: 0.9em;
+}
+.spacer {
+  flex: 1;
+}
+.segmented {
+  display: flex;
+  gap: 2px;
+}
+.inspector-crumbs {
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--xgv-border);
+  flex: 0 0 auto;
+}
+.inspector-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+.inspector-text {
+  flex: 1;
+  margin: 0;
+  padding: 8px 12px;
+  overflow: auto;
+  font-family: var(--xgv-mono-font-family);
+  font-size: var(--xgv-mono-font-size);
+  white-space: pre;
+  outline: none;
+}
+.inspector-text.wrap {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.banner.static {
+  cursor: default;
+}
+.banner.static:hover {
+  text-decoration: none;
+}
+.json-key {
+  color: var(--xgv-json-key-fg);
+  font-family: var(--xgv-mono-font-family);
+  font-size: var(--xgv-mono-font-size);
+}
+.json-string {
+  color: var(--xgv-json-string-fg);
+}
+.json-number {
+  color: var(--xgv-json-number-fg);
+}
+.json-bool,
+.json-null {
+  color: var(--xgv-json-keyword-fg);
+}
+.json-string,
+.json-number,
+.json-bool,
+.json-null {
+  font-family: var(--xgv-mono-font-family);
+  font-size: var(--xgv-mono-font-size);
+  white-space: pre;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tree:focus .tree-row.selected .json-key,
+.tree:focus .tree-row.selected .json-string,
+.tree:focus .tree-row.selected .json-number,
+.tree:focus .tree-row.selected .json-bool,
+.tree:focus .tree-row.selected .json-null {
+  color: inherit;
 }

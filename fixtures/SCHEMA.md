@@ -18,6 +18,7 @@ never regenerates or accepts them.
   normalize line separators, so CRLF would shift offsets between hosts). The
   generator rejects files that contain `\r`. `.gitattributes` keeps files at `eol=lf`.
 - Names starting with `malformed-` are malformed-input cases (see below).
+- `cases/<name>.flat.json` is generated for every well-formed case.
 - `cases/<name>.search.json` (optional) lists search and XPath queries. The
   inputs are written by hand; the `expected` members are filled in by the generator.
 
@@ -108,6 +109,33 @@ element child:
     element text for `#text`.
   - `{ "drill": "<tag>", "count": n }`: a complex column, where `n` is the
     number of children with that tag in the row (n ≥ 1).
+
+## `<name>.flat.json`
+
+These are the Flat view's rows: an outline sheet of the whole document, fully
+expanded, with one row per element and per attribute:
+
+```json
+[
+  { "depth": 0, "kind": "element", "name": "catalog", "value": "", "path": "0" },
+  { "depth": 1, "kind": "element", "name": "book", "value": "", "path": "0/0" },
+  { "depth": 2, "kind": "attr", "name": "@id", "value": "bk101", "path": "0/0" },
+  { "depth": 2, "kind": "element", "name": "author", "value": "Gambardella, Matthew", "path": "0/0/0" }
+]
+```
+
+- **Order:** document order. Each element row comes first, then its attribute
+  rows (in source order), then its element children, recursively.
+- **depth:** 0 for the root. An element's attribute and child rows have
+  `depth + 1`.
+- **name:** the qualified tag for elements, or `@` plus the qualified name for
+  attributes.
+- **value:** the element text for elements (as defined above: trimmed, interior
+  whitespace kept), and the attribute value for attributes. An element with no
+  text has `""`, even when it has children. The UI may collapse whitespace when
+  displaying a value, but the canonical value is never collapsed.
+- **path:** the element's path. For an attribute row, it's the owner element's
+  path.
 
 ## `<name>.search.json`
 
@@ -206,3 +234,76 @@ and that the first error is on the same `line`. The `column` is the reference
 parser's (saxes), which reports the position just after the offending
 character. The vitest suite compares it exactly. Other implementations compare
 only `line`, because each parser picks its own column for the same error.
+
+## JSON value inspector: `json/<name>.txt` → `json/<name>.json`
+
+The value inspector shows the full text of a node (element text or attribute
+value). When the text is JSON, it also shows a tree, grids and a pretty-printed
+form. Each `.txt` file is a node's text; the `.json` next to it is the
+canonical result:
+
+```json
+{ "kind": "text", "hasError": false }
+{ "kind": "json", "pretty": "…", "grids": { "": { "columns": […], "keys": […], "rows": […] }, "/lines": { … } } }
+```
+
+### Detection
+
+- **JSON:** the text, trimmed of XML whitespace, starts with `{` or `[` and
+  parses as strict RFC 8259 JSON. That means no comments, no trailing commas,
+  no single quotes, no unquoted keys, and nothing after the value.
+- **Text with `hasError: true`:** it starts with `{` or `[` but doesn't parse.
+  The UI shows the error location; the fixtures don't compare it.
+- **Text with `hasError: false`:** anything else.
+
+### Values
+
+- **Numbers** keep their source literal exactly: `12345678901234567890`,
+  `1.50` and `1e3` display as written and are never converted to a double.
+- **Objects** keep key order.
+- **Duplicate keys:** the last value wins but stays at the key's first
+  position.
+- **Special-looking keys:** `__proto__` and keys like `(value)` are ordinary
+  data.
+
+### `pretty`
+
+- 2-space indentation, `"key": value`, one member or item per line.
+- An empty object prints as `{}` and an empty array as `[]`.
+- Strings are escaped the way `JSON.stringify` escapes them:
+  - `"`, `\` and `\b \f \n \r \t` use their short escapes.
+  - Any other code point below U+0020 becomes `\u00XX` with lowercase hex.
+  - `/` and non-ASCII characters are not escaped.
+
+### Primitive display text
+
+- Strings as-is.
+- Numbers as their literal.
+- `true`, `false` and `null` as those words. JSON `null` is the string
+  `"null"`, which is distinct from an absent cell.
+
+### Grids
+
+`grids` has one entry per object or array in the value, keyed by JSON Pointer
+(RFC 6901; `""` is the root), in document order. `keys` holds the row keys:
+array indices as strings, or object keys.
+
+- **Array:** one row per item.
+  - Object items contribute their keys as columns (union, first-seen order).
+  - Primitive and array items go in a leading `(value)` column, which is
+    present only if at least one item is not an object.
+- **Object with two or more entries whose values are all objects (a "map"):**
+  one row per entry, with a leading `(key)` column and then the union of the
+  values' keys.
+- **Any other object:** one row per entry, with `(key)` and `(value)` columns.
+- **Columns:** the order is `(key)` (objects only), then `(value)` (if
+  present), then the union of keys. Columns are positional, so a data key
+  literally named `(value)` gets its own column.
+- **Column kinds:** `complex` if any cell in the column is a container,
+  otherwise `leaf`.
+- **Cells:**
+  - `null`: absent.
+  - A string: a primitive's display text, or the row key in `(key)`.
+  - `{ "drill": "object" | "array", "count": n }`: a nested container, where
+    `n` is its number of keys or items. The UI labels these `{ n keys }` and
+    `[ n items ]`, with singular forms for 1.

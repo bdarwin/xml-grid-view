@@ -1,0 +1,19 @@
+<p>A read-only XML viewer that adds a tree and a grid next to the text editor, with
+text, regex and XPath search.</p>
+<ul>
+  <li><b>Tree</b> of elements, with key attributes, child counts and speed search.
+      <b>Enter</b>/<b>F4</b> jumps to the element in the editor.</li>
+  <li><b>Grid</b> of repeating child elements. Columns are attributes, text-only children and
+      mixed text. Nested repeats appear as <code>{tag ×n}</code> cells you can drill into.
+      Breadcrumbs lead back up, and there's a tag-group selector.</li>
+  <li>Sorting, per-column filters (text and a distinct-values checklist), row numbers,
+      multi-cell selection and copy as TSV.</li>
+  <li><b>Find</b> (Ctrl/Cmd+F): match case, whole word and regex; search the current grid or the whole document by
+      names, attributes and text; a results list and a "show only matches" tree filter.
+      XPath mode binds document prefixes automatically, with the default namespace as <code>d:</code>.</li>
+  <li>Follows edits in the text editor and keeps expansion, selection, sort and filters.
+      Malformed XML keeps the last valid view and shows a banner that links to the error.</li>
+</ul>
+<p>Open any <code>.xml</code> file. Then click the <b>Grid</b> tab at the bottom of the editor
+(<b>Text | Grid</b>); <b>Enter</b>/<b>F4</b> in the grid jumps back to the text.
+The plugin never modifies the document.</p>

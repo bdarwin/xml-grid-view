@@ -1,0 +1,12 @@
+[
+  { "depth": 0, "kind": "element", "name": "doc", "value": "", "path": "0" },
+  { "depth": 1, "kind": "element", "name": "p", "value": "Hello  and  text.", "path": "0/0" },
+  { "depth": 2, "kind": "element", "name": "b", "value": "bold", "path": "0/0/0" },
+  { "depth": 2, "kind": "element", "name": "i", "value": "italic", "path": "0/0/1" },
+  { "depth": 1, "kind": "element", "name": "p", "value": "Plain paragraph.", "path": "0/1" },
+  { "depth": 1, "kind": "element", "name": "p", "value": "", "path": "0/2" },
+  { "depth": 2, "kind": "element", "name": "b", "value": "Only bold", "path": "0/2/0" },
+  { "depth": 1, "kind": "element", "name": "p", "value": "Two  parts  here", "path": "0/3" },
+  { "depth": 2, "kind": "element", "name": "b", "value": "b1", "path": "0/3/0" },
+  { "depth": 2, "kind": "element", "name": "b", "value": "b2", "path": "0/3/1" }
+]

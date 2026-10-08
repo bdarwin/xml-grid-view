@@ -1,5 +1,9 @@
 name: Release
 
+# Push a tag like v0.1.1 to build, test and publish. Each marketplace step runs
+# only when its token secret is configured, so a tag without tokens just
+# produces a GitHub release with both builds attached.
+
 on:
   push:
     tags: ["v*"]
@@ -18,9 +22,14 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Tag matches the extension version
+        run: test "v$(node -p "require('./packages/vscode/package.json').version")" = "$GITHUB_REF_NAME"
+      - run: pnpm lint
       - run: pnpm test
       - run: pnpm fixtures:check
       - run: pnpm build
+      - name: VS Code smoke test
+        run: xvfb-run -a pnpm --filter xml-grid-view test
       - uses: actions/upload-artifact@v7
         with:
           name: vsix
@@ -31,6 +40,10 @@ jobs:
     defaults:
       run:
         working-directory: packages/intellij
+    env:
+      CERTIFICATE_CHAIN: ${{ secrets.CERTIFICATE_CHAIN }}
+      PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
+      PRIVATE_KEY_PASSWORD: ${{ secrets.PRIVATE_KEY_PASSWORD }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-java@v6
@@ -38,13 +51,26 @@ jobs:
           distribution: temurin
           java-version: 21
       - uses: gradle/actions/setup-gradle@v6
+      - name: Free disk space for the Plugin Verifier's IDE downloads
+        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL && df -h /
+      - name: Tag matches the plugin version
+        run: test "v$(grep '^pluginVersion=' gradle.properties | cut -d= -f2)" = "$GITHUB_REF_NAME"
       - run: ./gradlew test buildPlugin --no-daemon
+      - name: Plugin Verifier (recommended IDE versions)
+        run: ./gradlew verifyPlugin --no-daemon
+      - name: Sign
+        if: env.CERTIFICATE_CHAIN != ''
+        run: ./gradlew signPlugin verifyPluginSignature --no-daemon
       - uses: actions/upload-artifact@v7
         with:
           name: intellij-plugin
-          path: packages/intellij/build/distributions/*.zip
+          # The signed zip when signing is configured, otherwise the unsigned one.
+          path: |
+            packages/intellij/build/distributions/*-signed.zip
+            packages/intellij/build/distributions/*.zip
+          if-no-files-found: error
 
-  release:
+  github-release:
     needs: [vsix, intellij]
     runs-on: ubuntu-latest
     steps:
@@ -57,8 +83,62 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" artifacts/* \
-            --title "XML Grid View $GITHUB_REF_NAME" \
-            --notes "VS Code: install the .vsix via Extensions → … → Install from VSIX.
-          IntelliJ 2024.3+: Settings → Plugins → ⚙ → Install Plugin from Disk… and pick the .zip.
-          See the README for features and known limitations."
+          # Attach the signed plugin zip when there is one.
+          if ls artifacts/*-signed.zip >/dev/null 2>&1; then
+            for f in artifacts/*-signed.zip; do rm -f "${f%-signed.zip}.zip"; done
+          fi
+          notes=$(awk -v v="## ${GITHUB_REF_NAME#v}" '$0==v{f=1;next} /^## /{f=0} f' CHANGELOG.md)
+          gh release create "$GITHUB_REF_NAME" artifacts/* --title "XML Grid View $GITHUB_REF_NAME" --notes "$notes
+
+          **Install:** VS Code: Extensions → … → Install from VSIX. IntelliJ 2024.3+: Settings → Plugins → ⚙ → Install Plugin from Disk."
+
+  publish-vscode:
+    needs: [github-release]
+    runs-on: ubuntu-latest
+    env:
+      VSCE_PAT: ${{ secrets.VSCE_PAT }}
+      OVSX_PAT: ${{ secrets.OVSX_PAT }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@v8
+        with:
+          name: vsix
+          path: packages/vscode
+      - name: Publish to VS Code Marketplace
+        if: env.VSCE_PAT != ''
+        working-directory: packages/vscode
+        run: pnpm exec vsce publish --no-dependencies --packagePath xml-grid-view-${GITHUB_REF_NAME#v}.vsix
+      - name: Publish to Open VSX
+        if: env.OVSX_PAT != ''
+        working-directory: packages/vscode
+        run: pnpm exec ovsx publish xml-grid-view-${GITHUB_REF_NAME#v}.vsix
+
+  publish-jetbrains:
+    needs: [github-release]
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/intellij
+    env:
+      PUBLISH_TOKEN: ${{ secrets.JETBRAINS_PUBLISH_TOKEN }}
+      CERTIFICATE_CHAIN: ${{ secrets.CERTIFICATE_CHAIN }}
+      PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
+      PRIVATE_KEY_PASSWORD: ${{ secrets.PRIVATE_KEY_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        if: env.PUBLISH_TOKEN != ''
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v6
+        if: env.PUBLISH_TOKEN != ''
+      - name: Publish to JetBrains Marketplace
+        if: env.PUBLISH_TOKEN != ''
+        run: ./gradlew publishPlugin --no-daemon

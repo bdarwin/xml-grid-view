@@ -1,0 +1,21 @@
+[
+  { "depth": 0, "kind": "element", "name": "catalog", "value": "", "path": "0" },
+  { "depth": 1, "kind": "element", "name": "book", "value": "", "path": "0/0" },
+  { "depth": 2, "kind": "attr", "name": "@id", "value": "b1", "path": "0/0" },
+  { "depth": 2, "kind": "attr", "name": "@lang", "value": "en", "path": "0/0" },
+  { "depth": 2, "kind": "element", "name": "title", "value": "The Cat in the Hat", "path": "0/0/0" },
+  { "depth": 2, "kind": "element", "name": "author", "value": "Seuss", "path": "0/0/1" },
+  { "depth": 2, "kind": "element", "name": "price", "value": "9.99", "path": "0/0/2" },
+  { "depth": 1, "kind": "element", "name": "book", "value": "", "path": "0/1" },
+  { "depth": 2, "kind": "attr", "name": "@id", "value": "b2", "path": "0/1" },
+  { "depth": 2, "kind": "attr", "name": "@lang", "value": "fr", "path": "0/1" },
+  { "depth": 2, "kind": "element", "name": "title", "value": "Le Petit Prince", "path": "0/1/0" },
+  { "depth": 2, "kind": "element", "name": "author", "value": "Saint-Exupéry", "path": "0/1/1" },
+  { "depth": 2, "kind": "element", "name": "price", "value": "12.50", "path": "0/1/2" },
+  { "depth": 1, "kind": "element", "name": "book", "value": "", "path": "0/2" },
+  { "depth": 2, "kind": "attr", "name": "@id", "value": "b3", "path": "0/2" },
+  { "depth": 2, "kind": "attr", "name": "@lang", "value": "en", "path": "0/2" },
+  { "depth": 2, "kind": "element", "name": "title", "value": "Concatenation Theory", "path": "0/2/0" },
+  { "depth": 2, "kind": "element", "name": "author", "value": "CAT Jones", "path": "0/2/1" },
+  { "depth": 2, "kind": "element", "name": "price", "value": "40", "path": "0/2/2" }
+]

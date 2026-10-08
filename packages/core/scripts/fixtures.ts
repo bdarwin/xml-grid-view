@@ -8,6 +8,8 @@ import { fileURLToPath } from "node:url";
 import {
   XmlModel,
   canonicalErrors,
+  canonicalFlat,
+  canonicalJsonValue,
   canonicalGrids,
   canonicalTree,
   jsBackend,
@@ -19,6 +21,19 @@ import {
 } from "../src/index.js";
 
 export const CASES_DIR = resolve(fileURLToPath(new URL(".", import.meta.url)), "../../../fixtures/cases");
+export const JSON_DIR = resolve(CASES_DIR, "../json");
+
+/** JSON value-inspector cases: fixtures/json/<name>.txt -> <name>.json. */
+export function listJsonCases(): { name: string; input: string; expected: string }[] {
+  return readdirSync(JSON_DIR)
+    .filter((f) => f.endsWith(".txt"))
+    .sort()
+    .map((f) => ({ name: f.slice(0, -4), input: join(JSON_DIR, f), expected: join(JSON_DIR, f.slice(0, -4) + ".json") }));
+}
+
+export function expectedJsonOutput(c: { input: string }): string {
+  return stableJson(canonicalJsonValue(readFileSync(c.input, "utf8")));
+}
 
 export interface FixtureCase {
   name: string;
@@ -60,6 +75,7 @@ export function expectedOutputs(c: FixtureCase): Map<string, string> {
   if (model.errors.length) throw new Error(`${c.name}: unexpected parse error ${JSON.stringify(model.errors[0])}`);
   out.set(`${base}.tree.json`, stableJson(canonicalTree(model)));
   out.set(`${base}.grids.json`, stableJson(canonicalGrids(model)));
+  out.set(`${base}.flat.json`, stableJson(canonicalFlat(model)));
   const search = readJson<SearchFile>(`${base}.search.json`);
   if (search) {
     const filled: SearchFile = {

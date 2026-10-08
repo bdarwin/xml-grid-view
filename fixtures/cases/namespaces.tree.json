@@ -52,7 +52,10 @@
           "path": "0/1/2",
           "start": 170,
           "end": 217,
-          "attrs": [{ "name": "url", "value": "a.png", "start": 187, "end": 198 }, { "name": "media:width", "value": "64", "start": 199, "end": 215 }],
+          "attrs": [
+            { "name": "url", "value": "a.png", "start": 187, "end": 198 },
+            { "name": "media:width", "value": "64", "start": 199, "end": 215 }
+          ],
           "text": "",
           "children": []
         }

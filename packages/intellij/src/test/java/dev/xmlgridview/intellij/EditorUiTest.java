@@ -3,8 +3,10 @@ package dev.xmlgridview.intellij;
 import com.intellij.openapi.application.ReadAction;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.fileEditor.FileEditor;
+import com.intellij.openapi.fileEditor.FileDocumentManager;
+import com.intellij.openapi.fileEditor.FileEditorManager;
+import com.intellij.openapi.fileEditor.FileEditorPolicy;
 import com.intellij.openapi.fileEditor.FileEditorProvider;
-import com.intellij.openapi.fileEditor.TextEditorWithPreview;
 import com.intellij.openapi.util.Disposer;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.testFramework.PlatformTestUtil;
@@ -30,7 +32,8 @@ public class EditorUiTest extends BasePlatformTestCase {
     </catalog>
     """;
 
-  private TextEditorWithPreview editor;
+  private XmlGridViewerEditor editor;
+  private VirtualFile file;
 
   @Override
   protected void tearDown() throws Exception {
@@ -43,13 +46,12 @@ public class EditorUiTest extends BasePlatformTestCase {
   }
 
   private XmlGridPanel open(String text) {
-    VirtualFile file = myFixture.configureByText("catalog.xml", text).getVirtualFile();
+    file = myFixture.configureByText("catalog.xml", text).getVirtualFile();
     FileEditor fe = new XmlGridEditorProvider().createEditor(getProject(), file);
-    assertInstanceOf(fe, TextEditorWithPreview.class);
-    editor = (TextEditorWithPreview)fe;
-    editor.getComponent(); // the layout is initialized with the component
-    assertEquals("text editor is the default layout", TextEditorWithPreview.Layout.SHOW_EDITOR, editor.getLayout());
-    XmlGridPanel panel = ((XmlGridViewerEditor)editor.getPreviewEditor()).getPanel();
+    assertInstanceOf(fe, XmlGridViewerEditor.class);
+    editor = (XmlGridViewerEditor)fe;
+    assertEquals("bottom tab label", "Grid", editor.getName());
+    XmlGridPanel panel = editor.getPanel();
     panel.apply(build(text));
     PlatformTestUtil.dispatchAllEventsInIdeEventQueue();
     return panel;
@@ -66,6 +68,8 @@ public class EditorUiTest extends BasePlatformTestCase {
     XmlGridEditorProvider provider = new XmlGridEditorProvider();
     assertTrue(provider.accept(getProject(), myFixture.configureByText("a.xml", "<a/>").getVirtualFile()));
     assertFalse(provider.accept(getProject(), myFixture.configureByText("a.txt", "<a/>").getVirtualFile()));
+    // A tab after the default text editor: bottom tabs "Text | Grid", Text selected by default.
+    assertEquals(FileEditorPolicy.PLACE_AFTER_DEFAULT_EDITOR, provider.getPolicy());
   }
 
   public void testNavigateMovesCaretToElementOffset() {
@@ -75,7 +79,9 @@ public class EditorUiTest extends BasePlatformTestCase {
     XNode book2 = model.byPath("0/1");
     assertNotNull(book2);
     panel.navigateToNode(book2);
-    Editor textEditor = editor.getTextEditor().getEditor();
+    Editor textEditor = FileEditorManager.getInstance(getProject()).getSelectedTextEditor();
+    assertNotNull("navigation switches to the text editor", textEditor);
+    assertEquals(file, FileDocumentManager.getInstance().getFile(textEditor.getDocument()));
     assertEquals(XML.indexOf("<book id=\"b2\""), textEditor.getCaretModel().getOffset());
     assertEquals(book2.start(), textEditor.getCaretModel().getOffset());
   }
@@ -115,7 +121,7 @@ public class EditorUiTest extends BasePlatformTestCase {
     panel.setColumnFilterForTest("@lang", new ColumnFilter("", Set.of("en")));
     XmlDocumentModel before = panel.model();
     com.intellij.openapi.command.WriteCommandAction.runWriteCommandAction(getProject(), () -> {
-      var doc = editor.getTextEditor().getEditor().getDocument();
+      var doc = FileDocumentManager.getInstance().getDocument(file);
       doc.insertString(doc.getText().indexOf("<magazine"), "<book id=\"b5\" lang=\"en\"/>");
     });
     panel.refresh();

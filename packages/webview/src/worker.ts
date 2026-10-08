@@ -51,7 +51,7 @@ export function createWorkerHandler(post: (r: WorkerResponse, transfer?: Transfe
     }
     const sk = result.skeleton;
     const transfer = sk
-      ? [sk.parent, sk.firstChild, sk.nextSibling, sk.childCount, sk.index, sk.depth, sk.nameIdx, sk.start, sk.openEnd, sk.end].map(
+      ? [sk.parent, sk.firstChild, sk.nextSibling, sk.childCount, sk.attrCount, sk.index, sk.depth, sk.nameIdx, sk.start, sk.openEnd, sk.end].map(
           (a) => a.buffer as ArrayBuffer,
         )
       : [];
@@ -80,6 +80,9 @@ export function createWorkerHandler(post: (r: WorkerResponse, transfer?: Transfe
           return;
         case "searchGrid":
           post({ id: req.id, ok: true, result: searchGrid(model.table(req.elementId, req.group), req.query) });
+          return;
+        case "flatValues":
+          post({ id: req.id, ok: true, result: model.flatValues(req.ids) });
           return;
         case "xpath":
           post({ id: req.id, ok: true, result: evaluateXPath(model, modelText, req.expr, jsBackend) });

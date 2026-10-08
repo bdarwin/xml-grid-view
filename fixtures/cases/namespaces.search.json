@@ -85,13 +85,19 @@
     {
       "expr": "/d:feed/d:entry/d:title",
       "expected": {
-        "nodes": [{ "path": "0/1/1", "kind": "element", "attr": null }, { "path": "0/2/1", "kind": "element", "attr": null }]
+        "nodes": [
+          { "path": "0/1/1", "kind": "element", "attr": null },
+          { "path": "0/2/1", "kind": "element", "attr": null }
+        ]
       }
     },
     {
       "expr": "//media:thumbnail/@url",
       "expected": {
-        "nodes": [{ "path": "0/1/2", "kind": "attribute", "attr": "url" }, { "path": "0/2/2", "kind": "attribute", "attr": "url" }]
+        "nodes": [
+          { "path": "0/1/2", "kind": "attribute", "attr": "url" },
+          { "path": "0/2/2", "kind": "attribute", "attr": "url" }
+        ]
       }
     },
     {

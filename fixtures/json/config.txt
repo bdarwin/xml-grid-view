@@ -1,0 +1,1 @@
+{"name": "demo", "version": 3, "debug": false, "servers": ["a", "b"], "limits": {"cpu": 2, "mem": "1G"}, "nothing": null}

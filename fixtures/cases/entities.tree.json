@@ -33,7 +33,10 @@
       "path": "0/2",
       "start": 67,
       "end": 125,
-      "attrs": [{ "name": "name", "value": "quote", "start": 70, "end": 82 }, { "name": "q", "value": "\"x\" 'y'", "start": 83, "end": 114 }],
+      "attrs": [
+        { "name": "name", "value": "quote", "start": 70, "end": 82 },
+        { "name": "q", "value": "\"x\" 'y'", "start": 83, "end": 114 }
+      ],
       "text": "quotes",
       "children": []
     },

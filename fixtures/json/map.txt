@@ -1,0 +1,2 @@
+{"bk101": {"title": "XML Guide", "price": 44.95},
+ "bk102": {"title": "Midnight Rain", "tags": ["fantasy", "new"]}}

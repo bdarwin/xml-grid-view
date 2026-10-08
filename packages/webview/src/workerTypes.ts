@@ -1,5 +1,6 @@
 import type {
   DocSearchResult,
+  FlatValues,
   GridSearchResult,
   GridTable,
   ParseError,
@@ -14,7 +15,8 @@ export type WorkerRequest =
   | { id: number; type: "table"; gen: number; elementId: number; group: string | null }
   | { id: number; type: "searchDoc"; gen: number; query: SearchQuery }
   | { id: number; type: "searchGrid"; gen: number; elementId: number; group: string | null; query: SearchQuery }
-  | { id: number; type: "xpath"; gen: number; expr: string };
+  | { id: number; type: "xpath"; gen: number; expr: string }
+  | { id: number; type: "flatValues"; gen: number; ids: number[] };
 
 export interface LoadResult {
   /** Generation of the model now held by the worker. */
@@ -33,6 +35,7 @@ export interface WorkerResults {
   searchDoc: DocSearchResult;
   searchGrid: GridSearchResult;
   xpath: XPathEvalResult;
+  flatValues: FlatValues[];
 }
 
 export type WorkerResponse =

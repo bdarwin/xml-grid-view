@@ -15,7 +15,6 @@ import com.intellij.openapi.project.DumbAwareToggleAction;
 import com.intellij.openapi.ui.ComboBox;
 import com.intellij.ui.DocumentAdapter;
 import com.intellij.ui.SearchTextField;
-import com.intellij.ui.SimpleListCellRenderer;
 import com.intellij.ui.components.JBCheckBox;
 import com.intellij.ui.components.JBLabel;
 import com.intellij.ui.components.labels.LinkLabel;
@@ -86,8 +85,8 @@ final class FindBar extends JPanel {
     super(new BorderLayout());
     setBorder(JBUI.Borders.compound(JBUI.Borders.customLineBottom(com.intellij.ui.JBColor.border()), JBUI.Borders.empty(2, 4)));
 
-    mode.setRenderer(SimpleListCellRenderer.create("", m -> m == Mode.TEXT ? "Text" : "XPath"));
-    scope.setRenderer(SimpleListCellRenderer.create("", s -> s.label));
+    mode.setRenderer(new TextListRenderer<Mode>(m -> m == Mode.TEXT ? "Text" : "XPath"));
+    scope.setRenderer(new TextListRenderer<Scope>(s -> s.label));
     scope.setSelectedItem(Scope.DOCUMENT);
     error.setForeground(NamedColorUtil.getErrorForeground());
     counter.setForeground(UIUtil.getContextHelpForeground());
@@ -210,6 +209,14 @@ final class FindBar extends JPanel {
 
   void setScope(Scope s) {
     scope.setSelectedItem(s);
+  }
+
+  void setScopeVisible(boolean visible) {
+    scope.setVisible(visible);
+  }
+
+  void setResultsVisible(boolean visible) {
+    resultsLink.setVisible(visible);
   }
 
   SearchOptions options() {

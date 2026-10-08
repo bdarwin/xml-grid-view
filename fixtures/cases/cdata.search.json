@@ -52,7 +52,10 @@
     {
       "expr": "//script[contains(., '<')]/@lang",
       "expected": {
-        "nodes": [{ "path": "0/0", "kind": "attribute", "attr": "lang" }, { "path": "0/1", "kind": "attribute", "attr": "lang" }]
+        "nodes": [
+          { "path": "0/0", "kind": "attribute", "attr": "lang" },
+          { "path": "0/1", "kind": "attribute", "attr": "lang" }
+        ]
       }
     }
   ]

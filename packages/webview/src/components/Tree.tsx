@@ -19,6 +19,7 @@ export interface TreeProps {
   onToggle(id: number, expand?: boolean): void;
   onSelect(id: number): void;
   onActivate(id: number): void;
+  onInspect?(id: number): void;
 }
 
 /** Visible rows in display order. */
@@ -91,7 +92,8 @@ export function Tree(p: TreeProps) {
         break;
       case "Enter":
       case "F4":
-        if (id >= 0) p.onActivate(id);
+        if (id >= 0 && e.shiftKey && e.key === "Enter" && p.onInspect) p.onInspect(id);
+        else if (id >= 0) p.onActivate(id);
         break;
       case "*":
         if (id >= 0) p.onToggle(id, true);

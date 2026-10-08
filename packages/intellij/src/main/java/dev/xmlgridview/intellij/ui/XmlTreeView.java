@@ -1,13 +1,16 @@
 package dev.xmlgridview.intellij.ui;
 
+import com.intellij.icons.AllIcons;
 import com.intellij.ide.util.treeView.AbstractTreeStructure;
 import com.intellij.ide.util.treeView.NodeDescriptor;
 import com.intellij.openapi.Disposable;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.CustomShortcutSet;
+import com.intellij.openapi.actionSystem.DefaultActionGroup;
 import com.intellij.openapi.project.DumbAwareAction;
 import com.intellij.ui.ColoredTreeCellRenderer;
+import com.intellij.ui.PopupHandler;
 import com.intellij.ui.ScrollPaneFactory;
 import com.intellij.ui.SimpleTextAttributes;
 import com.intellij.ui.TreeSpeedSearch;
@@ -16,6 +19,7 @@ import com.intellij.ui.tree.StructureTreeModel;
 import com.intellij.ui.tree.TreeVisitor;
 import com.intellij.ui.treeStructure.Tree;
 import com.intellij.util.ui.tree.TreeUtil;
+import dev.xmlgridview.intellij.model.InspectTarget;
 import dev.xmlgridview.intellij.model.XAttr;
 import dev.xmlgridview.intellij.model.XNode;
 import dev.xmlgridview.intellij.model.XmlDocumentModel;
@@ -56,6 +60,7 @@ final class XmlTreeView extends JPanel {
   private final Tree tree;
   private final Supplier<FindState> findState;
   private boolean suppressSelectionEvents;
+  private @Nullable Consumer<InspectTarget> inspector;
 
   XmlTreeView(@NotNull Disposable parent, @NotNull Supplier<FindState> findState,
               @NotNull Consumer<XNode> onSelect, @NotNull Consumer<XNode> onNavigate) {
@@ -86,7 +91,27 @@ final class XmlTreeView extends JPanel {
     };
     navigate.registerCustomShortcutSet(new CustomShortcutSet(new com.intellij.openapi.actionSystem.KeyboardShortcut(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), null),
                                                              new com.intellij.openapi.actionSystem.KeyboardShortcut(KeyStroke.getKeyStroke(KeyEvent.VK_F4, 0), null)), tree, parent);
+    InspectAction inspect = InspectAction.install(tree, parent, () -> {
+      XNode n = selected();
+      return n == null ? null : InspectTarget.ofNode(n);
+    }, t -> {
+      if (inspector != null) inspector.accept(t);
+    });
+    DefaultActionGroup menu = new DefaultActionGroup();
+    menu.add(inspect);
+    menu.add(new DumbAwareAction("Go to Source", null, AllIcons.Actions.EditSource) {
+      @Override
+      public void actionPerformed(@NotNull AnActionEvent e) {
+        XNode n = selected();
+        if (n != null) onNavigate.accept(n);
+      }
+    });
+    PopupHandler.installPopupMenu(tree, menu, "XmlGridView.Tree");
     add(ScrollPaneFactory.createScrollPane(tree, true), BorderLayout.CENTER);
+  }
+
+  void setInspector(@NotNull Consumer<InspectTarget> inspector) {
+    this.inspector = inspector;
   }
 
   JComponent focusComponent() {

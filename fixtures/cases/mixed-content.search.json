@@ -95,13 +95,21 @@
     {
       "expr": "//p[b]",
       "expected": {
-        "nodes": [{ "path": "0/0", "kind": "element", "attr": null }, { "path": "0/2", "kind": "element", "attr": null }, { "path": "0/3", "kind": "element", "attr": null }]
+        "nodes": [
+          { "path": "0/0", "kind": "element", "attr": null },
+          { "path": "0/2", "kind": "element", "attr": null },
+          { "path": "0/3", "kind": "element", "attr": null }
+        ]
       }
     },
     {
       "expr": "//p/text()",
       "expected": {
-        "nodes": [{ "path": "0/0", "kind": "text", "attr": null }, { "path": "0/1", "kind": "text", "attr": null }, { "path": "0/3", "kind": "text", "attr": null }]
+        "nodes": [
+          { "path": "0/0", "kind": "text", "attr": null },
+          { "path": "0/1", "kind": "text", "attr": null },
+          { "path": "0/3", "kind": "text", "attr": null }
+        ]
       }
     },
     {

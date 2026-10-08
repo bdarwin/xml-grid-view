@@ -216,3 +216,17 @@ describe("grid model", () => {
     expect(performance.now() - t0).toBeLessThan(10_000);
   });
 });
+
+describe("flat values", () => {
+  it("returns element text and attributes with spans", () => {
+    const xml = '<r><b id="x" n="1">t</b></r>';
+    const m = model(xml);
+    const [v] = m.flatValues([1]);
+    expect(v.text).toBe("t");
+    expect(v.attrs.map((a) => [a.name, a.value, xml.slice(a.start, a.end)])).toEqual([
+      ["id", "x", 'id="x"'],
+      ["n", "1", 'n="1"'],
+    ]);
+    expect(m.skeleton().attrCount[1]).toBe(2);
+  });
+});

@@ -1,0 +1,9 @@
+[
+  { "depth": 0, "kind": "element", "name": "scripts", "value": "", "path": "0" },
+  { "depth": 1, "kind": "element", "name": "script", "value": "if (a < b && c > d) { go(); }", "path": "0/0" },
+  { "depth": 2, "kind": "attr", "name": "@lang", "value": "js", "path": "0/0" },
+  { "depth": 1, "kind": "element", "name": "script", "value": "SELECT 1 WHERE x < 2 ;", "path": "0/1" },
+  { "depth": 2, "kind": "attr", "name": "@lang", "value": "sql", "path": "0/1" },
+  { "depth": 1, "kind": "element", "name": "script", "value": "", "path": "0/2" },
+  { "depth": 2, "kind": "attr", "name": "@lang", "value": "none", "path": "0/2" }
+]

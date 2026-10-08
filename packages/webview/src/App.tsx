@@ -8,6 +8,7 @@ import {
   pathOfId,
   parsePathKey,
   type DocSearchResult,
+  type FlatValues,
   type GridTable,
   type HostToView,
   type Matcher,
@@ -21,15 +22,18 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { FilterPopup } from "./components/FilterPopup";
 import { FindBar, type FindState } from "./components/FindBar";
+import { FlatView, flatRows, rowIndexOf, type FlatPos, type FlatSelection } from "./components/FlatView";
 import { Grid, selectionRange, type CellPos, type GridSelection } from "./components/Grid";
 import { Results, type ResultItem } from "./components/Results";
 import { Split } from "./components/Split";
 import { Tree } from "./components/Tree";
+import { ValueInspector, type InspectorTarget } from "./components/ValueInspector";
 import { autoFitWidth, computeView, isFilterActive, toTsv, type CellRange, type ColumnFilter, type Filters, type SortState } from "./gridView";
 import type { HostBridge } from "./host";
 import { StaleError, type WorkerClient } from "./workerClient";
 
 type Phase = "waiting" | "large" | "loading" | "ready";
+type ViewMode = "grid" | "flat";
 
 /** Path plus tag name, so a restored path only applies when the element is still the same kind. */
 type NamedPath = [path: string, name: string];
@@ -45,6 +49,9 @@ interface Snapshot {
   gridSel: GridSelection | null;
   split: number;
   find?: FindState;
+  mode?: ViewMode;
+  flatCollapsed?: NamedPath[];
+  flatFocus?: [NamedPath, number] | null;
 }
 
 type FindResults =
@@ -108,6 +115,12 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
   const [findError, setFindError] = useState<string | undefined>();
   const [findBusy, setFindBusy] = useState(false);
   const [fatal, setFatal] = useState<string | null>(null);
+  const [mode, setMode] = useState<ViewMode>("grid");
+  const [flatCollapsed, setFlatCollapsed] = useState<Set<number>>(new Set());
+  const [flatSel, setFlatSel] = useState<FlatSelection | null>(null);
+  const [flatValues, setFlatValues] = useState<Map<number, FlatValues>>(new Map());
+  const flatPending = useRef(new Set<number>());
+  const [inspector, setInspector] = useState<InspectorTarget | null>(null);
 
   const textRef = useRef("");
   const settingsRef = useRef(settings);
@@ -122,8 +135,8 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
 
   // ----- snapshot / restore ------------------------------------------------
 
-  const stateRef = useRef({ skeleton, expanded, selected, group, sort, filters, quick, gridSel, split, find });
-  stateRef.current = { skeleton, expanded, selected, group, sort, filters, quick, gridSel, split, find };
+  const stateRef = useRef({ skeleton, expanded, selected, group, sort, filters, quick, gridSel, split, find, mode, flatCollapsed, flatSel });
+  stateRef.current = { skeleton, expanded, selected, group, sort, filters, quick, gridSel, split, find, mode, flatCollapsed, flatSel };
 
   const takeSnapshot = useCallback((): Snapshot | null => {
     const s = stateRef.current;
@@ -139,6 +152,9 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
       gridSel: s.gridSel,
       split: s.split,
       find: s.find,
+      mode: s.mode,
+      flatCollapsed: [...s.flatCollapsed].filter((id) => id < sk.count).map((id) => namedPath(sk, id)),
+      flatFocus: s.flatSel && s.flatSel.focus.id < sk.count ? [namedPath(sk, s.flatSel.focus.id), s.flatSel.focus.attr] : null,
     };
   }, []);
 
@@ -153,6 +169,18 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
       if (snap.selected) sel = resolveNamed(sk, snap.selected);
       groupMemory.current = new Map(snap.groups);
       setSplit(snap.split);
+      if (snap.mode) setMode(snap.mode);
+      const fc = new Set<number>();
+      for (const np of snap.flatCollapsed ?? []) {
+        const id = resolveNamed(sk, np);
+        if (id >= 0) fc.add(id);
+      }
+      setFlatCollapsed(fc);
+      const ff = snap.flatFocus ? resolveNamed(sk, snap.flatFocus[0]) : -1;
+      if (ff >= 0) {
+        const attr = snap.flatFocus![1] < sk.attrCount[ff] ? snap.flatFocus![1] : -1;
+        setFlatSel({ anchor: { id: ff, attr, col: 0 }, focus: { id: ff, attr, col: 1 } });
+      } else setFlatSel(null);
     }
     if (sel < 0) {
       // Default: root selected and expanded; restored filters belonged to another element.
@@ -181,7 +209,7 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
       if (snap) host.setState({ snapshot: snap });
     }, 500);
     return () => clearTimeout(t);
-  }, [skeleton, expanded, selected, group, sort, filters, quick, gridSel, split, find]);
+  }, [skeleton, expanded, selected, group, sort, filters, quick, gridSel, split, find, mode, flatCollapsed, flatSel]);
 
   // ----- loading -----------------------------------------------------------
 
@@ -292,14 +320,15 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
   const fonts = () => {
     const cs = getComputedStyle(gridWrap.current ?? document.body);
     const font = `${cs.fontSize} ${cs.fontFamily}`;
-    return { font, header: `600 ${font}` };
+    const mono = `${cs.getPropertyValue("--xgv-mono-font-size").trim() || cs.fontSize} ${cs.getPropertyValue("--xgv-mono-font-family").trim() || "monospace"}`;
+    return { font, header: `600 ${font}`, mono };
   };
 
   // Auto-fit columns whenever a different grid is shown.
   useEffect(() => {
     if (!table || widths.length === table.columns.length) return;
     const f = fonts();
-    setWidths(table.columns.map((_, c) => autoFitWidth(table, view, c, f.font, f.header)));
+    setWidths(table.columns.map((_, c) => autoFitWidth(table, view, c, f.font, f.header, f.mono)));
   }, [table, widths]);
 
   // Clamp the grid selection when the view shrinks.
@@ -392,6 +421,136 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
     host.copy(toTsv(table, view, range, settings.copyWithHeader !== invert));
   };
 
+  // ----- flat view ---------------------------------------------------------
+
+  // Values belong to a model generation.
+  useEffect(() => {
+    flatPending.current = new Set();
+    setFlatValues(new Map());
+  }, [gen]);
+
+  const fetchFlatValues = useCallback(
+    async (ids: number[]): Promise<Map<number, FlatValues>> => {
+      const r = await worker.request<"flatValues">({ type: "flatValues", gen, ids });
+      let merged!: Map<number, FlatValues>;
+      setFlatValues((prev) => {
+        merged = new Map(prev);
+        for (const v of r) merged.set(v.id, v);
+        return merged;
+      });
+      return new Map(r.map((v) => [v.id, v]));
+    },
+    [gen],
+  );
+
+  const needFlatValues = (ids: number[]) => {
+    const todo = ids.filter((id) => !flatPending.current.has(id));
+    if (!todo.length) return;
+    for (const id of todo) flatPending.current.add(id);
+    fetchFlatValues(todo)
+      .catch(() => undefined)
+      .finally(() => {
+        for (const id of todo) flatPending.current.delete(id);
+      });
+  };
+
+  const revealFlat = (sk: TreeSkeleton, id: number) => {
+    setFlatCollapsed((prev) => {
+      const anc = ancestors(sk, id);
+      if (!anc.some((a) => prev.has(a))) return prev;
+      const next = new Set(prev);
+      for (const a of anc) next.delete(a);
+      return next;
+    });
+  };
+
+  const activateFlat = async (pos: FlatPos) => {
+    if (!skeleton) return;
+    if (pos.attr < 0) return activateElement(pos.id);
+    const v = flatValues.get(pos.id) ?? (await fetchFlatValues([pos.id]).catch(() => null))?.get(pos.id);
+    const a = v?.attrs[pos.attr];
+    if (a) navigateTo(a.start, a.end - a.start);
+    else activateElement(pos.id);
+  };
+
+  const copyFlat = async (sel: FlatSelection, rows: ReturnType<typeof flatRows>) => {
+    if (!skeleton) return;
+    const i0 = rowIndexOf(rows, sel.anchor);
+    const i1 = rowIndexOf(rows, sel.focus);
+    if (i0 < 0 || i1 < 0) return;
+    const [a, b] = i0 <= i1 ? [i0, i1] : [i1, i0];
+    const ids = [...new Set(Array.from(rows.ids.subarray(a, b + 1)))];
+    const missing = ids.filter((id) => !flatValues.has(id));
+    const extra = missing.length ? await fetchFlatValues(missing).catch(() => new Map<number, FlatValues>()) : new Map<number, FlatValues>();
+    const get = (id: number) => flatValues.get(id) ?? extra.get(id);
+    // Copy exactly the selected columns, like a spreadsheet range. Names keep their indentation.
+    const withName = Math.min(sel.anchor.col, sel.focus.col) === 0;
+    const withValue = Math.max(sel.anchor.col, sel.focus.col) === 1;
+    const lines: string[] = [];
+    for (let i = a; i <= b; i++) {
+      const id = rows.ids[i];
+      const attr = rows.attrs[i];
+      const v = get(id);
+      const depth = skeleton.depth[id] + (attr >= 0 ? 1 : 0);
+      const cells: string[] = [];
+      if (withName) cells.push("  ".repeat(depth) + tsvCell(attr >= 0 ? "@" + (v?.attrs[attr]?.name ?? "") : skeleton.names[skeleton.nameIdx[id]]));
+      // Values are copied on one line, as displayed.
+      if (withValue) cells.push(tsvCell(((attr >= 0 ? v?.attrs[attr]?.value : v?.text) ?? "").replace(/\s+/g, " ")));
+      lines.push(cells.join("\t"));
+    }
+    host.copy(lines.join("\n"));
+  };
+
+  const switchMode = (m: ViewMode) => {
+    if (m === mode || !skeleton) return;
+    if (m === "flat" && selected >= 0) {
+      revealFlat(skeleton, selected);
+      setFlatSel({ anchor: { id: selected, attr: -1, col: 0 }, focus: { id: selected, attr: -1, col: 1 } });
+    } else if (m === "grid" && flatSel) {
+      selectElement(flatSel.focus.id, { reveal: true });
+    }
+    setMode(m);
+    requestAnimationFrame(() => (document.querySelector(m === "flat" ? ".flat" : ".grid, .tree") as HTMLElement | null)?.focus());
+  };
+
+  // ----- value inspector -----------------------------------------------------
+
+  /** e.g. `catalog › book[2] › description` */
+  const elementTitle = (id: number): string => {
+    if (!skeleton) return "";
+    return [...ancestors(skeleton, id), id]
+      .map((a) => {
+        const name = skeleton.names[skeleton.nameIdx[a]];
+        return skeleton.parent[a] >= 0 && sameNameSiblings(skeleton, a) > 1 ? `${name}[${indexAmongSameName(skeleton, a) + 1}]` : name;
+      })
+      .join(" › ");
+  };
+
+  const elementValues = async (id: number) => flatValues.get(id) ?? (await fetchFlatValues([id]).catch(() => null))?.get(id);
+
+  const inspectCell = (pos: CellPos) => {
+    if (!table) return;
+    const r = view[pos.v];
+    if (r === undefined || pos.c < 0) return;
+    const col = table.columns[pos.c];
+    const raw = table.cells[r * table.columns.length + pos.c];
+    if (typeof raw !== "string") return;
+    const rowId = table.rowIds[r];
+    setInspector({ title: col.kind === "text" ? elementTitle(rowId) : `${elementTitle(rowId)} › ${col.label}`, text: raw });
+  };
+
+  const inspectFlat = async (pos: FlatPos) => {
+    const v = await elementValues(pos.id);
+    if (!v) return;
+    const a = pos.attr >= 0 ? v.attrs[pos.attr] : null;
+    setInspector({ title: a ? `${elementTitle(pos.id)} › @${a.name}` : elementTitle(pos.id), text: a ? a.value : v.text });
+  };
+
+  const inspectElement = async (id: number) => {
+    const v = await elementValues(id);
+    if (v) setInspector({ title: elementTitle(id), text: v.text });
+  };
+
   // ----- find --------------------------------------------------------------
 
   const openFind = () => {
@@ -411,6 +570,8 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
   };
 
   const searchText = find.mode === "xpath" ? find.xpath : find.query;
+  /** The Flat view has no "current grid", so it always searches the whole document. */
+  const scope = mode === "flat" ? "document" : find.scope;
 
   const matcher: Matcher | null = useMemo(() => {
     if (!find.open || find.mode !== "text") return null;
@@ -443,7 +604,7 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
           error = r.error;
         } else {
           const query: SearchQuery = { text: find.query, options: find.options, targets: find.targets };
-          if (find.scope === "document") {
+          if (scope === "document") {
             const r = await worker.request<"searchDoc">({ type: "searchDoc", gen, query });
             res = { kind: "doc", result: r };
             error = r.error;
@@ -468,7 +629,7 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
       }
     }, settings.debounceMs);
     return () => clearTimeout(t);
-  }, [find.open, find.mode, find.query, find.xpath, find.options, find.targets, find.scope, gen, find.scope === "grid" ? selected : -1, find.scope === "grid" ? group : null]);
+  }, [find.open, find.mode, find.query, find.xpath, find.options, find.targets, scope, gen, scope === "grid" ? selected : -1, scope === "grid" ? group : null]);
 
   /** Grid hits in view order (rows hidden by filters are skipped). */
   const gridHits = useMemo(() => {
@@ -499,6 +660,11 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
     return keep;
   }, [find.open, find.showOnlyMatches, hitSet, skeleton]);
 
+  const rowsForFlat = useMemo(
+    () => (mode === "flat" && skeleton ? flatRows(skeleton, flatCollapsed, treeFilter) : null),
+    [mode, skeleton, flatCollapsed, treeFilter],
+  );
+
   const findCount = gridHits ? gridHits.length : (elementHits?.length ?? 0);
 
   const goToHit = (i: number) => {
@@ -509,7 +675,12 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
       const h = gridHits[idx];
       setGridSel({ anchor: { v: h.v, c: h.c }, focus: { v: h.v, c: h.c } });
     } else if (elementHits) {
-      selectElement(elementHits[idx], { reveal: true });
+      const id = elementHits[idx];
+      if (mode === "flat" && skeleton) {
+        revealFlat(skeleton, id);
+        setFlatSel({ anchor: { id, attr: -1, col: 0 }, focus: { id, attr: -1, col: 1 } });
+      }
+      selectElement(id, { reveal: true });
     }
   };
   const nextHit = () => goToHit(findIndex + 1);
@@ -538,6 +709,7 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
   // Global keys: find, F3, Escape, Backspace (up one level).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (document.querySelector(".inspector")) return;
       const mod = e.ctrlKey || e.metaKey;
       if (mod && !e.altKey && e.key.toLowerCase() === "f") {
         e.preventDefault();
@@ -633,6 +805,7 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
           scalar={findResults?.kind === "xpath" ? findResults.result.scalar : undefined}
           namespaces={findResults?.kind === "xpath" ? findResults.result.namespaces : undefined}
           inputRef={findInput}
+          documentOnly={mode === "flat"}
           onNext={nextHit}
           onPrev={prevHit}
           onClose={closeFind}
@@ -641,7 +814,66 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
       {find.open && find.resultsOpen && resultItems.length > 0 && (
         <Results items={resultItems} index={findIndex} matcher={find.mode === "text" ? matcher : null} onPick={goToHit} />
       )}
-      <Split
+      <div class="modebar" role="tablist" aria-label="View">
+        {(["grid", "flat"] as const).map((m) => (
+          <button
+            key={m}
+            role="tab"
+            aria-selected={mode === m}
+            class={"modetab" + (mode === m ? " active" : "")}
+            title={m === "grid" ? "Tree and grid of repeating elements" : "Whole document as an outline sheet (name / value)"}
+            onClick={() => switchMode(m)}
+          >
+            {m === "grid" ? "Grid" : "Flat"}
+          </button>
+        ))}
+        {mode === "flat" && (
+          <span class="modebar-actions">
+            <button class="secondary small" onClick={() => setFlatCollapsed(new Set())} title="Expand all">
+              Expand all
+            </button>
+            <button
+              class="secondary small"
+              title="Collapse all below the root"
+              onClick={() => {
+                const c = new Set<number>();
+                for (let r = skeleton.firstRoot; r >= 0; r = skeleton.nextSibling[r])
+                  for (let ch = skeleton.firstChild[r]; ch >= 0; ch = skeleton.nextSibling[ch]) c.add(ch);
+                setFlatCollapsed(c);
+              }}
+            >
+              Collapse all
+            </button>
+          </span>
+        )}
+      </div>
+      {mode === "flat" && rowsForFlat && (
+        <FlatView
+          skeleton={skeleton}
+          rows={rowsForFlat}
+          values={flatValues}
+          sel={flatSel}
+          hits={hitSet}
+          matcher={matcher}
+          highlightNames={find.targets.names || find.targets.attrNames}
+          highlightValues={find.targets.text || find.targets.attrValues}
+          isCollapsed={(id) => flatCollapsed.has(id)}
+          onNeedValues={needFlatValues}
+          onToggle={(id, expand) =>
+            setFlatCollapsed((prev) => {
+              const next = new Set(prev);
+              if (expand ?? prev.has(id)) next.delete(id);
+              else next.add(id);
+              return next;
+            })
+          }
+          onSelect={setFlatSel}
+          onActivate={(pos) => void activateFlat(pos)}
+          onCopy={(sel) => void copyFlat(sel, rowsForFlat)}
+          onInspect={(pos) => void inspectFlat(pos)}
+        />
+      )}
+      {mode === "grid" && <Split
         ratio={split}
         onRatio={setSplit}
         left={
@@ -665,6 +897,7 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
               }
               onSelect={(id) => selectElement(id)}
               onActivate={activateElement}
+              onInspect={(id) => void inspectElement(id)}
             />
           </div>
         }
@@ -756,13 +989,14 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
                 onResize={(col, w) => setWidths((ws) => ws.map((x, i) => (i === col ? w : x)))}
                 onAutoFit={(col) => {
                   const f = fonts();
-                  const w = autoFitWidth(table, view, col, f.font, f.header);
+                  const w = autoFitWidth(table, view, col, f.font, f.header, f.mono);
                   setWidths((ws) => ws.map((x, i) => (i === col ? w : x)));
                 }}
                 onSelect={setGridSel}
                 onActivate={activateCell}
                 onDrill={drill}
                 onCopy={copy}
+                onInspect={inspectCell}
               />
             ) : (
               <div class="grid-empty">Select an element.</div>
@@ -788,8 +1022,18 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
             )}
           </div>
         }
-      />
-      {filterPopup && table && filterPopup.col < table.columns.length && (
+      />}
+      {inspector && (
+        <ValueInspector
+          target={inspector}
+          onClose={() => {
+            setInspector(null);
+            requestAnimationFrame(() => (document.querySelector(mode === "flat" ? ".flat" : ".grid") as HTMLElement | null)?.focus());
+          }}
+          onCopy={(text) => host.copy(text)}
+        />
+      )}
+      {filterPopup && mode === "grid" && table && filterPopup.col < table.columns.length && (
         <FilterPopup
           table={table}
           col={filterPopup.col}
@@ -811,6 +1055,10 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
       )}
     </div>
   );
+}
+
+function tsvCell(s: string): string {
+  return /[\t\n\r"]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
 function sameNameSiblings(sk: TreeSkeleton, id: number): number {

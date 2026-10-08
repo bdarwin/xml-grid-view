@@ -72,6 +72,8 @@ public class GoldenFixturesTest extends BasePlatformTestCase {
                         parse(CanonicalJson.write(CanonicalJson.tree(model))));
       checks += compare(failures, name + ".grids.json", read(base.resolve(name + ".grids.json")),
                         parse(CanonicalJson.write(CanonicalJson.grids(model))));
+      checks += compare(failures, name + ".flat.json", read(base.resolve(name + ".flat.json")),
+                        parse(CanonicalJson.write(CanonicalJson.flat(model))));
 
       Path searchFile = base.resolve(name + ".search.json");
       if (!Files.exists(searchFile)) continue;
@@ -99,6 +101,24 @@ public class GoldenFixturesTest extends BasePlatformTestCase {
     }
     assertTrue("only " + checks + " checks ran", checks > 50);
     if (!failures.isEmpty()) fail(failures.size() + " fixture mismatch(es):\n" + String.join("\n\n", failures));
+  }
+
+  /** Value inspector: every fixtures/json/<name>.txt against <name>.json (see SCHEMA.md "JSON value inspector"). */
+  public void testJsonValueFixtures() throws IOException {
+    Path dir = casesDir().resolveSibling("json");
+    List<Path> inputs;
+    try (Stream<Path> st = Files.list(dir)) {
+      inputs = st.filter(p -> p.toString().endsWith(".txt")).sorted().toList();
+    }
+    assertFalse("no JSON fixture cases found", inputs.isEmpty());
+    List<String> failures = new ArrayList<>();
+    for (Path in : inputs) {
+      String name = in.getFileName().toString().replaceFirst("\\.txt$", "");
+      String text = Files.readString(in, StandardCharsets.UTF_8);
+      compare(failures, "json/" + name, read(dir.resolve(name + ".json")),
+              parse(CanonicalJson.write(CanonicalJson.jsonValue(text))));
+    }
+    if (!failures.isEmpty()) fail(failures.size() + " JSON fixture mismatch(es):\n" + String.join("\n\n", failures));
   }
 
   private static int compare(List<String> failures, String what, JsonElement expected, JsonElement actual) {

@@ -1,0 +1,1 @@
+{"s": "line\nbreak \"q\" é 😀 tab\t slash\/ back\\", "ctl": "\u0001"}

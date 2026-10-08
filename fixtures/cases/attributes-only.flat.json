@@ -1,0 +1,14 @@
+[
+  { "depth": 0, "kind": "element", "name": "points", "value": "", "path": "0" },
+  { "depth": 1, "kind": "element", "name": "p", "value": "", "path": "0/0" },
+  { "depth": 2, "kind": "attr", "name": "@x", "value": "1", "path": "0/0" },
+  { "depth": 2, "kind": "attr", "name": "@y", "value": "2", "path": "0/0" },
+  { "depth": 1, "kind": "element", "name": "p", "value": "", "path": "0/1" },
+  { "depth": 2, "kind": "attr", "name": "@x", "value": "3", "path": "0/1" },
+  { "depth": 2, "kind": "attr", "name": "@y", "value": "4", "path": "0/1" },
+  { "depth": 2, "kind": "attr", "name": "@z", "value": "5", "path": "0/1" },
+  { "depth": 1, "kind": "element", "name": "p", "value": "", "path": "0/2" },
+  { "depth": 2, "kind": "attr", "name": "@y", "value": "6", "path": "0/2" },
+  { "depth": 2, "kind": "attr", "name": "@label", "value": "", "path": "0/2" },
+  { "depth": 1, "kind": "element", "name": "p", "value": "", "path": "0/3" }
+]

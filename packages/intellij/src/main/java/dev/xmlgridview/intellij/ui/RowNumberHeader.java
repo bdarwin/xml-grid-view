@@ -10,7 +10,10 @@ import javax.swing.event.TableModelEvent;
 import java.awt.Dimension;
 import java.awt.FontMetrics;
 import java.awt.Graphics;
+import java.awt.Point;
 import java.awt.Rectangle;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 
 /** Row header painting 1-based view row numbers aligned with the table rows. */
 final class RowNumberHeader extends JComponent {
@@ -25,6 +28,20 @@ final class RowNumberHeader extends JComponent {
       repaint();
     });
     table.getSelectionModel().addListSelectionListener(e -> repaint());
+    // Click a row number to select the whole row; Shift+click extends, like a spreadsheet.
+    addMouseListener(new MouseAdapter() {
+      @Override
+      public void mousePressed(MouseEvent e) {
+        if (e.getButton() != MouseEvent.BUTTON1 || table.getColumnCount() == 0) return;
+        int row = table.rowAtPoint(new Point(0, e.getY()));
+        if (row < 0) return;
+        int anchor = table.getSelectionModel().getAnchorSelectionIndex();
+        int from = e.isShiftDown() && anchor >= 0 ? anchor : row;
+        table.getSelectionModel().setSelectionInterval(from, row);
+        table.getColumnModel().getSelectionModel().setSelectionInterval(0, table.getColumnCount() - 1);
+        table.requestFocusInWindow();
+      }
+    });
     if (table.getRowSorter() != null) table.getRowSorter().addRowSorterListener(e -> {
       revalidate();
       repaint();
@@ -45,8 +62,8 @@ final class RowNumberHeader extends JComponent {
     g.setColor(UIUtil.getPanelBackground());
     g.fillRect(clip.x, clip.y, clip.width, clip.height);
     if (table.getRowCount() == 0) return;
-    int first = Math.max(0, table.rowAtPoint(new java.awt.Point(0, clip.y)));
-    int last = table.rowAtPoint(new java.awt.Point(0, clip.y + clip.height));
+    int first = Math.max(0, table.rowAtPoint(new Point(0, clip.y)));
+    int last = table.rowAtPoint(new Point(0, clip.y + clip.height));
     if (last < 0) last = table.getRowCount() - 1;
     FontMetrics fm = g.getFontMetrics(getFont());
     g.setFont(getFont());

@@ -26,7 +26,10 @@
     "groups": [{ "tag": "d", "count": 1 }],
     "grids": {
       "d": {
-        "columns": [{ "key": "@k", "kind": "attr" }, { "key": "e", "kind": "complex" }],
+        "columns": [
+          { "key": "@k", "kind": "attr" },
+          { "key": "e", "kind": "complex" }
+        ],
         "rows": [
           ["1", { "drill": "e", "count": 2 }]
         ]

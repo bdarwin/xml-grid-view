@@ -1,0 +1,28 @@
+{
+  "kind": "json",
+  "pretty": "{\n  \"__proto__\": {\n    \"polluted\": true\n  },\n  \"constructor\": 2,\n  \"a\": 3,\n  \"b\": 2,\n  \"(value)\": \"literal key\"\n}",
+  "grids": {
+    "": {
+      "columns": [
+        { "key": "(key)", "kind": "leaf" },
+        { "key": "(value)", "kind": "complex" }
+      ],
+      "keys": ["__proto__", "constructor", "a", "b", "(value)"],
+      "rows": [
+        ["__proto__", { "drill": "object", "count": 1 }],
+        ["constructor", "2"],
+        ["a", "3"],
+        ["b", "2"],
+        ["(value)", "literal key"]
+      ]
+    },
+    "/__proto__": {
+      "columns": [
+        { "key": "(key)", "kind": "leaf" },
+        { "key": "(value)", "kind": "leaf" }
+      ],
+      "keys": ["polluted"],
+      "rows": [["polluted", "true"]]
+    }
+  }
+}

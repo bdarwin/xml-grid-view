@@ -9,3 +9,7 @@ packages/intellij/.intellijPlatform/
 .idea/
 *.log
 .DS_Store
+packages/vscode/media/
+packages/vscode/LICENSE
+packages/vscode/CHANGELOG.md
+packages/intellij/screenshots/project/.idea/

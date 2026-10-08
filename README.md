@@ -1,5 +1,13 @@
 # XML Grid View
 
+| VS Code: Grid, with source beside | VS Code: Flat |
+| --- | --- |
+| ![VS Code grid view](docs/vscode-grid.png) | ![VS Code flat view](docs/vscode-flat.png) |
+| **IntelliJ: Grid tab** | **IntelliJ: Flat tab** |
+| ![IntelliJ grid tab](docs/intellij-grid.png) | ![IntelliJ flat tab](docs/intellij-flat.png) |
+| **Value inspector: JSON as a grid** | **Value inspector: JSON tree (IntelliJ)** |
+| ![Inspector JSON grid](docs/view-inspector-grid.png) | ![IntelliJ inspector JSON tree](docs/intellij-inspector.png) |
+
 A read-only XML viewer for VS Code and IntelliJ. It shows the document as a
 tree on the left and a grid on the right, with search and XPath. It never
 modifies the document.
@@ -52,8 +60,9 @@ the Command Palette.
 
 Choose **Settings → Plugins → ⚙ → Install Plugin from Disk…** and pick the zip
 from `packages/intellij/build/distributions/`. XML files still open in the text
-editor. Use the **Editor / Split / Viewer** toggle in the editor toolbar to show
-the grid.
+editor, and a **Text | Grid** tab bar appears at the bottom of the editor. Click
+**Grid** to open the viewer. To see source and grid side by side, use the
+editor tab's **Split Right**.
 
 ## Features
 
@@ -74,6 +83,23 @@ limitations.
     up to 1,000 distinct values, all ANDed together).
   - Auto-fit column widths, row numbers, multi-cell selection, and copy as TSV
     with an optional header.
+- **Flat view:** the whole document as an outline sheet with Name and Value
+  columns.
+  - One row per element in document order, indented by depth. Attributes
+    appear as `@name` rows under their element.
+  - Rows collapse and expand. Copy gives indented TSV that pastes cleanly into
+    Excel, and Enter/F4 jumps to the source.
+  - In VS Code, use the **Grid | Flat** switch at the top of the view. In
+    IntelliJ, use the **Flat** bottom tab (**Text | Grid | Flat**).
+- **Value inspector:** for long text or JSON stored inside a node.
+  - Open it with **Shift+Enter** on any cell, Flat value or tree node, or with
+    the **⤢** button that appears on long values.
+  - Text shows in full, with wrapping and search.
+  - JSON is detected automatically and gets three tabs:
+    - Tree: collapsible, with search.
+    - Grid: the same drill-down grid as XML, with sort and filters.
+    - Text: pretty-printed.
+  - Big numbers are shown exactly as written.
 - **Find (Ctrl/Cmd+F):**
   - Match case, whole word and regex.
   - Scope: the current grid or the whole document.
@@ -96,6 +122,16 @@ limitations.
   Code the limit is the `xmlGridView.largeFileThresholdMB` setting.
 - **Theming:** VS Code maps its `--vscode-*` theme variables onto the view's
   `--xgv-*` CSS variables. IntelliJ uses JBColor/JBUI throughout.
+
+## Releasing
+
+See [PUBLISHING.md](PUBLISHING.md). Pushing a `v*` tag runs the full test suite,
+then creates a GitHub release and publishes to the VS Code Marketplace, Open VSX and
+JetBrains Marketplace. Each marketplace is published only once its token secret is set.
+
+## License
+
+[MIT](LICENSE) © Darwin Baisa
 
 ## Golden fixtures
 

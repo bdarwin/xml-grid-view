@@ -25,6 +25,8 @@ export interface FindBarProps {
   scalar?: XPathScalar;
   namespaces?: Record<string, string>;
   inputRef: Ref<HTMLInputElement>;
+  /** Hide the scope choice and always search the whole document (Flat view). */
+  documentOnly?: boolean;
   onNext(): void;
   onPrev(): void;
   onClose(): void;
@@ -127,7 +129,7 @@ export function FindBar(p: FindBarProps) {
         </button>
       </div>
       <div class="find-row options">
-        {!xpath && (
+        {!xpath && !p.documentOnly && (
           <select
             value={s.scope}
             title="Scope"
@@ -145,13 +147,13 @@ export function FindBar(p: FindBarProps) {
               {label}
             </label>
           ))}
-        {(xpath || s.scope === "document") && (
+        {(xpath || s.scope === "document" || p.documentOnly) && (
           <label class="check">
             <input type="checkbox" checked={s.showOnlyMatches} onChange={() => p.onChange({ showOnlyMatches: !s.showOnlyMatches })} />
             Show only matches in tree
           </label>
         )}
-        {(xpath || s.scope === "document") && (
+        {(xpath || s.scope === "document" || p.documentOnly) && (
           <button class="link" onClick={() => p.onChange({ resultsOpen: !s.resultsOpen })} aria-expanded={s.resultsOpen}>
             {s.resultsOpen ? "Hide results" : "Show results"}
           </button>

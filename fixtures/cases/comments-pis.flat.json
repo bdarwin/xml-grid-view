@@ -1,0 +1,7 @@
+[
+  { "depth": 0, "kind": "element", "name": "config", "value": "", "path": "0" },
+  { "depth": 1, "kind": "element", "name": "setting", "value": "onetwo", "path": "0/0" },
+  { "depth": 2, "kind": "attr", "name": "@key", "value": "a", "path": "0/0" },
+  { "depth": 1, "kind": "element", "name": "setting", "value": "three", "path": "0/1" },
+  { "depth": 2, "kind": "attr", "name": "@key", "value": "b", "path": "0/1" }
+]

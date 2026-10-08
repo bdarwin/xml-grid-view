@@ -44,7 +44,10 @@
       "path": "0/1",
       "start": 70,
       "end": 149,
-      "attrs": [{ "name": "sku", "value": "B2", "start": 76, "end": 84 }, { "name": "discontinued", "value": "true", "start": 85, "end": 104 }],
+      "attrs": [
+        { "name": "sku", "value": "B2", "start": 76, "end": 84 },
+        { "name": "discontinued", "value": "true", "start": 85, "end": 104 }
+      ],
       "text": "",
       "children": [
         {

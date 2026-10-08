@@ -1,0 +1,16 @@
+[
+  { "depth": 0, "kind": "element", "name": "chars", "value": "", "path": "0" },
+  { "depth": 1, "kind": "element", "name": "c", "value": "&", "path": "0/0" },
+  { "depth": 2, "kind": "attr", "name": "@name", "value": "amp", "path": "0/0" },
+  { "depth": 1, "kind": "element", "name": "c", "value": "<tag>", "path": "0/1" },
+  { "depth": 2, "kind": "attr", "name": "@name", "value": "lt", "path": "0/1" },
+  { "depth": 1, "kind": "element", "name": "c", "value": "quotes", "path": "0/2" },
+  { "depth": 2, "kind": "attr", "name": "@name", "value": "quote", "path": "0/2" },
+  { "depth": 2, "kind": "attr", "name": "@q", "value": "\"x\" 'y'", "path": "0/2" },
+  { "depth": 1, "kind": "element", "name": "c", "value": "AB😀", "path": "0/3" },
+  { "depth": 2, "kind": "attr", "name": "@name", "value": "numeric", "path": "0/3" },
+  { "depth": 1, "kind": "element", "name": "c", "value": "😀 smile é", "path": "0/4" },
+  { "depth": 2, "kind": "attr", "name": "@name", "value": "emoji", "path": "0/4" },
+  { "depth": 1, "kind": "element", "name": "c", "value": " padded ", "path": "0/5" },
+  { "depth": 2, "kind": "attr", "name": "@name", "value": "nbsp", "path": "0/5" }
+]

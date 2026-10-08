@@ -1,0 +1,43 @@
+{
+  "kind": "json",
+  "pretty": "{\n  \"bk101\": {\n    \"title\": \"XML Guide\",\n    \"price\": 44.95\n  },\n  \"bk102\": {\n    \"title\": \"Midnight Rain\",\n    \"tags\": [\n      \"fantasy\",\n      \"new\"\n    ]\n  }\n}",
+  "grids": {
+    "": {
+      "columns": [
+        { "key": "(key)", "kind": "leaf" },
+        { "key": "title", "kind": "leaf" },
+        { "key": "price", "kind": "leaf" },
+        { "key": "tags", "kind": "complex" }
+      ],
+      "keys": ["bk101", "bk102"],
+      "rows": [
+        ["bk101", "XML Guide", "44.95", null],
+        ["bk102", "Midnight Rain", null, { "drill": "array", "count": 2 }]
+      ]
+    },
+    "/bk101": {
+      "columns": [
+        { "key": "(key)", "kind": "leaf" },
+        { "key": "(value)", "kind": "leaf" }
+      ],
+      "keys": ["title", "price"],
+      "rows": [["title", "XML Guide"], ["price", "44.95"]]
+    },
+    "/bk102": {
+      "columns": [
+        { "key": "(key)", "kind": "leaf" },
+        { "key": "(value)", "kind": "complex" }
+      ],
+      "keys": ["title", "tags"],
+      "rows": [
+        ["title", "Midnight Rain"],
+        ["tags", { "drill": "array", "count": 2 }]
+      ]
+    },
+    "/bk102/tags": {
+      "columns": [{ "key": "(value)", "kind": "leaf" }],
+      "keys": ["0", "1"],
+      "rows": [["fantasy"], ["new"]]
+    }
+  }
+}

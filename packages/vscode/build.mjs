@@ -10,6 +10,10 @@ if (!existsSync(new URL("webview.js", webviewDist))) {
 rmSync("dist", { recursive: true, force: true });
 mkdirSync("dist/webview", { recursive: true });
 for (const f of ["webview.js", "webview.css"]) cpSync(new URL(f, webviewDist), `dist/webview/${f}`);
+// Marketplace assets live at the repository root; vsce packages them from here.
+mkdirSync("media", { recursive: true });
+cpSync(new URL("../../media/icon.png", import.meta.url), "media/icon.png");
+for (const f of ["LICENSE", "CHANGELOG.md"]) cpSync(new URL(`../../${f}`, import.meta.url), f);
 
 await esbuild.build({
   entryPoints: ["src/extension.ts"],

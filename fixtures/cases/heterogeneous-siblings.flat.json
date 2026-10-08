@@ -1,0 +1,18 @@
+[
+  { "depth": 0, "kind": "element", "name": "inventory", "value": "", "path": "0" },
+  { "depth": 1, "kind": "element", "name": "item", "value": "", "path": "0/0" },
+  { "depth": 2, "kind": "attr", "name": "@sku", "value": "A1", "path": "0/0" },
+  { "depth": 2, "kind": "element", "name": "name", "value": "Widget", "path": "0/0/0" },
+  { "depth": 2, "kind": "element", "name": "qty", "value": "3", "path": "0/0/1" },
+  { "depth": 1, "kind": "element", "name": "item", "value": "", "path": "0/1" },
+  { "depth": 2, "kind": "attr", "name": "@sku", "value": "B2", "path": "0/1" },
+  { "depth": 2, "kind": "attr", "name": "@discontinued", "value": "true", "path": "0/1" },
+  { "depth": 2, "kind": "element", "name": "name", "value": "Gadget", "path": "0/1/0" },
+  { "depth": 2, "kind": "element", "name": "color", "value": "red", "path": "0/1/1" },
+  { "depth": 1, "kind": "element", "name": "note", "value": "Counted on Monday", "path": "0/2" },
+  { "depth": 1, "kind": "element", "name": "item", "value": "", "path": "0/3" },
+  { "depth": 2, "kind": "element", "name": "qty", "value": "0", "path": "0/3/0" },
+  { "depth": 1, "kind": "element", "name": "supplier", "value": "", "path": "0/4" },
+  { "depth": 2, "kind": "attr", "name": "@code", "value": "S1", "path": "0/4" },
+  { "depth": 1, "kind": "element", "name": "note", "value": "Recount needed", "path": "0/5" }
+]

@@ -45,6 +45,40 @@ public final class CanonicalJson {
     return m;
   }
 
+  /**
+   * Canonical form of the value inspector's JSON handling for one node text
+   * ({@code fixtures/json/<name>.json}).
+   */
+  public static @NotNull Map<String, Object> jsonValue(@NotNull String text) {
+    Json.Detection d = Json.detect(text);
+    Map<String, Object> out = new LinkedHashMap<>();
+    if (!d.isJson()) {
+      out.put("kind", "text");
+      out.put("hasError", d.hasError());
+      return out;
+    }
+    out.put("kind", "json");
+    out.put("pretty", d.pretty());
+    Map<String, Object> grids = new LinkedHashMap<>();
+    Json.forEachContainer(d.value(), (node, path) -> {
+      JsonTable t = JsonTable.of(node);
+      List<Object> cols = new ArrayList<>();
+      for (GridColumn c : t.columns()) cols.add(map("key", c.key(), "kind", c.kind().id()));
+      List<Object> rows = new ArrayList<>();
+      for (int r = 0; r < t.rowCount(); r++) {
+        List<Object> row = new ArrayList<>();
+        for (int c = 0; c < t.columnCount(); c++) {
+          Object v = t.cell(r, c);
+          row.add(v instanceof JsonTable.Drill dr ? map("drill", dr.kind(), "count", dr.count()) : v);
+        }
+        rows.add(row);
+      }
+      grids.put(Json.pointer(path), map("columns", cols, "keys", new ArrayList<Object>(t.rowKeys()), "rows", rows));
+    });
+    out.put("grids", grids);
+    return out;
+  }
+
   public static @NotNull Map<String, Object> grids(@NotNull XmlDocumentModel model) {
     Map<String, Object> out = new LinkedHashMap<>();
     for (XNode el : model.elements()) {
@@ -69,6 +103,21 @@ public final class CanonicalJson {
         grids.put(g.tag(), map("columns", cols, "rows", rows));
       }
       out.put(el.path(), map("groups", gl, "grids", grids));
+    }
+    return out;
+  }
+
+  /** Flat view rows, fully expanded (fixtures {@code <name>.flat.json}). */
+  public static @NotNull List<Object> flat(@NotNull XmlDocumentModel model) {
+    List<Object> out = new ArrayList<>();
+    for (FlatRow r : FlatRow.build(model)) {
+      Map<String, Object> m = new LinkedHashMap<>();
+      m.put("depth", r.depth());
+      m.put("kind", r.kind().id());
+      m.put("name", r.name());
+      m.put("value", r.value());
+      m.put("path", r.node().path());
+      out.add(m);
     }
     return out;
   }

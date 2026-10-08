@@ -1,0 +1,34 @@
+{
+  "kind": "json",
+  "pretty": "{\n  \"name\": \"demo\",\n  \"version\": 3,\n  \"debug\": false,\n  \"servers\": [\n    \"a\",\n    \"b\"\n  ],\n  \"limits\": {\n    \"cpu\": 2,\n    \"mem\": \"1G\"\n  },\n  \"nothing\": null\n}",
+  "grids": {
+    "": {
+      "columns": [
+        { "key": "(key)", "kind": "leaf" },
+        { "key": "(value)", "kind": "complex" }
+      ],
+      "keys": ["name", "version", "debug", "servers", "limits", "nothing"],
+      "rows": [
+        ["name", "demo"],
+        ["version", "3"],
+        ["debug", "false"],
+        ["servers", { "drill": "array", "count": 2 }],
+        ["limits", { "drill": "object", "count": 2 }],
+        ["nothing", "null"]
+      ]
+    },
+    "/servers": {
+      "columns": [{ "key": "(value)", "kind": "leaf" }],
+      "keys": ["0", "1"],
+      "rows": [["a"], ["b"]]
+    },
+    "/limits": {
+      "columns": [
+        { "key": "(key)", "kind": "leaf" },
+        { "key": "(value)", "kind": "leaf" }
+      ],
+      "keys": ["cpu", "mem"],
+      "rows": [["cpu", "2"], ["mem", "1G"]]
+    }
+  }
+}

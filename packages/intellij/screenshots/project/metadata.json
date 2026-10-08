@@ -1,0 +1,3 @@
+{"isbn": "978-0-13-468599-1", "id": 12345678901234567890, "price": {"amount": 44.95, "currency": "USD"},
+ "reviews": [{"user": "ann", "stars": 5, "text": "Great"}, {"user": "bob", "stars": 4, "text": "Solid", "verified": true}],
+ "tags": ["xml", "guide"], "draft": false, "notes": null}

@@ -1,5 +1,11 @@
 # XML Grid View for VS Code
 
+![Tree and grid, with the source opened beside it](https://raw.githubusercontent.com/bdarwin/xml-grid-view/main/docs/vscode-grid.png)
+
+![Flat view: the whole document as an outline sheet](https://raw.githubusercontent.com/bdarwin/xml-grid-view/main/docs/vscode-flat.png)
+
+![Find across the whole document](https://raw.githubusercontent.com/bdarwin/xml-grid-view/main/docs/vscode-find.png)
+
 A read-only viewer for XML files. It shows a tree on the left and a grid on the
 right, with search and XPath.
 
@@ -20,6 +26,14 @@ You can also use **Reopen Editor With… → XML Grid View**.
   - Nested repeats appear as `{tag ×n}` cells. Click one to drill down.
   - Sort, quick filter, and per-column filters (text plus a value checklist).
   - Multi-cell selection. Ctrl/Cmd+C copies as TSV; add Shift to toggle the header row.
+- **Flat view:** switch with **Grid | Flat** at the top.
+  - The whole document as an outline sheet, with Name and Value columns.
+  - Attributes appear as `@name` rows under their element.
+  - Collapse/expand, Expand all / Collapse all, copy as indented TSV, and
+    Enter to jump to the source.
+- **Value inspector (Shift+Enter or ⤢):** shows long text in full, with
+  search. JSON gets Tree, Grid and Text tabs, with collapse, search and
+  drill-down.
 - **Find (Ctrl/Cmd+F):**
   - Toggles for match case, whole word and regex.
   - Search the current grid or the whole document, by names, attribute names,
@@ -38,3 +52,7 @@ You can also use **Reopen Editor With… → XML Grid View**.
 | --- | --- | --- |
 | `xmlGridView.copyWithHeader` | `false` | Include the header row when copying cells |
 | `xmlGridView.largeFileThresholdMB` | `50` | Files above this size need an explicit "Load anyway" |
+
+## License
+
+MIT. Source and issues: <https://github.com/bdarwin/xml-grid-view>.

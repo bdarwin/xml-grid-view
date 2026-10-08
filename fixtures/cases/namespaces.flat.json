@@ -1,0 +1,17 @@
+[
+  { "depth": 0, "kind": "element", "name": "feed", "value": "", "path": "0" },
+  { "depth": 1, "kind": "element", "name": "title", "value": "Example", "path": "0/0" },
+  { "depth": 1, "kind": "element", "name": "entry", "value": "", "path": "0/1" },
+  { "depth": 2, "kind": "element", "name": "id", "value": "urn:1", "path": "0/1/0" },
+  { "depth": 2, "kind": "element", "name": "title", "value": "First", "path": "0/1/1" },
+  { "depth": 2, "kind": "element", "name": "media:thumbnail", "value": "", "path": "0/1/2" },
+  { "depth": 3, "kind": "attr", "name": "@url", "value": "a.png", "path": "0/1/2" },
+  { "depth": 3, "kind": "attr", "name": "@media:width", "value": "64", "path": "0/1/2" },
+  { "depth": 1, "kind": "element", "name": "entry", "value": "", "path": "0/2" },
+  { "depth": 2, "kind": "element", "name": "id", "value": "urn:2", "path": "0/2/0" },
+  { "depth": 2, "kind": "element", "name": "title", "value": "Second", "path": "0/2/1" },
+  { "depth": 2, "kind": "element", "name": "media:thumbnail", "value": "", "path": "0/2/2" },
+  { "depth": 3, "kind": "attr", "name": "@url", "value": "b.png", "path": "0/2/2" },
+  { "depth": 2, "kind": "element", "name": "link", "value": "", "path": "0/2/3" },
+  { "depth": 3, "kind": "attr", "name": "@href", "value": "http://example.com/2", "path": "0/2/3" }
+]

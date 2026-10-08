@@ -1,16 +1,14 @@
 package dev.xmlgridview.intellij.editor;
 
+import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.editor.Editor;
-import com.intellij.openapi.editor.ScrollType;
+import com.intellij.openapi.fileEditor.FileDocumentManager;
 import com.intellij.openapi.fileEditor.FileEditor;
 import com.intellij.openapi.fileEditor.FileEditorState;
-import com.intellij.openapi.fileEditor.TextEditor;
-import com.intellij.openapi.fileEditor.TextEditorWithPreview;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Disposer;
 import com.intellij.openapi.util.UserDataHolderBase;
 import com.intellij.openapi.vfs.VirtualFile;
-import com.intellij.openapi.wm.IdeFocusManager;
 import dev.xmlgridview.intellij.ui.XmlGridPanel;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -18,38 +16,27 @@ import org.jetbrains.annotations.Nullable;
 import javax.swing.JComponent;
 import java.beans.PropertyChangeListener;
 
-/** The viewer half of the composite editor. Read-only: it never modifies the document. */
+/** The "Grid" tab shown next to the text editor. Read-only: it never modifies the document. */
 public final class XmlGridViewerEditor extends UserDataHolderBase implements FileEditor {
+  private final Project project;
   private final VirtualFile file;
-  private final TextEditor textEditor;
   private final XmlGridPanel panel;
-  private @Nullable TextEditorWithPreview composite;
 
-  public XmlGridViewerEditor(@NotNull Project project, @NotNull VirtualFile file, @NotNull TextEditor textEditor) {
+  public XmlGridViewerEditor(@NotNull Project project, @NotNull VirtualFile file) {
+    this.project = project;
     this.file = file;
-    this.textEditor = textEditor;
-    this.panel = new XmlGridPanel(project, textEditor.getEditor().getDocument(), this::navigate, this);
-  }
-
-  void attach(@NotNull TextEditorWithPreview composite) {
-    this.composite = composite;
+    Document document = FileDocumentManager.getInstance().getDocument(file);
+    if (document == null) throw new IllegalArgumentException("No document for " + file);
+    this.panel = new XmlGridPanel(project, document, this::navigate, this);
   }
 
   public @NotNull XmlGridPanel getPanel() {
     return panel;
   }
 
-  /** Moves the caret to {@code offset} in the text editor, centers it and focuses the editor. */
-  public void navigate(int offset) {
-    if (composite != null && composite.getLayout() == TextEditorWithPreview.Layout.SHOW_PREVIEW) {
-      composite.setLayout(TextEditorWithPreview.Layout.SHOW_EDITOR_AND_PREVIEW);
-    }
-    Editor editor = textEditor.getEditor();
-    int target = Math.max(0, Math.min(offset, editor.getDocument().getTextLength()));
-    editor.getSelectionModel().removeSelection();
-    editor.getCaretModel().moveToOffset(target);
-    editor.getScrollingModel().scrollToCaret(ScrollType.CENTER);
-    IdeFocusManager.getGlobalInstance().requestFocus(editor.getContentComponent(), true);
+  /** Switches to the Text tab with the caret at {@code offset}; returns the text editor or null. */
+  public @Nullable Editor navigate(int offset) {
+    return EditorNavigation.navigate(project, file, offset);
   }
 
   @Override
@@ -64,7 +51,7 @@ public final class XmlGridViewerEditor extends UserDataHolderBase implements Fil
 
   @Override
   public @NotNull String getName() {
-    return "XML Grid";
+    return "Grid";
   }
 
   @Override

@@ -2,6 +2,7 @@ import type { GridTable, Matcher } from "@xmlgridview/core";
 import { useEffect, useRef } from "preact/hooks";
 import { cellString, isFilterActive, type CellRange, type Filters, type SortState } from "../gridView";
 import { Highlight } from "./Highlight";
+import { isInspectable } from "../inspect";
 import { useViewport } from "./useViewport";
 
 export const ROW_HEIGHT = 22;
@@ -46,6 +47,8 @@ export interface GridProps {
   onActivate(pos: CellPos): void;
   onDrill(pos: CellPos): void;
   onCopy(range: CellRange, invertHeader: boolean): void;
+  /** Opens the value inspector for a cell (Shift+Enter or the inline button). */
+  onInspect?(pos: CellPos): void;
 }
 
 export function Grid(p: GridProps) {
@@ -125,7 +128,8 @@ export function Grid(p: GridProps) {
       case "Enter":
       case "F4":
         if (!p.sel) break;
-        if (mod && e.key === "Enter") p.onDrill(p.sel.focus);
+        if (e.shiftKey && e.key === "Enter" && p.onInspect) p.onInspect(p.sel.focus);
+        else if (mod && e.key === "Enter") p.onDrill(p.sel.focus);
         else p.onActivate(p.sel.focus);
         break;
       case " ":
@@ -255,7 +259,26 @@ export function Grid(p: GridProps) {
           </span>
         );
       } else if (raw !== null) {
-        content = <Highlight text={raw} matcher={p.matcher} current={key === p.currentHit} />;
+        content = <Highlight text={raw.length > 1000 ? raw.slice(0, 1000) : raw} matcher={p.matcher} current={key === p.currentHit} />;
+        if (p.onInspect && isInspectable(raw)) {
+          content = (
+            <>
+              {content}
+              <button
+                class="inspect-btn"
+                title="Open value (Shift+Enter)"
+                aria-label="Open value"
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  p.onInspect!(pos);
+                }}
+              >
+                ⤢
+              </button>
+            </>
+          );
+        }
       }
       cells.push(
         <div

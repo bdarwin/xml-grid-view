@@ -1,0 +1,90 @@
+{
+  "kind": "json",
+  "pretty": "[\n  {\n    \"id\": 12345678901234567890,\n    \"customer\": \"Ann\",\n    \"total\": 1.50,\n    \"paid\": true,\n    \"lines\": [\n      {\n        \"sku\": \"X\",\n        \"qty\": 2\n      },\n      {\n        \"sku\": \"Y\",\n        \"qty\": 1,\n        \"note\": null\n      }\n    ],\n    \"address\": {\n      \"city\": \"Zürich\",\n      \"zip\": \"8001\"\n    }\n  },\n  {\n    \"id\": 2,\n    \"customer\": \"Bob\",\n    \"total\": 1e3,\n    \"paid\": false,\n    \"lines\": [],\n    \"coupon\": \"SAVE10\"\n  }\n]",
+  "grids": {
+    "": {
+      "columns": [
+        { "key": "id", "kind": "leaf" },
+        { "key": "customer", "kind": "leaf" },
+        { "key": "total", "kind": "leaf" },
+        { "key": "paid", "kind": "leaf" },
+        { "key": "lines", "kind": "complex" },
+        { "key": "address", "kind": "complex" },
+        { "key": "coupon", "kind": "leaf" }
+      ],
+      "keys": ["0", "1"],
+      "rows": [
+        ["12345678901234567890", "Ann", "1.50", "true", { "drill": "array", "count": 2 }, { "drill": "object", "count": 2 }, null],
+        ["2", "Bob", "1e3", "false", { "drill": "array", "count": 0 }, null, "SAVE10"]
+      ]
+    },
+    "/0": {
+      "columns": [
+        { "key": "(key)", "kind": "leaf" },
+        { "key": "(value)", "kind": "complex" }
+      ],
+      "keys": ["id", "customer", "total", "paid", "lines", "address"],
+      "rows": [
+        ["id", "12345678901234567890"],
+        ["customer", "Ann"],
+        ["total", "1.50"],
+        ["paid", "true"],
+        ["lines", { "drill": "array", "count": 2 }],
+        ["address", { "drill": "object", "count": 2 }]
+      ]
+    },
+    "/0/lines": {
+      "columns": [
+        { "key": "sku", "kind": "leaf" },
+        { "key": "qty", "kind": "leaf" },
+        { "key": "note", "kind": "leaf" }
+      ],
+      "keys": ["0", "1"],
+      "rows": [["X", "2", null], ["Y", "1", "null"]]
+    },
+    "/0/lines/0": {
+      "columns": [
+        { "key": "(key)", "kind": "leaf" },
+        { "key": "(value)", "kind": "leaf" }
+      ],
+      "keys": ["sku", "qty"],
+      "rows": [["sku", "X"], ["qty", "2"]]
+    },
+    "/0/lines/1": {
+      "columns": [
+        { "key": "(key)", "kind": "leaf" },
+        { "key": "(value)", "kind": "leaf" }
+      ],
+      "keys": ["sku", "qty", "note"],
+      "rows": [["sku", "Y"], ["qty", "1"], ["note", "null"]]
+    },
+    "/0/address": {
+      "columns": [
+        { "key": "(key)", "kind": "leaf" },
+        { "key": "(value)", "kind": "leaf" }
+      ],
+      "keys": ["city", "zip"],
+      "rows": [["city", "Zürich"], ["zip", "8001"]]
+    },
+    "/1": {
+      "columns": [
+        { "key": "(key)", "kind": "leaf" },
+        { "key": "(value)", "kind": "complex" }
+      ],
+      "keys": ["id", "customer", "total", "paid", "lines", "coupon"],
+      "rows": [
+        ["id", "2"],
+        ["customer", "Bob"],
+        ["total", "1e3"],
+        ["paid", "false"],
+        ["lines", { "drill": "array", "count": 0 }],
+        ["coupon", "SAVE10"]
+      ]
+    },
+    "/1/lines": {
+      "columns": [],
+      "keys": [],
+      "rows": []
+    }
+  }
+}

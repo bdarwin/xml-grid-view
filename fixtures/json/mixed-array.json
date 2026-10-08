@@ -1,0 +1,53 @@
+{
+  "kind": "json",
+  "pretty": "[\n  1,\n  \"two\",\n  {\n    \"x\": 1\n  },\n  [\n    3,\n    4\n  ],\n  null,\n  {\n    \"y\": {\n      \"z\": true\n    }\n  }\n]",
+  "grids": {
+    "": {
+      "columns": [
+        { "key": "(value)", "kind": "complex" },
+        { "key": "x", "kind": "leaf" },
+        { "key": "y", "kind": "complex" }
+      ],
+      "keys": ["0", "1", "2", "3", "4", "5"],
+      "rows": [
+        ["1", null, null],
+        ["two", null, null],
+        [null, "1", null],
+        [{ "drill": "array", "count": 2 }, null, null],
+        ["null", null, null],
+        [null, null, { "drill": "object", "count": 1 }]
+      ]
+    },
+    "/2": {
+      "columns": [
+        { "key": "(key)", "kind": "leaf" },
+        { "key": "(value)", "kind": "leaf" }
+      ],
+      "keys": ["x"],
+      "rows": [["x", "1"]]
+    },
+    "/3": {
+      "columns": [{ "key": "(value)", "kind": "leaf" }],
+      "keys": ["0", "1"],
+      "rows": [["3"], ["4"]]
+    },
+    "/5": {
+      "columns": [
+        { "key": "(key)", "kind": "leaf" },
+        { "key": "(value)", "kind": "complex" }
+      ],
+      "keys": ["y"],
+      "rows": [
+        ["y", { "drill": "object", "count": 1 }]
+      ]
+    },
+    "/5/y": {
+      "columns": [
+        { "key": "(key)", "kind": "leaf" },
+        { "key": "(value)", "kind": "leaf" }
+      ],
+      "keys": ["z"],
+      "rows": [["z", "true"]]
+    }
+  }
+}

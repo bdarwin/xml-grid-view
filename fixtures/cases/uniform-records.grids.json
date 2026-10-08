@@ -3,13 +3,23 @@
     "groups": [{ "tag": "book", "count": 3 }],
     "grids": {
       "book": {
-        "columns": [{ "key": "@id", "kind": "attr" }, { "key": "@lang", "kind": "attr" }, { "key": "title", "kind": "leaf" }, { "key": "author", "kind": "leaf" }, { "key": "price", "kind": "leaf" }],
+        "columns": [
+          { "key": "@id", "kind": "attr" },
+          { "key": "@lang", "kind": "attr" },
+          { "key": "title", "kind": "leaf" },
+          { "key": "author", "kind": "leaf" },
+          { "key": "price", "kind": "leaf" }
+        ],
         "rows": [["b1", "en", "The Cat in the Hat", "Seuss", "9.99"], ["b2", "fr", "Le Petit Prince", "Saint-Exupéry", "12.50"], ["b3", "en", "Concatenation Theory", "CAT Jones", "40"]]
       }
     }
   },
   "0/0": {
-    "groups": [{ "tag": "title", "count": 1 }, { "tag": "author", "count": 1 }, { "tag": "price", "count": 1 }],
+    "groups": [
+      { "tag": "title", "count": 1 },
+      { "tag": "author", "count": 1 },
+      { "tag": "price", "count": 1 }
+    ],
     "grids": {
       "title": {
         "columns": [{ "key": "#text", "kind": "text" }],
@@ -26,7 +36,11 @@
     }
   },
   "0/1": {
-    "groups": [{ "tag": "title", "count": 1 }, { "tag": "author", "count": 1 }, { "tag": "price", "count": 1 }],
+    "groups": [
+      { "tag": "title", "count": 1 },
+      { "tag": "author", "count": 1 },
+      { "tag": "price", "count": 1 }
+    ],
     "grids": {
       "title": {
         "columns": [{ "key": "#text", "kind": "text" }],
@@ -43,7 +57,11 @@
     }
   },
   "0/2": {
-    "groups": [{ "tag": "title", "count": 1 }, { "tag": "author", "count": 1 }, { "tag": "price", "count": 1 }],
+    "groups": [
+      { "tag": "title", "count": 1 },
+      { "tag": "author", "count": 1 },
+      { "tag": "price", "count": 1 }
+    ],
     "grids": {
       "title": {
         "columns": [{ "key": "#text", "kind": "text" }],

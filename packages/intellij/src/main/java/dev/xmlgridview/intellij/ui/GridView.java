@@ -26,6 +26,7 @@ import dev.xmlgridview.intellij.model.GridColumn;
 import dev.xmlgridview.intellij.model.GridFilter;
 import dev.xmlgridview.intellij.model.GridMatch;
 import dev.xmlgridview.intellij.model.GridTable;
+import dev.xmlgridview.intellij.model.InspectTarget;
 import dev.xmlgridview.intellij.model.SearchEngine;
 import dev.xmlgridview.intellij.model.XNode;
 import org.jetbrains.annotations.NotNull;
@@ -57,6 +58,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 /**
@@ -81,6 +83,8 @@ final class GridView extends JPanel implements UiDataProvider {
   private final Listener listener;
   private final Supplier<FindState> findState;
   private boolean copyWithHeader;
+  private @Nullable Consumer<InspectTarget> inspector;
+  private final InspectAction inspectAction;
 
   GridView(@NotNull Disposable parent, @NotNull Supplier<FindState> findState, @NotNull Listener listener) {
     super(new BorderLayout());
@@ -91,8 +95,7 @@ final class GridView extends JPanel implements UiDataProvider {
     table.setCellSelectionEnabled(true);
     table.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
     table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
-    table.setShowGrid(true);
-    table.setStriped(true);
+    GridLines.apply(table);
     table.getEmptyText().setText("No rows");
     table.setDefaultRenderer(Object.class, new CellRenderer());
     table.setDefaultRenderer(String.class, new CellRenderer());
@@ -139,6 +142,25 @@ final class GridView extends JPanel implements UiDataProvider {
 
     table.addMouseListener(new MouseAdapter() {
       @Override
+      public void mousePressed(MouseEvent e) {
+        if (e.getButton() != MouseEvent.BUTTON1 || e.isShiftDown() || e.isControlDown() || e.isMetaDown() || inspector == null) return;
+        int viewRow = table.rowAtPoint(e.getPoint());
+        int viewCol = table.columnAtPoint(e.getPoint());
+        GridTable t = model.table();
+        if (t == null || viewRow < 0 || viewCol < 0) return;
+        int row = table.convertRowIndexToModel(viewRow);
+        int col = table.convertColumnIndexToModel(viewCol);
+        if (t.columns().isEmpty() || t.columns().get(col).kind() == GridColumn.Kind.COMPLEX) return;
+        if (!InspectAction.worthInspecting(t.cellText(row, col))) return;
+        Rectangle cell = table.getCellRect(viewRow, viewCol, false);
+        if (!InspectAction.hitsCellIcon(e.getX(), cell.x, cell.width)) return;
+        table.changeSelection(viewRow, viewCol, false, false);
+        InspectTarget target = InspectTarget.ofGridCell(t, row, col);
+        if (target != null) inspector.accept(target);
+        e.consume();
+      }
+
+      @Override
       public void mouseClicked(MouseEvent e) {
         if (e.getClickCount() != 2 || e.getButton() != MouseEvent.BUTTON1) return;
         int viewRow = table.rowAtPoint(e.getPoint());
@@ -168,6 +190,9 @@ final class GridView extends JPanel implements UiDataProvider {
     };
     drill.registerCustomShortcutSet(new CustomShortcutSet(KeyStroke.getKeyStroke(KeyEvent.VK_DOWN, KeyEvent.ALT_DOWN_MASK)), table, parent);
 
+    inspectAction = InspectAction.install(table, parent, this::inspectTarget, t -> {
+      if (inspector != null) inspector.accept(t);
+    });
     PopupHandler.installPopupMenu(table, popupActions(), "XmlGridView.Grid");
 
     JScrollPane scroll = ScrollPaneFactory.createScrollPane(table, true);
@@ -305,6 +330,25 @@ final class GridView extends JPanel implements UiDataProvider {
     }
   }
 
+  void setInspector(@NotNull Consumer<InspectTarget> inspector) {
+    this.inspector = inspector;
+  }
+
+  /**
+   * Inspector target for the lead cell. A whole-row selection (row number click)
+   * targets the row element itself.
+   */
+  @Nullable InspectTarget inspectTarget() {
+    GridTable t = model.table();
+    int viewRow = table.getSelectionModel().getLeadSelectionIndex();
+    if (t == null || viewRow < 0 || viewRow >= table.getRowCount()) return null;
+    int row = table.convertRowIndexToModel(viewRow);
+    int viewCol = table.getColumnModel().getSelectionModel().getLeadSelectionIndex();
+    boolean wholeRow = table.getColumnCount() > 1 && table.getSelectedColumnCount() == table.getColumnCount();
+    int col = wholeRow || viewCol < 0 ? -1 : table.convertColumnIndexToModel(viewCol);
+    return InspectTarget.ofGridCell(t, row, col);
+  }
+
   private void activate(int viewRow, int viewCol, boolean preferDrill) {
     GridTable t = model.table();
     if (t == null) return;
@@ -433,6 +477,7 @@ final class GridView extends JPanel implements UiDataProvider {
       }
     });
     g.add(Separator.getInstance());
+    g.add(inspectAction);
     g.add(new DumbAwareAction("Go to Source", null, AllIcons.Actions.EditSource) {
       @Override
       public void actionPerformed(@NotNull AnActionEvent e) {
@@ -476,8 +521,11 @@ final class GridView extends JPanel implements UiDataProvider {
       else {
         append(text, attrs);
       }
+      boolean inspect = c.kind() != GridColumn.Kind.COMPLEX && InspectAction.worthInspecting(text);
+      setIcon(inspect ? InspectAction.CELL_ICON : null);
+      setIconOnTheRight(true);
       if (c.kind() == GridColumn.Kind.COMPLEX && t.cell(row, col) != null) setToolTipText("Double-click or Alt+Down to drill down");
-      else setToolTipText(null);
+      else setToolTipText(inspect ? "Shift+Enter or click the icon to inspect the full value" : null);
     }
   }
 }

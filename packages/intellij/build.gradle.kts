@@ -84,6 +84,10 @@ intellijPlatform {
 }
 
 tasks {
+    // CI runs `signPlugin verifyPluginSignature` in one build; verification reads the signed zip.
+    verifyPluginSignature {
+        dependsOn(signPlugin)
+    }
     withType<JavaCompile> {
         options.encoding = "UTF-8"
         options.release = 21

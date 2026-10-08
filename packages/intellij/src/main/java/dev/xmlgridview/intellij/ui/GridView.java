@@ -171,19 +171,7 @@ final class GridView extends JPanel implements UiDataProvider {
         int viewRow = table.rowAtPoint(e.getPoint());
         int viewCol = table.columnAtPoint(e.getPoint());
         if (viewRow < 0 || viewCol < 0) return;
-        GridTable t = model.table();
-        if (t != null && inspector != null && !t.columns().isEmpty()) {
-          int row = table.convertRowIndexToModel(viewRow);
-          int col = table.convertColumnIndexToModel(viewCol);
-          boolean value = t.columns().get(col).kind() != GridColumn.Kind.COMPLEX && t.cell(row, col) != null;
-          if (value) {
-            // Double-click a value: inspect it. Drill cells drill down; empty cells go to the source.
-            InspectTarget target = InspectTarget.ofGridCell(t, row, col);
-            if (target != null) inspector.accept(target);
-            return;
-          }
-        }
-        activate(viewRow, viewCol, true);
+        onDoubleClick(viewRow, viewCol);
       }
     });
 
@@ -364,6 +352,21 @@ final class GridView extends JPanel implements UiDataProvider {
     boolean wholeRow = table.getColumnCount() > 1 && table.getSelectedColumnCount() == table.getColumnCount();
     int col = wholeRow || viewCol < 0 ? -1 : table.convertColumnIndexToModel(viewCol);
     return InspectTarget.ofGridCell(t, row, col);
+  }
+
+  /** Double-click: a value opens the inspector; drill cells drill down; empty cells go to the source. */
+  void onDoubleClick(int viewRow, int viewCol) {
+    GridTable t = model.table();
+    if (t != null && inspector != null && !t.columns().isEmpty()) {
+      int row = table.convertRowIndexToModel(viewRow);
+      int col = table.convertColumnIndexToModel(viewCol);
+      if (t.columns().get(col).kind() != GridColumn.Kind.COMPLEX && t.cell(row, col) != null) {
+        InspectTarget target = InspectTarget.ofGridCell(t, row, col);
+        if (target != null) inspector.accept(target);
+        return;
+      }
+    }
+    activate(viewRow, viewCol, true);
   }
 
   private void activate(int viewRow, int viewCol, boolean preferDrill) {

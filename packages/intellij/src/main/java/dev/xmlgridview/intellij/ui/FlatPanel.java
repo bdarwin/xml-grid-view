@@ -195,13 +195,7 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
         int row = table.rowAtPoint(e.getPoint());
         int viewCol = table.columnAtPoint(e.getPoint());
         if (row < 0 || viewCol < 0) return;
-        if (table.convertColumnIndexToModel(viewCol) == VALUE_COL) {
-          // Double-click a value: inspect it (one window per value).
-          inspectorOpener.accept(InspectTarget.ofFlatRow(rowsModel.rows.get(row)));
-        }
-        else if (!inTwisty(row, e.getX())) {
-          navigateRow(row);
-        }
+        onDoubleClick(row, table.convertColumnIndexToModel(viewCol), e.getX());
       }
     });
 
@@ -459,6 +453,12 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
     FlatRow r = rowsModel.rows.get(row);
     if (r.expandable() && !isExpanded(r)) toggle(row);
     else if (r.expandable() && row + 1 < rowsModel.rows.size()) selectRow(row + 1);
+  }
+
+  /** Double-click: a value opens the inspector; a name (outside the twisty) goes to the source. */
+  private void onDoubleClick(int row, int modelCol, int x) {
+    if (modelCol == VALUE_COL) inspectorOpener.accept(InspectTarget.ofFlatRow(rowsModel.rows.get(row)));
+    else if (!inTwisty(row, x)) navigateRow(row);
   }
 
   private void navigateRow(int row) {
@@ -826,21 +826,10 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
     inspectorOpener = opener;
   }
 
-  /** Sends a real double-click to the cell (layout is forced so cell geometry is valid). */
+  /** Runs the double-click action for a cell (the mouse handler calls the same method). */
   @TestOnly
   public void doubleClickForTest(int row, int modelCol) {
-    table.setSize(JBUI.scale(900), JBUI.scale(600));
-    table.doLayout();
-    int viewCol = table.convertColumnIndexToView(modelCol);
-    java.awt.Rectangle r = table.getCellRect(row, viewCol, false);
-    int x = r.x + r.width / 2;
-    int y = r.y + r.height / 2;
-    for (int n = 1; n <= 2; n++) {
-      long t = System.currentTimeMillis();
-      table.dispatchEvent(new MouseEvent(table, MouseEvent.MOUSE_PRESSED, t, MouseEvent.BUTTON1_DOWN_MASK, x, y, n, false, MouseEvent.BUTTON1));
-      table.dispatchEvent(new MouseEvent(table, MouseEvent.MOUSE_RELEASED, t, 0, x, y, n, false, MouseEvent.BUTTON1));
-      table.dispatchEvent(new MouseEvent(table, MouseEvent.MOUSE_CLICKED, t, 0, x, y, n, false, MouseEvent.BUTTON1));
-    }
+    onDoubleClick(row, modelCol, Integer.MAX_VALUE);
   }
 
   @TestOnly

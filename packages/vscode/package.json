@@ -1,8 +1,8 @@
 {
   "name": "xml-grid-view",
   "displayName": "XML Grid View",
-  "description": "Read-only tree and grid viewer for XML files, with search and XPath.",
-  "version": "0.2.0",
+  "description": "View and edit XML as a tree, grid or flat sheet, with search, XPath and a JSON-aware value inspector.",
+  "version": "0.2.1",
   "publisher": "bdarwin",
   "author": {
     "name": "Darwin Baisa"

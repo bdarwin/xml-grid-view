@@ -1,19 +1,24 @@
-<p>A read-only XML viewer that adds a tree and a grid next to the text editor, with
-text, regex and XPath search.</p>
+<p>View and edit XML as a <b>tree</b>, a <b>grid</b> of repeating elements, or a <b>Flat</b> outline sheet,
+right next to the text editor. Includes text, regex and XPath search, a value inspector with JSON support,
+and in-place editing of values.</p>
 <ul>
-  <li><b>Tree</b> of elements, with key attributes, child counts and speed search.
-      <b>Enter</b>/<b>F4</b> jumps to the element in the editor.</li>
-  <li><b>Grid</b> of repeating child elements. Columns are attributes, text-only children and
-      mixed text. Nested repeats appear as <code>{tag ×n}</code> cells you can drill into.
-      Breadcrumbs lead back up, and there's a tag-group selector.</li>
-  <li>Sorting, per-column filters (text and a distinct-values checklist), row numbers,
-      multi-cell selection and copy as TSV.</li>
-  <li><b>Find</b> (Ctrl/Cmd+F): match case, whole word and regex; search the current grid or the whole document by
-      names, attributes and text; a results list and a "show only matches" tree filter.
-      XPath mode binds document prefixes automatically, with the default namespace as <code>d:</code>.</li>
+  <li><b>Grid</b> tab: a tree of elements (key attributes, child counts, speed search and a node filter)
+      beside a grid of repeating children. Columns are attributes, text-only children and mixed text, and
+      nested repeats appear as <code>{tag ×n}</code> cells you can drill into, with breadcrumbs back up.</li>
+  <li><b>Flat</b> tab: the whole document as a Name / Value outline sheet with attribute rows,
+      collapse/expand, spreadsheet-style cell selection and copy as TSV.</li>
+  <li>Sorting, per-column filters (text and a distinct-values checklist), row numbers, grid lines and theme colors.</li>
+  <li><b>Edit values</b>: select an attribute value or a leaf element's text and press F2, or just type.
+      Enter commits. Values are escaped automatically and CDATA is preserved, and every edit is a normal,
+      undoable change.</li>
+  <li><b>Value inspector</b> (double-click or Shift+Enter): long text in full, plus JSON as a Tree, a
+      drill-down Grid or pretty Text. Large numbers are shown exactly, and the value can be edited and
+      saved, with JSON validation.</li>
+  <li><b>Find</b> (Ctrl/Cmd+F): match case, whole word and regex, over the current grid or the whole
+      document, with a results list and "show only matches". XPath mode binds document prefixes
+      automatically, with the default namespace as <code>d:</code>.</li>
   <li>Follows edits in the text editor and keeps expansion, selection, sort and filters.
       Malformed XML keeps the last valid view and shows a banner that links to the error.</li>
 </ul>
-<p>Open any <code>.xml</code> file. Then click the <b>Grid</b> tab at the bottom of the editor
-(<b>Text | Grid</b>); <b>Enter</b>/<b>F4</b> in the grid jumps back to the text.
-The plugin never modifies the document.</p>
+<p>Open any <code>.xml</code> file and use the <b>Text | Grid | Flat</b> tabs at the bottom of the editor.
+Enter/F4 jumps to the element in the text. In Remote Development, install the plugin on the host.</p>

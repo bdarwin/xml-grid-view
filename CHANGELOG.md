@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.1
+
+- Updated the marketplace descriptions. They now cover the Flat view, the
+  value inspector and value editing; earlier ones still said "read-only".
+
 ## 0.2.0
 
 - **Edit values.** Edit attribute values and leaf-element text in the Grid,

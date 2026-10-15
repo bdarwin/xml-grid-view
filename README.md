@@ -1,5 +1,9 @@
 # XML Grid View
 
+[![JetBrains Marketplace](https://img.shields.io/jetbrains/plugin/v/34932-xml-grid-view?label=JetBrains%20Marketplace)](https://plugins.jetbrains.com/plugin/34932-xml-grid-view)
+[![Downloads](https://img.shields.io/jetbrains/plugin/d/34932-xml-grid-view)](https://plugins.jetbrains.com/plugin/34932-xml-grid-view)
+[![CI](https://github.com/bdarwin/xml-grid-view/actions/workflows/ci.yml/badge.svg)](https://github.com/bdarwin/xml-grid-view/actions/workflows/ci.yml)
+
 | VS Code: Grid, with source beside | VS Code: Flat |
 | --- | --- |
 | ![VS Code grid view](docs/vscode-grid.png) | ![VS Code flat view](docs/vscode-flat.png) |
@@ -59,8 +63,13 @@ the Command Palette.
 
 ### IntelliJ (2024.3 or newer)
 
-Choose **Settings → Plugins → ⚙ → Install Plugin from Disk…** and pick the zip
-from `packages/intellij/build/distributions/`. XML files still open in the text
+Install it from the [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/34932-xml-grid-view):
+**Settings → Plugins → Marketplace**, then search for **XML Grid View**. In
+Remote Development (SSH/WSL), Marketplace installs land on the host
+automatically.
+
+To install a build from the releases page instead, choose **⚙ → Install Plugin
+from Disk…** and pick the zip. XML files still open in the text
 editor, and a **Text | Grid** tab bar appears at the bottom of the editor. Click
 **Grid** to open the viewer. To see source and grid side by side, use the
 editor tab's **Split Right**.

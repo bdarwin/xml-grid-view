@@ -1,5 +1,7 @@
 # XML Grid View
 
+[![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/bdarwin.xml-grid-view-plus?label=VS%20Code%20Marketplace)](https://marketplace.visualstudio.com/items?itemName=bdarwin.xml-grid-view-plus)
+[![Installs](https://img.shields.io/visual-studio-marketplace/i/bdarwin.xml-grid-view-plus)](https://marketplace.visualstudio.com/items?itemName=bdarwin.xml-grid-view-plus)
 [![JetBrains Marketplace](https://img.shields.io/jetbrains/plugin/v/34932-xml-grid-view?label=JetBrains%20Marketplace)](https://plugins.jetbrains.com/plugin/34932-xml-grid-view)
 [![Downloads](https://img.shields.io/jetbrains/plugin/d/34932-xml-grid-view)](https://plugins.jetbrains.com/plugin/34932-xml-grid-view)
 [![CI](https://github.com/bdarwin/xml-grid-view/actions/workflows/ci.yml/badge.svg)](https://github.com/bdarwin/xml-grid-view/actions/workflows/ci.yml)
@@ -53,9 +55,13 @@ workflow runs the tests and then attaches both builds.
 
 ### VS Code
 
-On the VS Code Marketplace the extension is called **XML Grid View Plus**
-(`bdarwin.xml-grid-view-plus`), because another publisher already uses the
-name "XML Grid View". To install from a file instead, choose **Extensions → … → Install from VSIX…** and pick
+Install **XML Grid View Plus** from the
+[VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=bdarwin.xml-grid-view-plus):
+open Extensions, search "XML Grid View Plus" and click Install, or run
+`code --install-extension bdarwin.xml-grid-view-plus`. (On VS Code it has a
+different name because another publisher already uses "XML Grid View".)
+
+To install from a file instead, choose **Extensions → … → Install from VSIX…** and pick
 `packages/vscode/xml-grid-view-plus-<version>.vsix`. From a terminal, run
 `code --install-extension packages/vscode/xml-grid-view-plus-0.2.2.vsix`.
 

@@ -103,6 +103,6 @@ and they also go in the JetBrains plugin page's media section.
 
 | | |
 | --- | --- |
-| VS Code extension ID | `bdarwin.xml-grid-view` |
-| Open VSX | `bdarwin/xml-grid-view` |
+| VS Code extension ID | `bdarwin.xml-grid-view-plus` |
+| Open VSX | `bdarwin.xml-grid-view-plus` |
 | JetBrains plugin ID | `io.github.bdarwin.xmlgridview` |

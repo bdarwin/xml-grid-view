@@ -35,7 +35,7 @@ suite("XML Grid View", () => {
   let api: Api;
 
   suiteSetup(async () => {
-    const ext = vscode.extensions.all.find((e) => e.packageJSON.name === "xml-grid-view");
+    const ext = vscode.extensions.all.find((e) => e.packageJSON.name === "xml-grid-view-plus");
     assert.ok(ext, "extension is installed");
     api = (await ext.activate()) as Api;
   });

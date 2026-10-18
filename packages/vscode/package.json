@@ -1,8 +1,8 @@
 {
-  "name": "xml-grid-view",
-  "displayName": "XML Grid View",
+  "name": "xml-grid-view-plus",
+  "displayName": "XML Grid View Plus",
   "description": "View and edit XML as a tree, grid or flat sheet, with search, XPath and a JSON-aware value inspector.",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "publisher": "bdarwin",
   "author": {
     "name": "Darwin Baisa"
@@ -139,8 +139,8 @@
     "compile": "node build.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "node build.mjs && tsc -p tsconfig.test.json && node out/test/runTest.js",
-    "publish:vsce": "vsce publish --no-dependencies --packagePath xml-grid-view-$npm_package_version.vsix",
-    "publish:ovsx": "ovsx publish xml-grid-view-$npm_package_version.vsix"
+    "publish:vsce": "vsce publish --no-dependencies --packagePath xml-grid-view-plus-$npm_package_version.vsix",
+    "publish:ovsx": "ovsx publish xml-grid-view-plus-$npm_package_version.vsix"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.0",

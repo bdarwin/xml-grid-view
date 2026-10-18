@@ -29,7 +29,7 @@ jobs:
       - run: pnpm fixtures:check
       - run: pnpm build
       - name: VS Code smoke test
-        run: xvfb-run -a pnpm --filter xml-grid-view test
+        run: xvfb-run -a pnpm --filter xml-grid-view-plus test
       - uses: actions/upload-artifact@v7
         with:
           name: vsix
@@ -113,11 +113,11 @@ jobs:
       - name: Publish to VS Code Marketplace
         if: env.VSCE_PAT != ''
         working-directory: packages/vscode
-        run: pnpm exec vsce publish --no-dependencies --packagePath xml-grid-view-${GITHUB_REF_NAME#v}.vsix
+        run: pnpm exec vsce publish --no-dependencies --packagePath xml-grid-view-plus-${GITHUB_REF_NAME#v}.vsix
       - name: Publish to Open VSX
         if: env.OVSX_PAT != ''
         working-directory: packages/vscode
-        run: pnpm exec ovsx publish xml-grid-view-${GITHUB_REF_NAME#v}.vsix
+        run: pnpm exec ovsx publish xml-grid-view-plus-${GITHUB_REF_NAME#v}.vsix
 
   publish-jetbrains:
     needs: [github-release]

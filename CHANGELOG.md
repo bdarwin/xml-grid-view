@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.2
+
+- The VS Code extension is now **XML Grid View Plus**
+  (`bdarwin.xml-grid-view-plus`), because the name "XML Grid View" is taken
+  on the VS Code Marketplace. The IntelliJ plugin keeps its name. No
+  functional changes.
+
 ## 0.2.1
 
 - Updated the marketplace descriptions. They now cover the Flat view, the

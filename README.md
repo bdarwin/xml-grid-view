@@ -32,7 +32,7 @@ also needs any JDK able to run Gradle; Gradle provisions Java 21 automatically.
 
 ```sh
 pnpm install
-pnpm build            # core → webview → packages/vscode/xml-grid-view-<version>.vsix
+pnpm build            # core → webview → packages/vscode/xml-grid-view-plus-<version>.vsix
 pnpm test             # vitest: core unit tests + golden fixtures
 pnpm lint             # eslint + typecheck for all TS packages
 
@@ -41,7 +41,7 @@ cd packages/intellij
 ./gradlew test        # JUnit: golden fixtures + model + light UI tests
 ```
 
-The VS Code smoke test runs with `pnpm --filter xml-grid-view test` and
+The VS Code smoke test runs with `pnpm --filter xml-grid-view-plus test` and
 downloads VS Code on first use.
 
 ## Installing
@@ -53,9 +53,11 @@ workflow runs the tests and then attaches both builds.
 
 ### VS Code
 
-Choose **Extensions → … → Install from VSIX…** and pick
-`packages/vscode/xml-grid-view-<version>.vsix`. From a terminal, run
-`code --install-extension packages/vscode/xml-grid-view-0.1.0.vsix`.
+On the VS Code Marketplace the extension is called **XML Grid View Plus**
+(`bdarwin.xml-grid-view-plus`), because another publisher already uses the
+name "XML Grid View". To install from a file instead, choose **Extensions → … → Install from VSIX…** and pick
+`packages/vscode/xml-grid-view-plus-<version>.vsix`. From a terminal, run
+`code --install-extension packages/vscode/xml-grid-view-plus-0.2.2.vsix`.
 
 XML files still open in the text editor. To open the viewer, use **Open With
 XML Grid View**, from the editor title button, the Explorer context menu or

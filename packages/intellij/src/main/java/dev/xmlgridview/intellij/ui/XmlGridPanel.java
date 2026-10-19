@@ -180,7 +180,9 @@ public final class XmlGridPanel extends JPanel implements Disposable {
     north.add(findBar);
     add(north, BorderLayout.NORTH);
 
-    groupCombo.setRenderer(new TextListRenderer<GroupInfo>(g -> g.tag() + " (" + g.count() + ")"));
+    groupCombo.setRenderer(new TextListRenderer<GroupInfo>(
+      g -> XmlDocumentModel.SELF_GROUP.equals(g.tag()) ? "(fields)" : g.tag() + " (" + g.count() + ")"));
+    groupCombo.setToolTipText("Rows: one child tag, or (fields) for this element as a single row");
     groupCombo.addActionListener(e -> {
       if (updatingGroups || gridNode == null) return;
       GroupInfo g = (GroupInfo)groupCombo.getSelectedItem();
@@ -358,11 +360,12 @@ public final class XmlGridPanel extends JPanel implements Disposable {
     updatingGroups = true;
     try {
       groupCombo.removeAllItems();
+      if (!t.groups().isEmpty()) groupCombo.addItem(new GroupInfo(XmlDocumentModel.SELF_GROUP, 1));
       for (GroupInfo g : t.groups()) groupCombo.addItem(g);
       for (int i = 0; i < groupCombo.getItemCount(); i++) {
         if (groupCombo.getItemAt(i).tag().equals(t.group())) groupCombo.setSelectedIndex(i);
       }
-      groupCombo.setVisible(t.groups().size() > 1);
+      groupCombo.setVisible(!t.groups().isEmpty());
     }
     finally {
       updatingGroups = false;
@@ -415,12 +418,12 @@ public final class XmlGridPanel extends JPanel implements Disposable {
   private record GroupCrumb(String tag) implements Crumb {
     @Override
     public String getText() {
-      return "→ " + tag;
+      return XmlDocumentModel.SELF_GROUP.equals(tag) ? "→ (fields)" : "→ " + tag;
     }
 
     @Override
     public String getTooltip() {
-      return "Rows: <" + tag + "> children";
+      return XmlDocumentModel.SELF_GROUP.equals(tag) ? "One row: this element's attributes and children" : "Rows: <" + tag + "> children";
     }
   }
 

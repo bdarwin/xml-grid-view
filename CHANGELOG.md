@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.3.0
+
+- **Fields grid:** selecting an element whose children don't repeat, such as
+  a `<book>` with `title`, `author` and `price`, now shows one row with all of
+  them as columns, instead of a `#text` grid of the first child only. The tag
+  dropdown has a new **(fields)** entry; elements with repeating children
+  still open on the first repeating tag.
+- **Flat view:**
+  - **Tree:** the element tree now sits beside the sheet. Selecting a node
+    scrolls to it, the tree follows the sheet's selection, and the tree's
+    filter box filters the sheet.
+  - **Section colours:** each record gets a colour band, alternating between
+    two colours, instead of zebra stripes. Element rows are tinted more
+    strongly than value rows.
+  - **Copy:** copied names no longer include indentation.
+- The VS Code extension is now also published to Open VSX, for Cursor,
+  VSCodium, Windsurf and other VS Code-based editors.
+
 ## 0.2.2
 
 - The VS Code extension is now **XML Grid View Plus**

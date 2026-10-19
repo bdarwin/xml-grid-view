@@ -60,6 +60,24 @@ export function flatRows(sk: TreeSkeleton, collapsed: Set<number>, filter: Set<n
   return { ids: ids.subarray(0, n), attrs: attrs.subarray(0, n) };
 }
 
+/**
+ * Colour band per element for the Flat view: 0 = above the section level (untinted),
+ * 1 or 2 = alternating bands. The section level is the first level with more than one
+ * element under a chain of single children (e.g. each <book> under <catalog>, or under
+ * <catalog><books>); every row inside a section takes its band.
+ */
+export function flatBands(sk: TreeSkeleton): Uint8Array {
+  const band = new Uint8Array(sk.count);
+  let level = 1;
+  for (let r = sk.firstRoot; r >= 0 && sk.childCount[r] === 1; r = sk.firstChild[r]) level++;
+  for (let id = 0; id < sk.count; id++) {
+    const d = sk.depth[id];
+    if (d === level) band[id] = (sk.index[id] % 2) + 1;
+    else if (d > level) band[id] = band[sk.parent[id]];
+  }
+  return band;
+}
+
 export function rowIndexOf(rows: FlatRows, pos: FlatPos): number {
   for (let i = 0; i < rows.ids.length; i++) if (rows.ids[i] === pos.id && rows.attrs[i] === pos.attr) return i;
   return -1;
@@ -97,6 +115,7 @@ let measureCtx: CanvasRenderingContext2D | null = null;
 
 export function FlatView(p: FlatViewProps) {
   const { skeleton: sk, rows } = p;
+  const bands = useMemo(() => flatBands(sk), [sk]);
   const [ref, vp] = useViewport<HTMLDivElement>();
   const [nameWidth, setNameWidth] = useState(0);
   const [editing, setEditing] = useState<{ id: number; attr: number; initial: string; selectAll: boolean } | null>(null);
@@ -296,8 +315,13 @@ export function FlatView(p: FlatViewProps) {
     const nameSel = inRows && c0 === 0;
     const valueSel = inRows && c1 === 1;
     const isFocus = i === focusIndex;
+    const b = bands[id];
     const cls =
-      "flat-row" + (isAttr ? " attr" : "") + (inRows ? " row-sel" : "") + (!isAttr && p.hits?.has(id) ? " hit" : "") + (i % 2 ? " odd" : "");
+      "flat-row" +
+      (isAttr ? " attr" : "") +
+      (inRows ? " row-sel" : "") +
+      (!isAttr && p.hits?.has(id) ? " hit" : "") +
+      (b ? (b === 1 ? " band-a" : " band-b") + (isAttr || sk.childCount[id] === 0 ? " val" : " node") : "");
     const cellDown = (col: FlatCol) => (e: MouseEvent) => {
       if (e.button !== 0 || (e.target as HTMLElement).classList.contains("twisty")) return;
       ref.current?.focus({ preventScroll: true });

@@ -53,6 +53,31 @@ public record FlatRow(int depth, @NotNull Kind kind, @NotNull XNode node, int at
     return kind == Kind.ELEMENT ? node.path() : node.path() + "@" + attr().name();
   }
 
+  /** Value rows (attributes and leaf elements) get the lighter band tint; element rows with children the stronger one. */
+  public boolean isValueRow() {
+    return kind == Kind.ATTR || node.children().isEmpty();
+  }
+
+  /**
+   * Depth of the Flat view's colour sections: the first level with more than one element
+   * under a chain of single children (each book under catalog, or under catalog/books).
+   */
+  public static int sectionLevel(@NotNull XmlDocumentModel model) {
+    int level = 1;
+    for (XNode r = model.root(); r != null && r.children().size() == 1; r = r.children().get(0)) level++;
+    return level;
+  }
+
+  /** Colour band of a node: 0 above the section level, else 1 or 2 alternating by section. */
+  public static int band(@NotNull XNode node, int sectionLevel) {
+    int depth = 0;
+    for (XNode a = node.parent(); a != null; a = a.parent()) depth++;
+    if (depth < sectionLevel) return 0;
+    XNode s = node;
+    for (int d = depth; d > sectionLevel; d--) s = s.parent();
+    return s.index() % 2 + 1;
+  }
+
   /** All rows, fully expanded, in document order. */
   public static @NotNull List<FlatRow> build(@NotNull XmlDocumentModel model) {
     return build(model, n -> false, null);

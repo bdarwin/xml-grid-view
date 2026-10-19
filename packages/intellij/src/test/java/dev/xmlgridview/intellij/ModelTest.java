@@ -55,6 +55,18 @@ public class ModelTest extends BasePlatformTestCase {
     assertEquals("a", m.root().children().get(0).tag());
   }
 
+  public void testFieldsGridIsTheDefaultWhenNoTagRepeats() {
+    XmlDocumentModel m = build("<book id='b1'><title>T</title><author>A</author></book>");
+    GridTable t = m.table(m.root(), null);
+    assertEquals(XmlDocumentModel.SELF_GROUP, t.group());
+    assertEquals(1, t.rowCount());
+    assertEquals(java.util.List.of("@id", "title", "author"), t.columns().stream().map(c -> c.key()).toList());
+    assertEquals("A", t.cell(0, 2));
+    XmlDocumentModel order = build("<order><customer>C</customer><item>1</item><item>2</item></order>");
+    assertEquals("item", order.table(order.root(), null).group());
+    assertEquals(XmlDocumentModel.SELF_GROUP, order.table(order.root(), XmlDocumentModel.SELF_GROUP).group());
+  }
+
   public void testFilterCombinationIsAnd() {
     XmlDocumentModel m = build("<r><i a='x' b='1'/><i a='x' b='2'/><i a='y' b='1'/><i a='xy' b='3'/></r>");
     GridTable t = m.table(m.root(), "i");

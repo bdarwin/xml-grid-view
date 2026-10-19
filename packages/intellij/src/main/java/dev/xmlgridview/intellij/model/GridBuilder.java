@@ -18,7 +18,7 @@ final class GridBuilder {
 
   static GridTable build(XNode element, @Nullable String group, List<GroupInfo> groups) {
     List<XNode> rows = new ArrayList<>();
-    if (group == null) rows.add(element);
+    if (group == null || group.equals(XmlDocumentModel.SELF_GROUP)) rows.add(element);
     else for (XNode c : element.children()) if (c.tag().equals(group)) rows.add(c);
 
     Set<String> attrNames = new LinkedHashSet<>();

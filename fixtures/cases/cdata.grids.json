@@ -1,7 +1,14 @@
 {
   "0": {
+    "default": "script",
     "groups": [{ "tag": "script", "count": 3 }],
     "grids": {
+      ".": {
+        "columns": [{ "key": "script", "kind": "complex" }],
+        "rows": [
+          [{ "drill": "script", "count": 3 }]
+        ]
+      },
       "script": {
         "columns": [
           { "key": "@lang", "kind": "attr" },

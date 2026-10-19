@@ -117,7 +117,10 @@ jobs:
       - name: Publish to Open VSX
         if: env.OVSX_PAT != ''
         working-directory: packages/vscode
-        run: pnpm exec ovsx publish xml-grid-view-plus-${GITHUB_REF_NAME#v}.vsix
+        run: |
+          # The namespace has to exist once; "already exists" is fine.
+          pnpm exec ovsx create-namespace bdarwin || true
+          pnpm exec ovsx publish xml-grid-view-plus-${GITHUB_REF_NAME#v}.vsix
 
   publish-jetbrains:
     needs: [github-release]

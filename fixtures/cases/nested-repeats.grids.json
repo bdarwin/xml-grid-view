@@ -1,7 +1,14 @@
 {
   "0": {
+    "default": "order",
     "groups": [{ "tag": "order", "count": 3 }],
     "grids": {
+      ".": {
+        "columns": [{ "key": "order", "kind": "complex" }],
+        "rows": [
+          [{ "drill": "order", "count": 3 }]
+        ]
+      },
       "order": {
         "columns": [
           { "key": "@id", "kind": "attr" },
@@ -18,12 +25,24 @@
     }
   },
   "0/0": {
+    "default": "line",
     "groups": [
       { "tag": "customer", "count": 1 },
       { "tag": "line", "count": 2 },
       { "tag": "tag", "count": 2 }
     ],
     "grids": {
+      ".": {
+        "columns": [
+          { "key": "@id", "kind": "attr" },
+          { "key": "customer", "kind": "leaf" },
+          { "key": "line", "kind": "complex" },
+          { "key": "tag", "kind": "complex" }
+        ],
+        "rows": [
+          ["1001", "Ann", { "drill": "line", "count": 2 }, { "drill": "tag", "count": 2 }]
+        ]
+      },
       "customer": {
         "columns": [{ "key": "#text", "kind": "text" }],
         "rows": [["Ann"]]
@@ -43,8 +62,17 @@
     }
   },
   "0/0/1": {
+    "default": ".",
     "groups": [{ "tag": "price", "count": 1 }],
     "grids": {
+      ".": {
+        "columns": [
+          { "key": "@sku", "kind": "attr" },
+          { "key": "@qty", "kind": "attr" },
+          { "key": "price", "kind": "leaf" }
+        ],
+        "rows": [["X", "2", "1.00"]]
+      },
       "price": {
         "columns": [{ "key": "#text", "kind": "text" }],
         "rows": [["1.00"]]
@@ -52,8 +80,17 @@
     }
   },
   "0/0/2": {
+    "default": ".",
     "groups": [{ "tag": "price", "count": 1 }],
     "grids": {
+      ".": {
+        "columns": [
+          { "key": "@sku", "kind": "attr" },
+          { "key": "@qty", "kind": "attr" },
+          { "key": "price", "kind": "leaf" }
+        ],
+        "rows": [["Y", "1", "2.50"]]
+      },
       "price": {
         "columns": [{ "key": "#text", "kind": "text" }],
         "rows": [["2.50"]]
@@ -61,11 +98,22 @@
     }
   },
   "0/1": {
+    "default": ".",
     "groups": [
       { "tag": "customer", "count": 1 },
       { "tag": "line", "count": 1 }
     ],
     "grids": {
+      ".": {
+        "columns": [
+          { "key": "@id", "kind": "attr" },
+          { "key": "customer", "kind": "leaf" },
+          { "key": "line", "kind": "complex" }
+        ],
+        "rows": [
+          ["1002", "Bob", { "drill": "line", "count": 1 }]
+        ]
+      },
       "customer": {
         "columns": [{ "key": "#text", "kind": "text" }],
         "rows": [["Bob"]]
@@ -84,11 +132,23 @@
     }
   },
   "0/1/1": {
+    "default": ".",
     "groups": [
       { "tag": "price", "count": 1 },
       { "tag": "discount", "count": 1 }
     ],
     "grids": {
+      ".": {
+        "columns": [
+          { "key": "@sku", "kind": "attr" },
+          { "key": "@qty", "kind": "attr" },
+          { "key": "price", "kind": "leaf" },
+          { "key": "discount", "kind": "complex" }
+        ],
+        "rows": [
+          ["Z", "5", "0.10", { "drill": "discount", "count": 1 }]
+        ]
+      },
       "price": {
         "columns": [{ "key": "#text", "kind": "text" }],
         "rows": [["0.10"]]
@@ -100,8 +160,16 @@
     }
   },
   "0/2": {
+    "default": ".",
     "groups": [{ "tag": "customer", "count": 1 }],
     "grids": {
+      ".": {
+        "columns": [
+          { "key": "@id", "kind": "attr" },
+          { "key": "customer", "kind": "leaf" }
+        ],
+        "rows": [["1003", "Cy"]]
+      },
       "customer": {
         "columns": [{ "key": "#text", "kind": "text" }],
         "rows": [["Cy"]]

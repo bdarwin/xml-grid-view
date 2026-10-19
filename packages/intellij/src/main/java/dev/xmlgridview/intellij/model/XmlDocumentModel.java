@@ -64,15 +64,29 @@ public final class XmlDocumentModel {
   }
 
   /**
-   * The grid for an element and tag group. Unknown or null groups fall back to
-   * the first group; an element without element children yields a one-row
-   * "self" table (group null).
+   * Pseudo group for the one-row "fields" grid of an element with element children
+   * (attributes and children as columns). "." can never be a tag name.
+   */
+  public static final String SELF_GROUP = ".";
+
+  /** The grid shown on selection: the first repeating tag, else the fields grid; null without children. */
+  public static @Nullable String defaultGroup(@NotNull List<GroupInfo> groups) {
+    if (groups.isEmpty()) return null;
+    for (GroupInfo g : groups) if (g.count() > 1) return g.tag();
+    return SELF_GROUP;
+  }
+
+  /**
+   * The grid for an element and tag group (or SELF_GROUP). Unknown or null groups
+   * fall back to defaultGroup(); an element without element children yields a
+   * one-row table with group null.
    */
   public @NotNull GridTable table(@NotNull XNode el, @Nullable String group) {
     List<GroupInfo> groups = groups(el);
     String g = null;
+    if (!groups.isEmpty() && SELF_GROUP.equals(group)) g = SELF_GROUP;
     for (GroupInfo gi : groups) if (gi.tag().equals(group)) g = gi.tag();
-    if (g == null && !groups.isEmpty()) g = groups.get(0).tag();
+    if (g == null) g = defaultGroup(groups);
     String key = el.id() + "\u0000" + (g == null ? "" : g);
     String finalG = g;
     return tableCache.computeIfAbsent(key, k -> GridBuilder.build(el, finalG, groups));

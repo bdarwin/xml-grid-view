@@ -1,11 +1,26 @@
 {
   "0": {
+    "default": "item",
     "groups": [
       { "tag": "item", "count": 3 },
       { "tag": "note", "count": 2 },
       { "tag": "supplier", "count": 1 }
     ],
     "grids": {
+      ".": {
+        "columns": [
+          { "key": "item", "kind": "complex" },
+          { "key": "note", "kind": "complex" },
+          { "key": "supplier", "kind": "complex" }
+        ],
+        "rows": [
+          [
+            { "drill": "item", "count": 3 },
+            { "drill": "note", "count": 2 },
+            { "drill": "supplier", "count": 1 }
+          ]
+        ]
+      },
       "item": {
         "columns": [
           { "key": "@sku", "kind": "attr" },
@@ -27,11 +42,20 @@
     }
   },
   "0/0": {
+    "default": ".",
     "groups": [
       { "tag": "name", "count": 1 },
       { "tag": "qty", "count": 1 }
     ],
     "grids": {
+      ".": {
+        "columns": [
+          { "key": "@sku", "kind": "attr" },
+          { "key": "name", "kind": "leaf" },
+          { "key": "qty", "kind": "leaf" }
+        ],
+        "rows": [["A1", "Widget", "3"]]
+      },
       "name": {
         "columns": [{ "key": "#text", "kind": "text" }],
         "rows": [["Widget"]]
@@ -43,11 +67,21 @@
     }
   },
   "0/1": {
+    "default": ".",
     "groups": [
       { "tag": "name", "count": 1 },
       { "tag": "color", "count": 1 }
     ],
     "grids": {
+      ".": {
+        "columns": [
+          { "key": "@sku", "kind": "attr" },
+          { "key": "@discontinued", "kind": "attr" },
+          { "key": "name", "kind": "leaf" },
+          { "key": "color", "kind": "leaf" }
+        ],
+        "rows": [["B2", "true", "Gadget", "red"]]
+      },
       "name": {
         "columns": [{ "key": "#text", "kind": "text" }],
         "rows": [["Gadget"]]
@@ -59,8 +93,13 @@
     }
   },
   "0/3": {
+    "default": ".",
     "groups": [{ "tag": "qty", "count": 1 }],
     "grids": {
+      ".": {
+        "columns": [{ "key": "qty", "kind": "leaf" }],
+        "rows": [["0"]]
+      },
       "qty": {
         "columns": [{ "key": "#text", "kind": "text" }],
         "rows": [["0"]]

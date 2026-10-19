@@ -1,7 +1,14 @@
 {
   "0": {
+    "default": "p",
     "groups": [{ "tag": "p", "count": 4 }],
     "grids": {
+      ".": {
+        "columns": [{ "key": "p", "kind": "complex" }],
+        "rows": [
+          [{ "drill": "p", "count": 4 }]
+        ]
+      },
       "p": {
         "columns": [
           { "key": "b", "kind": "complex" },
@@ -18,11 +25,20 @@
     }
   },
   "0/0": {
+    "default": ".",
     "groups": [
       { "tag": "b", "count": 1 },
       { "tag": "i", "count": 1 }
     ],
     "grids": {
+      ".": {
+        "columns": [
+          { "key": "b", "kind": "leaf" },
+          { "key": "i", "kind": "leaf" },
+          { "key": "#text", "kind": "text" }
+        ],
+        "rows": [["bold", "italic", "Hello  and  text."]]
+      },
       "b": {
         "columns": [{ "key": "#text", "kind": "text" }],
         "rows": [["bold"]]
@@ -34,8 +50,13 @@
     }
   },
   "0/2": {
+    "default": ".",
     "groups": [{ "tag": "b", "count": 1 }],
     "grids": {
+      ".": {
+        "columns": [{ "key": "b", "kind": "leaf" }],
+        "rows": [["Only bold"]]
+      },
       "b": {
         "columns": [{ "key": "#text", "kind": "text" }],
         "rows": [["Only bold"]]
@@ -43,8 +64,18 @@
     }
   },
   "0/3": {
+    "default": "b",
     "groups": [{ "tag": "b", "count": 2 }],
     "grids": {
+      ".": {
+        "columns": [
+          { "key": "b", "kind": "complex" },
+          { "key": "#text", "kind": "text" }
+        ],
+        "rows": [
+          [{ "drill": "b", "count": 2 }, "Two  parts  here"]
+        ]
+      },
       "b": {
         "columns": [{ "key": "#text", "kind": "text" }],
         "rows": [["b1"], ["b2"]]

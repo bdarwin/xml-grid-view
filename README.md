@@ -96,6 +96,9 @@ limitations.
     for mixed content.
   - Repeated or complex children appear as `{tag ×n}` cells that drill down,
     and a breadcrumb leads back up.
+  - An element whose children don't repeat (say a `<book>` with `title`,
+    `author`, `price`) opens as one row of **(fields)**: its attributes and
+    children side by side. Pick (fields) or a child tag from the dropdown.
   - Sorting is numeric when every value is a number.
   - A quick filter (web view) and per-column filters (text plus a checklist of
     up to 1,000 distinct values, all ANDed together).
@@ -105,8 +108,14 @@ limitations.
   columns.
   - One row per element in document order, indented by depth. Attributes
     appear as `@name` rows under their element.
-  - Rows collapse and expand. Copy gives indented TSV that pastes cleanly into
-    Excel, and Enter/F4 jumps to the source.
+  - The element tree sits on the left, as in the Grid view. Selecting a node
+    scrolls the sheet to it, and the tree follows the sheet's selection. The
+    tree's filter box filters the sheet too.
+  - Each section (each repeated record, such as every `<book>`) gets its own
+    colour band, alternating between two colours. Element rows are tinted more
+    strongly than value rows.
+  - Rows collapse and expand. Copy gives plain TSV, without indentation, that
+    pastes cleanly into Excel, and Enter/F4 jumps to the source.
   - In VS Code, use the **Grid | Flat** switch at the top of the view. In
     IntelliJ, use the **Flat** bottom tab (**Text | Grid | Flat**).
 - **Value inspector:** for long text or JSON stored inside a node.

@@ -72,6 +72,8 @@ final class XmlTreeView extends JPanel {
   /** Nodes matching the filter box, or null when it is empty. */
   private @Nullable Collection<XNode> boxFilter;
   private @Nullable Consumer<InspectTarget> inspector;
+  /** Told the nodes kept by the filter box (with ancestors), or null when it is empty. */
+  private @Nullable Consumer<@Nullable Set<XNode>> boxFilterListener;
 
   XmlTreeView(@NotNull Disposable parent, @NotNull Supplier<FindState> findState,
               @NotNull Consumer<XNode> onSelect, @NotNull Consumer<XNode> onNavigate) {
@@ -172,6 +174,7 @@ final class XmlTreeView extends JPanel {
   /** Visible nodes: the filter box and Find's "show only matches", combined (both must match). */
   private CompletableFuture<?> applyFilters() {
     Set<XNode> box = closeOverAncestors(boxFilter);
+    if (boxFilterListener != null) boxFilterListener.accept(box);
     Set<XNode> find = closeOverAncestors(findFilter);
     Set<XNode> visible;
     if (box == null) visible = find;
@@ -194,6 +197,10 @@ final class XmlTreeView extends JPanel {
       }
     }
     return out;
+  }
+
+  void setBoxFilterListener(@NotNull Consumer<@Nullable Set<XNode>> listener) {
+    boxFilterListener = listener;
   }
 
   void setInspector(@NotNull Consumer<InspectTarget> inspector) {

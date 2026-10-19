@@ -1,10 +1,20 @@
 {
   "0": {
+    "default": "entry",
     "groups": [
       { "tag": "title", "count": 1 },
       { "tag": "entry", "count": 2 }
     ],
     "grids": {
+      ".": {
+        "columns": [
+          { "key": "title", "kind": "leaf" },
+          { "key": "entry", "kind": "complex" }
+        ],
+        "rows": [
+          ["Example", { "drill": "entry", "count": 2 }]
+        ]
+      },
       "title": {
         "columns": [{ "key": "#text", "kind": "text" }],
         "rows": [["Example"]]
@@ -24,12 +34,23 @@
     }
   },
   "0/1": {
+    "default": ".",
     "groups": [
       { "tag": "id", "count": 1 },
       { "tag": "title", "count": 1 },
       { "tag": "media:thumbnail", "count": 1 }
     ],
     "grids": {
+      ".": {
+        "columns": [
+          { "key": "id", "kind": "leaf" },
+          { "key": "title", "kind": "leaf" },
+          { "key": "media:thumbnail", "kind": "complex" }
+        ],
+        "rows": [
+          ["urn:1", "First", { "drill": "media:thumbnail", "count": 1 }]
+        ]
+      },
       "id": {
         "columns": [{ "key": "#text", "kind": "text" }],
         "rows": [["urn:1"]]
@@ -48,6 +69,7 @@
     }
   },
   "0/2": {
+    "default": ".",
     "groups": [
       { "tag": "id", "count": 1 },
       { "tag": "title", "count": 1 },
@@ -55,6 +77,17 @@
       { "tag": "link", "count": 1 }
     ],
     "grids": {
+      ".": {
+        "columns": [
+          { "key": "id", "kind": "leaf" },
+          { "key": "title", "kind": "leaf" },
+          { "key": "media:thumbnail", "kind": "complex" },
+          { "key": "link", "kind": "complex" }
+        ],
+        "rows": [
+          ["urn:2", "Second", { "drill": "media:thumbnail", "count": 1 }, { "drill": "link", "count": 1 }]
+        ]
+      },
       "id": {
         "columns": [{ "key": "#text", "kind": "text" }],
         "rows": [["urn:2"]]

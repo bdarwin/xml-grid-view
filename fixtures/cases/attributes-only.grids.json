@@ -1,7 +1,14 @@
 {
   "0": {
+    "default": "p",
     "groups": [{ "tag": "p", "count": 4 }],
     "grids": {
+      ".": {
+        "columns": [{ "key": "p", "kind": "complex" }],
+        "rows": [
+          [{ "drill": "p", "count": 4 }]
+        ]
+      },
       "p": {
         "columns": [
           { "key": "@x", "kind": "attr" },

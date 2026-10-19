@@ -70,6 +70,15 @@ final class XmlColors {
     return new SimpleTextAttributes(style, attrValue());
   }
 
+  /**
+   * Flat view section background: band 1 is tinted with the tag colour, band 2 with the
+   * attribute-name colour; element rows more strongly than value rows. Band 0 is untinted.
+   */
+  static @NotNull Color band(int band, boolean valueRow, @NotNull Color base) {
+    if (band == 0) return base;
+    return ColorUtil.mix(base, band == 1 ? tag() : attrName(), valueRow ? 0.06 : 0.16);
+  }
+
   /** Alternating row background, visible on light and dark themes, that keeps grid lines (JBTable striping hides them). */
   static @NotNull Color stripe(int row, @NotNull Color base) {
     if (row % 2 == 0) return base;

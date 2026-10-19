@@ -77,8 +77,10 @@ element child:
 ```json
 {
   "0": {
+    "default": "book",
     "groups": [{ "tag": "book", "count": 3 }, { "tag": "note", "count": 1 }],
     "grids": {
+      ".": { ... },
       "book": {
         "columns": [{ "key": "@id", "kind": "attr" }, { "key": "title", "kind": "leaf" }],
         "rows": [["b1", "The Cat"], ["b2", null]]
@@ -91,7 +93,14 @@ element child:
 
 - **groups**: the distinct tags of the element children, in order of first
   appearance, with counts. Every group has a grid.
-- **rows**: the element children with that tag, in document order.
+- **`.` (fields grid)**: one more grid whose single row is the element itself,
+  so its attributes and children become columns (same column rules). `.` can
+  never be a tag name.
+- **default**: the grid shown when the element is selected: the first group
+  whose count is greater than 1, otherwise `.`. For example, a `<book>` whose
+  children are all distinct leaves opens as one row of fields.
+- **rows**: the element children with that tag, in document order (for `.`,
+  the element itself).
 - **columns**, in this order:
   1. Attribute columns, `key` `@<name>`, kind `attr`. Attribute names are
      collected across all rows in first-seen order (row by row, attributes in

@@ -23,6 +23,7 @@ import com.intellij.openapi.project.DumbAwareAction;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Disposer;
 import com.intellij.ui.ColoredTableCellRenderer;
+import com.intellij.ui.OnePixelSplitter;
 import com.intellij.ui.PopupHandler;
 import com.intellij.ui.ScrollPaneFactory;
 import com.intellij.ui.SimpleTextAttributes;
@@ -92,6 +93,13 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
   private final Alarm searchAlarm = new Alarm(Alarm.ThreadToUse.SWING_THREAD, this);
   private final FindBar findBar;
   private final RowsModel rowsModel = new RowsModel();
+  private final XmlTreeView tree;
+  /** Elements kept by the tree's filter box (with ancestors), or null when it is empty. */
+  private @Nullable Set<XNode> boxFilter;
+  private int modelVersion;
+  /** See {@link FlatRow#sectionLevel}. */
+  private int sectionLevel = 1;
+  private boolean syncingTree;
   private final JBTable table = new JBTable(rowsModel);
   /** Paths of collapsed elements; kept across refreshes. */
   private final Set<String> collapsed = new HashSet<>();
@@ -235,7 +243,22 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
         }
       }
     });
-    add(scroll, BorderLayout.CENTER);
+    // Element tree on the left, like the Grid view; selecting a node scrolls the sheet to it.
+    tree = new XmlTreeView(this, () -> findState, this::showInFlat, n -> navigator.accept(n.start()));
+    tree.setInspector(t -> inspectorOpener.accept(t));
+    tree.setBoxFilterListener(box -> {
+      boxFilter = box;
+      rebuildRows(selectedKey());
+    });
+    table.getSelectionModel().addListSelectionListener(e -> {
+      if (e.getValueIsAdjusting() || syncingTree) return;
+      int row = leadRow();
+      if (row >= 0) tree.select(rowsModel.rows.get(row).node().path(), true);
+    });
+    OnePixelSplitter splitter = new OnePixelSplitter(false, "XmlGridView.FlatSplitter", 0.25f);
+    splitter.setFirstComponent(tree);
+    splitter.setSecondComponent(scroll);
+    add(splitter, BorderLayout.CENTER);
 
     new DumbAwareAction() {
       @Override
@@ -307,7 +330,20 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
 
   private void modelChanged(@NotNull XmlDocumentModel built) {
     String selected = selectedKey();
+    boolean first = model == null;
     model = built;
+    sectionLevel = FlatRow.sectionLevel(built);
+    boxFilter = null; // the tree re-applies its filter box to the new model and reports back
+    int version = ++modelVersion;
+    List<String> expanded = first ? List.of() : tree.expandedPaths();
+    tree.setModel(built).whenComplete((x, err) -> com.intellij.openapi.application.ApplicationManager.getApplication().invokeLater(() -> {
+      if (version != modelVersion) return;
+      (first ? tree.expandRoot() : tree.expandPaths(expanded)).onProcessed(y -> {
+        String key = selectedKey();
+        XNode n = key == null ? built.root() : rowsModel.rows.get(leadRow()).node();
+        if (n != null) tree.select(n.path(), true);
+      });
+    }, com.intellij.openapi.application.ModalityState.any()));
     // Collapsed paths that no longer exist are dropped; the rest carry over.
     collapsed.removeIf(p -> built.byPath(p) == null);
     rebuildRows(selected);
@@ -328,7 +364,12 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
         XNode a = n;
         while (a != null && keep.add(a)) a = a.parent();
       }
-      rows = FlatRow.build(m, n -> false, keep::contains);
+      Set<XNode> box = boxFilter;
+      rows = FlatRow.build(m, n -> false, n -> keep.contains(n) && (box == null || box.contains(n)));
+    }
+    else if (boxFilter != null) {
+      Set<XNode> box = boxFilter;
+      rows = FlatRow.build(m, n -> false, box::contains);
     }
     else {
       rows = FlatRow.build(m, n -> collapsed.contains(n.path()), null);
@@ -402,6 +443,20 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
       }
     }
     return false;
+  }
+
+  /** Tree selection: expands the element's ancestors in the sheet, then selects and scrolls to its row. */
+  private void showInFlat(@NotNull XNode node) {
+    boolean changed = false;
+    for (XNode a = node.parent(); a != null; a = a.parent()) changed |= collapsed.remove(a.path());
+    syncingTree = true;
+    try {
+      if (changed) rebuildRows(null);
+      selectKey(node.path());
+    }
+    finally {
+      syncingTree = false;
+    }
   }
 
   private void selectRow(int row) {
@@ -492,7 +547,7 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
 
   /**
    * The selected cells as TSV, like copying a spreadsheet range: only the selected columns,
-   * names indented two spaces per depth, values on one line.
+   * names without indentation, values on one line.
    */
   String selectionAsTsv() {
     boolean name = false;
@@ -507,7 +562,7 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
     for (int row : table.getSelectedRows()) {
       FlatRow r = rowsModel.rows.get(row);
       if (!sb.isEmpty()) sb.append('\n');
-      if (name) sb.append("  ".repeat(r.depth())).append(r.name());
+      if (name) sb.append(r.name());
       if (name && value) sb.append('\t');
       if (value) sb.append(oneLine(r.value()));
     }
@@ -794,7 +849,7 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
         setIconOnTheRight(true);
         setToolTipText(inspect ? "Double-click, Shift+Enter or click the icon to inspect the full value" : null);
       }
-      if (!selected) setBackground(XmlColors.stripe(row, tbl.getBackground()));
+      if (!selected) setBackground(XmlColors.band(FlatRow.band(r.node(), sectionLevel), r.isValueRow(), tbl.getBackground()));
     }
 
     private boolean currentKeyIs(String key) {
@@ -907,6 +962,17 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
   public void selectCellsForTest(int fromRow, int toRow, int fromCol, int toCol) {
     table.getSelectionModel().setSelectionInterval(fromRow, toRow);
     table.getColumnModel().getSelectionModel().setSelectionInterval(fromCol, toCol);
+  }
+
+  @TestOnly
+  public void selectInTreeForTest(@NotNull String path) {
+    XNode n = model == null ? null : model.byPath(path);
+    if (n != null) showInFlat(n);
+  }
+
+  @TestOnly
+  public @Nullable String leadKeyForTest() {
+    return selectedKey();
   }
 
   @TestOnly

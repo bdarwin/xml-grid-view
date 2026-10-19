@@ -130,13 +130,32 @@ public class FlatViewTest extends BasePlatformTestCase {
     assertEquals(XML.indexOf("id=\"bk101\""), text.getCaretModel().getOffset());
   }
 
-  public void testCopyAsIndentedTsv() {
+  public void testTreeSelectionExpandsAndSelectsTheRow() {
+    FlatPanel panel = open(XML);
+    panel.toggleForTest(1); // collapse <book>
+    assertFalse(names(panel.visibleRows()).contains("    author"));
+    panel.selectInTreeForTest("0/0/2/1"); // catalog/book/items/it[2]
+    assertEquals("0/0/2/1", panel.leadKeyForTest());
+    assertTrue("ancestors expanded", names(panel.visibleRows()).contains("    author"));
+  }
+
+  public void testSectionBands() {
+    XmlDocumentModel m = build("<catalog><books><book id='1'><t>a</t></book><book><t>b</t></book></books></catalog>");
+    int level = FlatRow.sectionLevel(m);
+    assertEquals("sections are the books under the single <books>", 2, level);
+    List<FlatRow> rows = FlatRow.build(m);
+    StringBuilder sb = new StringBuilder();
+    for (FlatRow r : rows) sb.append(r.name()).append('=').append(FlatRow.band(r.node(), level)).append(r.isValueRow() ? "v " : "n ");
+    assertEquals("catalog=0n books=0n book=1n @id=1v t=1v book=2n t=2v ", sb.toString());
+  }
+
+  public void testCopyAsTsvWithoutIndentation() {
     FlatPanel panel = open(XML);
     panel.selectRowsForTest(1, 4);
-    assertEquals("  book\t\n"
-                 + "    @id\tbk101\n"
-                 + "    author\tGambardella, Matthew\n"
-                 + "    description\tAn in-depth look with XML.", panel.copyForTest());
+    assertEquals("book\t\n"
+                 + "@id\tbk101\n"
+                 + "author\tGambardella, Matthew\n"
+                 + "description\tAn in-depth look with XML.", panel.copyForTest());
   }
 
   public void testCopyCellRangeLikeASpreadsheet() {
@@ -144,7 +163,7 @@ public class FlatViewTest extends BasePlatformTestCase {
     panel.selectCellsForTest(3, 4, 1, 1); // Value column only
     assertEquals("Gambardella, Matthew\nAn in-depth look with XML.", panel.copyForTest());
     panel.selectCellsForTest(1, 2, 0, 0); // Name column only
-    assertEquals("  book\n    @id", panel.copyForTest());
+    assertEquals("book\n@id", panel.copyForTest());
   }
 
   public void testInspectTargetForLeadRow() {

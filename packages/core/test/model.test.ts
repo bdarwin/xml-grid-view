@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { XmlModel, cellText, parseXml, pathOfElement, elementAtPath, idAtPath, pathOfId, XmlParser } from "../src/index.js";
+import { XmlModel, SELF_GROUP, cellText, parseXml, pathOfElement, elementAtPath, idAtPath, pathOfId, XmlParser } from "../src/index.js";
 
 function model(xml: string) {
   return new XmlModel(parseXml(xml));
@@ -146,7 +146,7 @@ describe("grid model", () => {
     const m = model(`<r xmlns="urn:d" xmlns:p="urn:p">
       <p:item p:id="1"><p:name>a</p:name></p:item>
     </r>`);
-    const g = grid(m);
+    const g = grid(m, 0, "p:item");
     expect(g.t.group).toBe("p:item");
     expect(g.keys).toEqual(["@p:id", "p:name"]);
     const item = m.elements[1];
@@ -182,15 +182,34 @@ describe("grid model", () => {
 
   it("treats empty elements as empty leaf values", () => {
     const m = model("<r><row><a/><b></b><c>x</c></row></r>");
-    const g = grid(m);
+    const g = grid(m, 0, "row");
     expect(g.kinds).toEqual(["leaf", "leaf", "leaf"]);
     expect(g.rows).toEqual([["", "", "x"]]);
+  });
+
+  it("defaults to the fields grid when no child tag repeats", () => {
+    const m = model('<book id="b1"><title>T</title><author>A</author><tags><t/><t/></tags></book>');
+    const g = grid(m);
+    expect(g.t.group).toBe(SELF_GROUP);
+    expect(g.keys).toEqual(["@id", "title", "author", "tags"]);
+    expect(g.kinds).toEqual(["attr", "leaf", "leaf", "complex"]);
+    expect(g.rows).toEqual([["b1", "T", "A", "{tags ×1}"]]);
+    expect(Array.from(g.t.rowIds)).toEqual([0]);
+  });
+
+  it("defaults to the first repeating tag, and the fields grid stays selectable", () => {
+    const m = model("<order><customer>C</customer><item>1</item><item>2</item></order>");
+    expect(grid(m).t.group).toBe("item");
+    const self = grid(m, 0, SELF_GROUP);
+    expect(self.keys).toEqual(["customer", "item"]);
+    expect(self.rows).toEqual([["C", "{item ×2}"]]);
+    expect(grid(m, 1, SELF_GROUP).t.group).toBeNull(); // no element children: plain one-row grid
   });
 
   it("provides source spans for cells", () => {
     const xml = '<r><i k="v"><n>t</n></i></r>';
     const m = model(xml);
-    const t = m.table(0);
+    const t = m.table(0, "i");
     expect(xml.substr(t.spans[0], t.spans[1])).toBe('k="v"');
     expect(xml.substr(t.spans[2], t.spans[3])).toBe("<n>t</n>");
   });

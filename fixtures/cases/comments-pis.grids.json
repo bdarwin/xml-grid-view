@@ -1,7 +1,14 @@
 {
   "0": {
+    "default": "setting",
     "groups": [{ "tag": "setting", "count": 2 }],
     "grids": {
+      ".": {
+        "columns": [{ "key": "setting", "kind": "complex" }],
+        "rows": [
+          [{ "drill": "setting", "count": 2 }]
+        ]
+      },
       "setting": {
         "columns": [
           { "key": "@key", "kind": "attr" },

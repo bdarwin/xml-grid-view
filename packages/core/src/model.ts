@@ -4,6 +4,13 @@ import type { XDocument, XElement } from "./types.js";
 export const TEXT_COLUMN = "#text";
 
 /**
+ * Pseudo tag group for the "fields" grid of an element with element children:
+ * one row (the element itself) with its attributes and children as columns.
+ * "." can never be an XML tag name.
+ */
+export const SELF_GROUP = ".";
+
+/**
  * Flat, transferable view of the element tree for the UI thread.
  * Arrays are indexed by element id (document order). -1 means "none".
  */
@@ -54,7 +61,10 @@ export interface FlatValues {
 /** A grid of the child elements of `elementId` that share the tag `group`. */
 export interface GridTable {
   elementId: number;
-  /** Tag of the rows, or null for the "self" view of an element without element children. */
+  /**
+   * Tag of the rows; SELF_GROUP for the one-row fields grid of an element with
+   * element children; null for an element without element children (also one row).
+   */
   group: string | null;
   groups: GroupInfo[];
   columns: GridColumn[];
@@ -160,24 +170,35 @@ export class XmlModel {
   }
 
   /**
-   * Builds (and caches) the grid for an element. `group` selects the tag group;
-   * when omitted or not present the first group is used, and elements without
-   * element children produce a one-row "self" table.
+   * Builds (and caches) the grid for an element. `group` selects a tag group or
+   * SELF_GROUP; when omitted or unknown, defaultGroup() decides. Elements without
+   * element children produce a one-row table with group null.
    */
   table(elementId: number, group?: string | null): GridTable {
     const el = this.doc.elements[elementId];
     if (!el) throw new Error(`No element ${elementId}`);
     const groups = this.groups(el);
-    const g = groups.find((x) => x.name === group)?.name ?? groups[0]?.name ?? null;
+    const g =
+      groups.length && group === SELF_GROUP ? SELF_GROUP : (groups.find((x) => x.name === group)?.name ?? defaultGroup(groups));
     const key = `${elementId}\u0000${g ?? ""}`;
     let t = this.tableCache.get(key);
     if (!t) {
-      const rows = g === null ? [el] : el.elements.filter((c) => c.name === g);
+      const rows = g === null || g === SELF_GROUP ? [el] : el.elements.filter((c) => c.name === g);
       t = buildTable(elementId, g, groups, rows, this.index.texts);
       this.tableCache.set(key, t);
     }
     return t;
   }
+}
+
+/**
+ * The grid shown when an element is selected: the first tag that repeats, or
+ * the fields grid when no tag repeats (e.g. a record whose children are all
+ * distinct leaves); null when there are no element children.
+ */
+export function defaultGroup(groups: GroupInfo[]): string | null {
+  if (!groups.length) return null;
+  return groups.find((g) => g.count > 1)?.name ?? SELF_GROUP;
 }
 
 function buildIndex(doc: XDocument): SearchIndex {

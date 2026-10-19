@@ -86,9 +86,12 @@ public final class CanonicalJson {
       List<GroupInfo> groups = XmlDocumentModel.groups(el);
       List<Object> gl = new ArrayList<>();
       Map<String, Object> grids = new LinkedHashMap<>();
-      for (GroupInfo g : groups) {
-        gl.add(map("tag", g.tag(), "count", g.count()));
-        GridTable t = model.table(el, g.tag());
+      for (GroupInfo g : groups) gl.add(map("tag", g.tag(), "count", g.count()));
+      List<String> names = new ArrayList<>();
+      names.add(XmlDocumentModel.SELF_GROUP);
+      for (GroupInfo g : groups) names.add(g.tag());
+      for (String name : names) {
+        GridTable t = model.table(el, name);
         List<Object> cols = new ArrayList<>();
         for (GridColumn c : t.columns()) cols.add(map("key", c.key(), "kind", c.kind().id()));
         List<Object> rows = new ArrayList<>();
@@ -100,9 +103,9 @@ public final class CanonicalJson {
           }
           rows.add(row);
         }
-        grids.put(g.tag(), map("columns", cols, "rows", rows));
+        grids.put(name, map("columns", cols, "rows", rows));
       }
-      out.put(el.path(), map("groups", gl, "grids", grids));
+      out.put(el.path(), map("default", XmlDocumentModel.defaultGroup(groups), "groups", gl, "grids", grids));
     }
     return out;
   }

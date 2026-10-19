@@ -1,7 +1,14 @@
 {
   "0": {
+    "default": "b",
     "groups": [{ "tag": "b", "count": 2 }],
     "grids": {
+      ".": {
+        "columns": [{ "key": "b", "kind": "complex" }],
+        "rows": [
+          [{ "drill": "b", "count": 2 }]
+        ]
+      },
       "b": {
         "columns": [{ "key": "c", "kind": "complex" }],
         "rows": [
@@ -12,8 +19,15 @@
     }
   },
   "0/0": {
+    "default": ".",
     "groups": [{ "tag": "c", "count": 1 }],
     "grids": {
+      ".": {
+        "columns": [{ "key": "c", "kind": "complex" }],
+        "rows": [
+          [{ "drill": "c", "count": 1 }]
+        ]
+      },
       "c": {
         "columns": [{ "key": "d", "kind": "complex" }],
         "rows": [
@@ -23,8 +37,15 @@
     }
   },
   "0/0/0": {
+    "default": ".",
     "groups": [{ "tag": "d", "count": 1 }],
     "grids": {
+      ".": {
+        "columns": [{ "key": "d", "kind": "complex" }],
+        "rows": [
+          [{ "drill": "d", "count": 1 }]
+        ]
+      },
       "d": {
         "columns": [
           { "key": "@k", "kind": "attr" },
@@ -37,8 +58,18 @@
     }
   },
   "0/0/0/0": {
+    "default": "e",
     "groups": [{ "tag": "e", "count": 2 }],
     "grids": {
+      ".": {
+        "columns": [
+          { "key": "@k", "kind": "attr" },
+          { "key": "e", "kind": "complex" }
+        ],
+        "rows": [
+          ["1", { "drill": "e", "count": 2 }]
+        ]
+      },
       "e": {
         "columns": [{ "key": "#text", "kind": "text" }],
         "rows": [["deep"], ["deeper"]]

@@ -1,7 +1,14 @@
 {
   "0": {
+    "default": "c",
     "groups": [{ "tag": "c", "count": 6 }],
     "grids": {
+      ".": {
+        "columns": [{ "key": "c", "kind": "complex" }],
+        "rows": [
+          [{ "drill": "c", "count": 6 }]
+        ]
+      },
       "c": {
         "columns": [
           { "key": "@name", "kind": "attr" },

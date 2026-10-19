@@ -4,7 +4,7 @@
  * implementation produces the same JSON.
  */
 import { createMatcher, searchDocument, searchGrid, ALL_TARGETS, type SearchOptions, type SearchTargets } from "./search.js";
-import { elementText, type XmlModel } from "./model.js";
+import { SELF_GROUP, defaultGroup, elementText, type XmlModel } from "./model.js";
 import { pathKey, pathOfElement } from "./paths.js";
 import { evaluateXPath, type XPathBackend } from "./xpath.js";
 import type { XElement } from "./types.js";
@@ -36,6 +36,8 @@ export interface CanonicalGrid {
 }
 
 export interface CanonicalGridSet {
+  /** The grid shown when the element is selected: a tag or "." (fields). */
+  default: string;
   groups: { tag: string; count: number }[];
   grids: Record<string, CanonicalGrid>;
 }
@@ -121,8 +123,8 @@ export function canonicalGrids(model: XmlModel): Record<string, CanonicalGridSet
     if (!el.elements.length) continue;
     const groups = model.groups(el);
     const grids: Record<string, CanonicalGrid> = {};
-    for (const g of groups) {
-      const t = model.table(el.id, g.name);
+    for (const name of [SELF_GROUP, ...groups.map((g) => g.name)]) {
+      const t = model.table(el.id, name);
       const ncols = t.columns.length;
       const rows: CanonicalCell[][] = [];
       for (let r = 0; r < t.rowIds.length; r++) {
@@ -133,9 +135,9 @@ export function canonicalGrids(model: XmlModel): Record<string, CanonicalGridSet
         }
         rows.push(row);
       }
-      grids[g.name] = { columns: t.columns.map((c) => ({ key: c.key, kind: c.kind })), rows };
+      grids[name] = { columns: t.columns.map((c) => ({ key: c.key, kind: c.kind })), rows };
     }
-    out[pathKey(pathOfElement(el))] = { groups: groups.map((g) => ({ tag: g.name, count: g.count })), grids };
+    out[pathKey(pathOfElement(el))] = { default: defaultGroup(groups)!, groups: groups.map((g) => ({ tag: g.name, count: g.count })), grids };
   }
   return out;
 }

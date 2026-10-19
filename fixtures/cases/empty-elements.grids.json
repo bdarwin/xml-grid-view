@@ -1,7 +1,14 @@
 {
   "0": {
+    "default": "row",
     "groups": [{ "tag": "row", "count": 3 }],
     "grids": {
+      ".": {
+        "columns": [{ "key": "row", "kind": "complex" }],
+        "rows": [
+          [{ "drill": "row", "count": 3 }]
+        ]
+      },
       "row": {
         "columns": [
           { "key": "a", "kind": "leaf" },
@@ -14,6 +21,7 @@
     }
   },
   "0/0": {
+    "default": ".",
     "groups": [
       { "tag": "a", "count": 1 },
       { "tag": "b", "count": 1 },
@@ -21,6 +29,15 @@
       { "tag": "d", "count": 1 }
     ],
     "grids": {
+      ".": {
+        "columns": [
+          { "key": "a", "kind": "leaf" },
+          { "key": "b", "kind": "leaf" },
+          { "key": "c", "kind": "leaf" },
+          { "key": "d", "kind": "leaf" }
+        ],
+        "rows": [["", "", "x", ""]]
+      },
       "a": {
         "columns": [],
         "rows": [[]]
@@ -40,11 +57,19 @@
     }
   },
   "0/1": {
+    "default": ".",
     "groups": [
       { "tag": "a", "count": 1 },
       { "tag": "c", "count": 1 }
     ],
     "grids": {
+      ".": {
+        "columns": [
+          { "key": "a", "kind": "leaf" },
+          { "key": "c", "kind": "leaf" }
+        ],
+        "rows": [["1", ""]]
+      },
       "a": {
         "columns": [{ "key": "#text", "kind": "text" }],
         "rows": [["1"]]

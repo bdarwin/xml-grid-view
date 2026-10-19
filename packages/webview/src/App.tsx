@@ -1,5 +1,6 @@
 import {
   ALL_TARGETS,
+  SELF_GROUP,
   DEFAULT_OPTIONS,
   DEFAULT_SETTINGS,
   createMatcher,
@@ -481,6 +482,20 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
     });
   };
 
+  /** Tree selection while in Flat: select the element there too and scroll it into view. */
+  const showInFlat = (id: number) => {
+    if (!skeleton) return;
+    selectElement(id);
+    revealFlat(skeleton, id);
+    setFlatSel({ anchor: { id, attr: -1, col: 0 }, focus: { id, attr: -1, col: 1 } });
+  };
+
+  /** Flat selection: keeps the tree selection on the focused row's element. */
+  const selectFlat = (sel: FlatSelection | null) => {
+    setFlatSel(sel);
+    if (sel && skeleton && sel.focus.id !== selected) selectElement(sel.focus.id, { reveal: true });
+  };
+
   const activateFlat = async (pos: FlatPos) => {
     if (!skeleton) return;
     if (pos.attr < 0) return activateElement(pos.id);
@@ -508,9 +523,8 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
       const id = rows.ids[i];
       const attr = rows.attrs[i];
       const v = get(id);
-      const depth = skeleton.depth[id] + (attr >= 0 ? 1 : 0);
       const cells: string[] = [];
-      if (withName) cells.push("  ".repeat(depth) + tsvCell(attr >= 0 ? "@" + (v?.attrs[attr]?.name ?? "") : skeleton.names[skeleton.nameIdx[id]]));
+      if (withName) cells.push(tsvCell(attr >= 0 ? "@" + (v?.attrs[attr]?.name ?? "") : skeleton.names[skeleton.nameIdx[id]]));
       // Values are copied on one line, as displayed.
       if (withValue) cells.push(tsvCell(((attr >= 0 ? v?.attrs[attr]?.value : v?.text) ?? "").replace(/\s+/g, " ")));
       lines.push(cells.join("\t"));
@@ -757,11 +771,6 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
     return keep;
   }, [find.open, find.showOnlyMatches, hitSet, skeleton]);
 
-  const rowsForFlat = useMemo(
-    () => (mode === "flat" && skeleton ? flatRows(skeleton, flatCollapsed, treeFilter) : null),
-    [mode, skeleton, flatCollapsed, treeFilter],
-  );
-
   // "Filter nodes" box above the tree: tag names, attribute names/values and text, case-insensitive.
   useEffect(() => {
     const q = nodeFilter.trim();
@@ -795,6 +804,11 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
     for (const id of nodeFilterHits) if (treeFilter.has(id)) both.add(id);
     return both;
   }, [nodeFilterHits, treeFilter]);
+
+  const rowsForFlat = useMemo(
+    () => (mode === "flat" && skeleton ? flatRows(skeleton, flatCollapsed, treeViewFilter) : null),
+    [mode, skeleton, flatCollapsed, treeViewFilter],
+  );
 
   const findCount = gridHits ? gridHits.length : (elementHits?.length ?? 0);
 
@@ -978,38 +992,7 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
           </span>
         )}
       </div>
-      {mode === "flat" && rowsForFlat && (
-        <FlatView
-          skeleton={skeleton}
-          rows={rowsForFlat}
-          values={flatValues}
-          sel={flatSel}
-          hits={hitSet}
-          matcher={matcher}
-          highlightNames={find.targets.names || find.targets.attrNames}
-          highlightValues={find.targets.text || find.targets.attrValues}
-          isCollapsed={(id) => flatCollapsed.has(id)}
-          onNeedValues={needFlatValues}
-          onToggle={(id, expand) =>
-            setFlatCollapsed((prev) => {
-              const next = new Set(prev);
-              if (expand ?? prev.has(id)) next.delete(id);
-              else next.add(id);
-              return next;
-            })
-          }
-          onSelect={setFlatSel}
-          onActivate={(pos) => void activateFlat(pos)}
-          onCopy={(sel) => void copyFlat(sel, rowsForFlat)}
-          onInspect={(pos) => void inspectFlat(pos)}
-          canEdit={(pos) => flatEditTarget(pos) !== null}
-          onEdit={(pos, value) => {
-            const e = flatEditTarget(pos);
-            if (e) void requestEdit(e.target, value, e.label);
-          }}
-        />
-      )}
-      {mode === "grid" && <Split
+      <Split
         ratio={split}
         onRatio={setSplit}
         left={
@@ -1047,13 +1030,48 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
                   return next;
                 })
               }
-              onSelect={(id) => selectElement(id)}
+              onSelect={(id) => (mode === "flat" ? showInFlat(id) : selectElement(id))}
               onActivate={activateElement}
               onInspect={(id) => void inspectElement(id)}
             />
           </div>
         }
         right={
+          mode === "flat" ? (
+            <div class="grid-wrap flat-wrap">
+              {rowsForFlat && (
+            <FlatView
+              skeleton={skeleton}
+              rows={rowsForFlat}
+              values={flatValues}
+              sel={flatSel}
+              hits={hitSet}
+              matcher={matcher}
+              highlightNames={find.targets.names || find.targets.attrNames}
+              highlightValues={find.targets.text || find.targets.attrValues}
+              isCollapsed={(id) => flatCollapsed.has(id)}
+              onNeedValues={needFlatValues}
+              onToggle={(id, expand) =>
+                setFlatCollapsed((prev) => {
+                  const next = new Set(prev);
+                  if (expand ?? prev.has(id)) next.delete(id);
+                  else next.add(id);
+                  return next;
+                })
+              }
+              onSelect={selectFlat}
+              onActivate={(pos) => void activateFlat(pos)}
+              onCopy={(sel) => void copyFlat(sel, rowsForFlat)}
+              onInspect={(pos) => void inspectFlat(pos)}
+              canEdit={(pos) => flatEditTarget(pos) !== null}
+              onEdit={(pos, value) => {
+                const e = flatEditTarget(pos);
+                if (e) void requestEdit(e.target, value, e.label);
+              }}
+            />
+              )}
+            </div>
+          ) : (
           <div
             class="grid-wrap"
             ref={gridWrap}
@@ -1085,25 +1103,20 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
                 {table?.group && (
                   <span class="crumb-wrap">
                     <span class="crumb-sep">›</span>
-                    {table.groups.length > 1 ? (
-                      <select
-                        class="group-select"
-                        value={table.group}
-                        aria-label="Tag group"
-                        title="Child tag group"
-                        onChange={(e) => chooseGroup((e.target as HTMLSelectElement).value)}
-                      >
-                        {table.groups.map((g) => (
-                          <option key={g.name} value={g.name}>
-                            {g.name} ({g.count})
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <span class="crumb group">
-                        {table.group} ({table.groups[0]?.count ?? 0})
-                      </span>
-                    )}
+                    <select
+                      class="group-select"
+                      value={table.group}
+                      aria-label="Tag group"
+                      title="Rows: one child tag, or (fields) for this element as a single row"
+                      onChange={(e) => chooseGroup((e.target as HTMLSelectElement).value)}
+                    >
+                      <option value={SELF_GROUP}>(fields)</option>
+                      {table.groups.map((g) => (
+                        <option key={g.name} value={g.name}>
+                          {g.name} ({g.count})
+                        </option>
+                      ))}
+                    </select>
                   </span>
                 )}
               </nav>
@@ -1178,8 +1191,9 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
               </div>
             )}
           </div>
+          )
         }
-      />}
+      />
       {toast && (
         <div class="toast" role="status" onClick={() => setToast(null)}>
           {toast}

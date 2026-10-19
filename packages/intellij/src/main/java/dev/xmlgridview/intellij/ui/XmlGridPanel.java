@@ -667,6 +667,11 @@ public final class XmlGridPanel extends JPanel implements Disposable {
   }
 
   @TestOnly
+  public boolean isReadOnlyLargeFileForTest() {
+    return loader.isReadOnlyLargeFile();
+  }
+
+  @TestOnly
   public boolean isGridCellEditableForTest(int viewRow, int viewCol) {
     return grid.table().isCellEditable(viewRow, viewCol);
   }

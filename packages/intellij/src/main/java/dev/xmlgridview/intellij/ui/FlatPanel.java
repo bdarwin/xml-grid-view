@@ -167,6 +167,9 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
     // Columns are sized explicitly: Name fits its content, Value fills the rest (see fitColumns).
     table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
     GridLines.apply(table);
+    // JBTable otherwise renders every row to pick the row height after each model change
+    // (seconds on large files); a sample of the first rows is enough.
+    table.setMaxItemsForSizeCalculation(100);
     table.getEmptyText().setText("No XML elements");
     table.getTableHeader().setReorderingAllowed(false);
     // A manual drag of the Name column's edge stops automatic fitting.
@@ -962,6 +965,11 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
   public void selectCellsForTest(int fromRow, int toRow, int fromCol, int toCol) {
     table.getSelectionModel().setSelectionInterval(fromRow, toRow);
     table.getColumnModel().getSelectionModel().setSelectionInterval(fromCol, toCol);
+  }
+
+  @TestOnly
+  public @Nullable XmlDocumentModel modelForTest() {
+    return model;
   }
 
   @TestOnly

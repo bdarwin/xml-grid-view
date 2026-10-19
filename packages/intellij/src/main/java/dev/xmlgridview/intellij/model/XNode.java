@@ -18,11 +18,11 @@ public final class XNode {
   private final String tag;
   private final String ns;
   private final int start;
-  private final int end;
+  private int end;
   private final List<XAttr> attrs;
   private final Map<String, String> nsDecls;
-  private final String text;
-  private final int textStart;
+  private String text;
+  private int textStart;
   private final @Nullable XNode parent;
   private final int index;
   private final String path;
@@ -43,6 +43,13 @@ public final class XNode {
     this.parent = parent;
     this.index = index;
     this.path = parent == null ? Integer.toString(index) : parent.path + "/" + index;
+  }
+
+  /** Completes an element once its end tag (or the end of input) is reached; used by the streaming parser. */
+  void finish(int end, String text, int textStart) {
+    this.end = end;
+    this.text = text;
+    this.textStart = textStart;
   }
 
   void addChild(XNode child) {

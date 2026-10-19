@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.3.1
+
+Large files load much faster in IntelliJ.
+
+- **New parser:** IntelliJ now uses its own streaming XML parser instead of
+  the IDE's PSI. A 50 MB file builds in about 0.6 s instead of 6 s, with
+  about a fifth of the memory. Shared fixtures keep the output identical to
+  VS Code, now including DOCTYPE, references and CRLF handling.
+- **No UI freeze:** opening Flat on a large file no longer blocks the IDE for
+  seconds while every row is measured. At 50 MB this went from 4 s to under
+  0.1 s.
+- **One build per version:** the Grid and Flat tabs share one model per
+  document version. Building no longer holds the IDE's read lock, so typing
+  is never blocked.
+- **Progress banner:** slow loads show "Loading XML… N%".
+- **Files over IntelliJ's 20 MB limit:** these are read in full from disk and
+  shown read-only, instead of a truncated preview with a "not well-formed"
+  error. The view refreshes when the file changes on disk.
+- **Load failures:** a failed load now shows an error banner with Retry.
+
 ## 0.3.0
 
 - **Fields grid:** selecting an element whose children don't repeat, such as

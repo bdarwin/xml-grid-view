@@ -55,6 +55,23 @@ public class ModelTest extends BasePlatformTestCase {
     assertEquals("a", m.root().children().get(0).tag());
   }
 
+  /** CRLF can't be in the shared fixtures (they are LF-only), so this pins the TS core's output for it. */
+  public void testCrlfMatchesTheTsCore() throws Exception {
+    XmlDocumentModel m = build("<doc a=\"one\r\ntwo\rthree\">\r\n  <p>first\r\nsecond\rthird</p>\r\n  <r><![CDATA[x\r\ny]]></r>\r\n</doc>\r\n");
+    String expected = "{\"tag\":\"doc\",\"ns\":\"\",\"path\":\"0\",\"start\":0,\"end\":89,\"attrs\":[{\"name\":\"a\",\"value\":\"one two three\",\"start\":5,\"end\":23}],\"text\":\"\",\"children\":[{\"tag\":\"p\",\"ns\":\"\",\"path\":\"0/0\",\"start\":28,\"end\":54,\"attrs\":[],\"text\":\"first\\nsecond\\nthird\",\"children\":[]},{\"tag\":\"r\",\"ns\":\"\",\"path\":\"0/1\",\"start\":58,\"end\":81,\"attrs\":[],\"text\":\"x\\ny\",\"children\":[]}]}";
+    assertEquals(com.google.gson.JsonParser.parseString(expected),
+                 com.google.gson.JsonParser.parseString(dev.xmlgridview.intellij.model.CanonicalJson.write(dev.xmlgridview.intellij.model.CanonicalJson.tree(m))));
+  }
+
+  public void testMalformedInputNeverThrows() {
+    for (String s : new String[]{"<", "<a", "<a b", "<a b=", "<a b='", "<a><b></a>", "</x><a/>", "<a/><b/>", "<!DOCTYPE", "<a><![CDATA[x", "<a>&", "<<a>>", "<a x=y>t</a>"}) {
+      XmlDocumentModel m = build(s);
+      for (XNode n : m.elements()) assertTrue(s, n.end() >= n.start() && n.end() <= s.length());
+    }
+    XmlDocumentModel m = build("<r><a>1</a><b>2</r>");
+    assertEquals(java.util.List.of("a", "b"), m.root().children().stream().map(XNode::tag).toList());
+  }
+
   public void testFieldsGridIsTheDefaultWhenNoTagRepeats() {
     XmlDocumentModel m = build("<book id='b1'><title>T</title><author>A</author></book>");
     GridTable t = m.table(m.root(), null);

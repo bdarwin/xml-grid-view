@@ -109,6 +109,9 @@ final class GridView extends JPanel implements UiDataProvider {
     table.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
     table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
     GridLines.apply(table);
+    // JBTable otherwise renders every row to pick the row height after each model change
+    // (seconds on large files); a sample of the first rows is enough.
+    table.setMaxItemsForSizeCalculation(100);
     table.getEmptyText().setText("No rows");
     table.setDefaultRenderer(Object.class, new CellRenderer());
     table.setDefaultRenderer(String.class, new CellRenderer());

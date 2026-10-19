@@ -2,7 +2,7 @@
   "name": "xml-grid-view-plus",
   "displayName": "XML Grid View Plus",
   "description": "View and edit XML as a tree, grid or flat sheet, with search, XPath and a JSON-aware value inspector.",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "publisher": "bdarwin",
   "author": {
     "name": "Darwin Baisa"

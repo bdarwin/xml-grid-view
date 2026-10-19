@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<!DOCTYPE doc [
+  <!ELEMENT doc ANY>
+  <!ATTLIST doc a CDATA "x>y">
+]>
+<doc a="one
+two	three" b="ref&#10;line" c="&amp;&#32;spaced">
+  <p>first
+  second</p>
+  <q>&#32;&#9;lead</q>
+  <r><![CDATA[
+  cdata
+  lines]]></r>
+  <!-- a comment with <tags> -->
+  <s>a<?pi x?>b&#x41;c</s>
+  <t xml:lang="en">x</t>
+</doc>

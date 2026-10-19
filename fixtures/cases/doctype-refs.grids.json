@@ -1,0 +1,52 @@
+{
+  "0": {
+    "default": ".",
+    "groups": [
+      { "tag": "p", "count": 1 },
+      { "tag": "q", "count": 1 },
+      { "tag": "r", "count": 1 },
+      { "tag": "s", "count": 1 },
+      { "tag": "t", "count": 1 }
+    ],
+    "grids": {
+      ".": {
+        "columns": [
+          { "key": "@a", "kind": "attr" },
+          { "key": "@b", "kind": "attr" },
+          { "key": "@c", "kind": "attr" },
+          { "key": "p", "kind": "leaf" },
+          { "key": "q", "kind": "leaf" },
+          { "key": "r", "kind": "leaf" },
+          { "key": "s", "kind": "leaf" },
+          { "key": "t", "kind": "complex" }
+        ],
+        "rows": [
+          ["one two three", "ref\nline", "& spaced", "first\n  second", "lead", "cdata\n  lines", "abAc", { "drill": "t", "count": 1 }]
+        ]
+      },
+      "p": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [["first\n  second"]]
+      },
+      "q": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [["lead"]]
+      },
+      "r": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [["cdata\n  lines"]]
+      },
+      "s": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [["abAc"]]
+      },
+      "t": {
+        "columns": [
+          { "key": "@xml:lang", "kind": "attr" },
+          { "key": "#text", "kind": "text" }
+        ],
+        "rows": [["en", "x"]]
+      }
+    }
+  }
+}

@@ -80,6 +80,27 @@ suite("XML Grid View", () => {
     await waitFor(() => api.readyCount(fixture()) > 0, "web view ready message");
   });
 
+  test("JSON files open in the custom editor via Open With, and edits apply", async () => {
+    const root = vscode.workspace.workspaceFolders![0].uri.fsPath;
+    const json = vscode.Uri.file(path.join(root, "people.json"));
+    const doc = await vscode.workspace.openTextDocument(json);
+    await vscode.window.showTextDocument(doc);
+    assert.strictEqual(customTab(json), undefined, "the text editor stays the default for .json");
+    await vscode.commands.executeCommand("xmlGridView.openWith", json);
+    await waitFor(() => customTab(json), "custom editor tab for JSON");
+    await waitFor(() => api.readyCount(json) > 0, "web view ready message");
+    const original = doc.getText();
+    const offset = original.indexOf('"Grace"');
+    try {
+      await api.simulateViewMessage(json, { type: "edit", docVersion: doc.version, edits: [{ offset, length: 7, text: '"Hopper"' }], label: "Edit name" });
+      assert.ok(doc.getText().includes('"name": "Hopper"'));
+    } finally {
+      const editor = await vscode.window.showTextDocument(doc);
+      await editor.edit((b) => b.replace(new vscode.Range(doc.positionAt(0), doc.positionAt(doc.getText().length)), original));
+      await doc.save();
+    }
+  });
+
   test("navigate reveals and selects the range in a text editor", async () => {
     await vscode.commands.executeCommand("xmlGridView.openWith", fixture());
     await waitFor(() => api.viewCount(fixture()) > 0, "view to resolve");

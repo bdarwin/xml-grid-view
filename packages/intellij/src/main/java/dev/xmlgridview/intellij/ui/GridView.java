@@ -98,6 +98,11 @@ final class GridView extends JPanel implements UiDataProvider {
   private boolean copyWithHeader;
   private @Nullable Consumer<InspectTarget> inspector;
   private DefaultActionGroup popupMenu;
+  private @Nullable DocumentProblems problems;
+  /** Problems by cell (model row << 32 | model column) and by model row, for the current table. */
+  private Map<Long, List<DocumentProblems.Problem>> cellProblems = Map.of();
+  private Map<Integer, List<DocumentProblems.Problem>> rowProblems = Map.of();
+  private RowNumberHeader rowHeader;
   private final InspectAction inspectAction;
 
   GridView(@NotNull Disposable parent, @NotNull Supplier<FindState> findState, @NotNull Listener listener) {
@@ -256,13 +261,72 @@ final class GridView extends JPanel implements UiDataProvider {
     selectCellOnRightClick(table);
 
     JScrollPane scroll = ScrollPaneFactory.createScrollPane(table, true);
-    RowNumberHeader rowHeader = new RowNumberHeader(table);
+    rowHeader = new RowNumberHeader(table);
+    rowHeader.setMarker(r -> {
+      List<DocumentProblems.Problem> ps = rowProblems.get(r);
+      return ps == null ? null : DocumentProblems.color(ps);
+    });
     scroll.setRowHeaderView(rowHeader);
     add(scroll, BorderLayout.CENTER);
   }
 
   JBTable table() {
     return table;
+  }
+
+  void setProblems(@NotNull DocumentProblems problems) {
+    this.problems = problems;
+    recomputeProblems();
+  }
+
+  /**
+   * Maps the document's problems onto the table: a problem inside a row's child goes to that
+   * child's column, one inside an attribute to its column, the rest to the row (number).
+   */
+  void recomputeProblems() {
+    GridTable t = model.table();
+    Map<Long, List<DocumentProblems.Problem>> cells = new java.util.HashMap<>();
+    Map<Integer, List<DocumentProblems.Problem>> rows = new java.util.HashMap<>();
+    if (t != null && problems != null && !problems.ordered().isEmpty()) {
+      Map<XNode, Integer> rowOf = new java.util.IdentityHashMap<>();
+      for (int r = 0; r < t.rowCount(); r++) rowOf.put(t.rows().get(r), r);
+      for (DocumentProblems.Located l : problems.ordered()) {
+        XNode child = null;
+        XNode e = l.node();
+        while (e != null && !rowOf.containsKey(e)) {
+          child = e;
+          e = e.parent();
+        }
+        if (e == null) continue;
+        int r = rowOf.get(e);
+        int col = -1;
+        if (child != null) col = t.columnIndex(child.tag());
+        else {
+          for (int c = 0; c < t.columnCount() && col < 0; c++) {
+            GridColumn gc = t.columns().get(c);
+            if (gc.kind() != GridColumn.Kind.ATTR) continue;
+            dev.xmlgridview.intellij.model.XAttr a = e.attr(gc.label().substring(1));
+            if (a != null && l.problem().offset() >= a.start() && l.problem().offset() < a.end()) col = c;
+          }
+        }
+        if (col >= 0) cells.computeIfAbsent(((long)r << 32) | col, k -> new ArrayList<>()).add(l.problem());
+        else rows.computeIfAbsent(r, k -> new ArrayList<>()).add(l.problem());
+      }
+    }
+    cellProblems = cells;
+    rowProblems = rows;
+    table.repaint();
+    if (rowHeader != null) rowHeader.repaint();
+  }
+
+  @org.jetbrains.annotations.TestOnly
+  List<DocumentProblems.Problem> cellProblemsForTest(int modelRow, int modelCol) {
+    return cellProblems.getOrDefault(((long)modelRow << 32) | modelCol, List.of());
+  }
+
+  @org.jetbrains.annotations.TestOnly
+  List<DocumentProblems.Problem> rowProblemsForTest(int modelRow) {
+    return rowProblems.getOrDefault(modelRow, List.of());
   }
 
   JComponent focusComponent() {
@@ -295,6 +359,7 @@ final class GridView extends JPanel implements UiDataProvider {
         if (i >= 0) keys.add(new RowSorter.SortKey(i, order));
       });
       for (int c = 0; c < t.columnCount(); c++) sorter.setComparator(c, CellComparator.INSTANCE);
+      recomputeProblems();
       sorter.setSortKeys(keys);
       sorter.allRowsChanged();
       autoFit();
@@ -700,6 +765,12 @@ final class GridView extends JPanel implements UiDataProvider {
       if (c.kind() == GridColumn.Kind.COMPLEX && t.cell(row, col) != null) setToolTipText("Double-click or Alt+Down to drill down");
       else setToolTipText(inspect ? "Double-click, Shift+Enter or click the icon to inspect the full value" : null);
       if (!selected) setBackground(XmlColors.stripe(viewRow, tbl.getBackground()));
+      List<DocumentProblems.Problem> ps = cellProblems.get(((long)row << 32) | col);
+      if (ps != null) {
+        // A bar along the bottom of the cell, like the web view, and the messages as tooltip.
+        setBorder(javax.swing.BorderFactory.createMatteBorder(0, 0, JBUI.scale(2), 0, DocumentProblems.color(ps)));
+        setToolTipText(DocumentProblems.tooltip(ps));
+      }
       // SimpleColoredComponent fills the icon area with the table's background; leave it unfilled
       // so striped rows stay striped behind the inspect icon.
       setTransparentIconBackground(true);

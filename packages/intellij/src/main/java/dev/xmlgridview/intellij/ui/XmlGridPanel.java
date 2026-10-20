@@ -102,6 +102,9 @@ public final class XmlGridPanel extends JPanel implements Disposable {
   private @Nullable String pendingGridRow;
   private int pendingGridCol;
   private final com.intellij.openapi.actionSystem.DefaultActionGroup gridEditActions;
+  private final DocumentProblems problems;
+  private final LinkLabel<Void> problemsLink = new LinkLabel<>("", null);
+  private int problemIndex = -1;
   private final Project project;
   private final com.intellij.openapi.actionSystem.DefaultActionGroup treeStructureActions;
   private final com.intellij.openapi.actionSystem.DefaultActionGroup gridStructureActions;
@@ -187,6 +190,9 @@ public final class XmlGridPanel extends JPanel implements Disposable {
     grid.addMenuActions(gridEditActions);
     gridStructureActions = StructureActions.create(this, () -> model == null ? null : grid.structureTarget(model), applier);
     grid.addMenuActions(gridStructureActions);
+    problems = new DocumentProblems(project, document, this, this::problemsChanged);
+    tree.setProblems(problems);
+    grid.setProblems(problems);
     summary = new SummaryPanel(new SummaryPanel.Listener() {
       @Override
       public void chooseGroup(@NotNull String tag) {
@@ -261,6 +267,21 @@ public final class XmlGridPanel extends JPanel implements Disposable {
     gridHeader.setBorder(JBUI.Borders.empty(2, 4));
     gridHeader.add(crumbs, BorderLayout.CENTER);
     JPanel headerRight = new JPanel(new FlowLayout(FlowLayout.RIGHT, JBUI.scale(8), 0));
+    problemsLink.setToolTipText("Problems the IDE reports for this file. Click (or F2 / Shift+F2) for the next / previous.");
+    problemsLink.setListener((l, d) -> stepProblem(1), null);
+    problemsLink.setVisible(false);
+    headerRight.add(problemsLink);
+    for (boolean next : new boolean[]{true, false}) {
+      com.intellij.openapi.actionSystem.AnAction ide = com.intellij.openapi.actionSystem.ActionManager.getInstance()
+        .getAction(next ? "GotoNextError" : "GotoPreviousError");
+      if (ide == null) continue;
+      new DumbAwareAction() {
+        @Override
+        public void actionPerformed(@NotNull AnActionEvent e) {
+          stepProblem(next ? 1 : -1);
+        }
+      }.registerCustomShortcutSet(ide.getShortcutSet(), this, this);
+    }
     headerRight.add(clearFilters);
     LinkLabel<Void> export = new LinkLabel<>("Export", null);
     export.setToolTipText("Export the visible rows as CSV or JSON");
@@ -371,6 +392,7 @@ public final class XmlGridPanel extends JPanel implements Disposable {
       }
       if (findBar.isVisible()) scheduleSearch(0);
     }, ModalityState.any()));
+    problems.refresh(built);
 
     XNode target = state == null ? null : built.byPath(state.gridPath);
     if (target == null) target = built.root();
@@ -473,6 +495,48 @@ public final class XmlGridPanel extends JPanel implements Disposable {
     crumbs.setCrumbs(list);
     updateRowsLabel();
     if (findBar.isVisible() && findBar.scope() == FindBar.Scope.GRID) scheduleSearch(0);
+  }
+
+  private void problemsChanged() {
+    problemIndex = -1;
+    grid.recomputeProblems();
+    tree.repaintTree();
+    int total = problems.ordered().size();
+    int errors = problems.errorCount();
+    problemsLink.setVisible(total > 0);
+    StringBuilder text = new StringBuilder();
+    if (errors > 0) text.append(errors).append(errors == 1 ? " error" : " errors");
+    if (total > errors) text.append(text.isEmpty() ? "" : ", ").append(total - errors).append(total - errors == 1 ? " warning" : " warnings");
+    problemsLink.setText(text.toString());
+    problemsLink.setIcon(errors > 0 ? com.intellij.icons.AllIcons.General.Error : com.intellij.icons.AllIcons.General.Warning);
+  }
+
+  /** Shows the next (step 1) or previous (-1) problem: its element in the grid, with the message. */
+  void stepProblem(int step) {
+    List<DocumentProblems.Located> list = problems.ordered();
+    if (list.isEmpty()) return;
+    int n = list.size();
+    problemIndex = problemIndex < 0 ? (step > 0 ? 0 : n - 1) : ((problemIndex + step) % n + n) % n;
+    DocumentProblems.Located l = list.get(problemIndex);
+    revealNode(l.node());
+    String msg = (l.problem().error() ? "Error " : "Warning ") + (problemIndex + 1) + "/" + n + ": " + l.problem().message();
+    if (!com.intellij.openapi.application.ApplicationManager.getApplication().isUnitTestMode() && problemsLink.isShowing()) {
+      com.intellij.openapi.ui.popup.JBPopupFactory.getInstance()
+        .createHtmlTextBalloonBuilder(StringUtil.escapeXmlEntities(msg), l.problem().error() ? com.intellij.openapi.ui.MessageType.ERROR : com.intellij.openapi.ui.MessageType.WARNING, null)
+        .setFadeoutTime(5000)
+        .createBalloon()
+        .show(com.intellij.ui.awt.RelativePoint.getSouthOf(problemsLink), com.intellij.openapi.ui.popup.Balloon.Position.below);
+    }
+  }
+
+  @TestOnly
+  DocumentProblems problemsForTest() {
+    return problems;
+  }
+
+  @TestOnly
+  String problemsLinkTextForTest() {
+    return problemsLink.isVisible() ? problemsLink.getText() : "";
   }
 
   private void showExportMenu(JComponent anchor) {

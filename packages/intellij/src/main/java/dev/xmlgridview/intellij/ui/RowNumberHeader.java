@@ -18,6 +18,13 @@ import java.awt.event.MouseEvent;
 /** Row header painting 1-based view row numbers aligned with the table rows. */
 final class RowNumberHeader extends JComponent {
   private final JTable table;
+  /** Colour of a problem bar for a model row, or null. */
+  private java.util.function.IntFunction<java.awt.Color> marker = r -> null;
+
+  void setMarker(@org.jetbrains.annotations.NotNull java.util.function.IntFunction<java.awt.Color> marker) {
+    this.marker = marker;
+    repaint();
+  }
 
   RowNumberHeader(JTable table) {
     this.table = table;
@@ -76,6 +83,11 @@ final class RowNumberHeader extends JComponent {
       int x = getWidth() - fm.stringWidth(s) - JBUI.scale(6);
       int y = cell.y + (cell.height + fm.getAscent() - fm.getDescent()) / 2;
       g.drawString(s, x, y);
+      java.awt.Color bar = marker.apply(table.convertRowIndexToModel(r));
+      if (bar != null) {
+        g.setColor(bar);
+        g.fillRect(0, cell.y, JBUI.scale(3), cell.height);
+      }
     }
     g.setColor(JBColor.border());
     g.drawLine(getWidth() - 1, clip.y, getWidth() - 1, clip.y + clip.height);

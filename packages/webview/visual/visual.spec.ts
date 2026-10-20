@@ -203,3 +203,35 @@ test("comments, processing instructions and DOCTYPE", async ({ page }) => {
   await expect(page.locator(".flat-row.misc")).toHaveCount(6);
   await shot(page, "light-misc-flat");
 });
+
+test("problems from the editor in tree, grid and Flat", async ({ page }) => {
+  await open(page);
+  await ready(page);
+  const at = (s: string, from = 0) => sample.indexOf(s, from);
+  const items = [
+    // An attribute value, a leaf child of a row, a whole row, and something deep inside a book.
+    { offset: at('"paperback"'), length: 11, severity: "error", message: 'Value "paperback" is not in the enumeration.', source: "xml" },
+    { offset: at("<price", at("bk103")) + 1, length: 5, severity: "warning", message: "Element price is deprecated.", source: "xml" },
+    { offset: at("<book", at("bk103") - 20) + 1, length: 4, severity: "error", message: "Missing required element isbn.", source: "xml" },
+    { offset: at("<tag>", at("bk101")) + 1, length: 3, severity: "error", message: "Invalid tag.", source: "xml" },
+  ];
+  await page.evaluate((its) => window.postMessage({ type: "diagnostics", items: its }, "*"), items);
+  await expect(page.locator(".problems-btn")).toHaveText("✖ 3⚠ 1");
+  await expect(page.locator(".cell.problem-error")).toHaveCount(2);
+  await expect(page.locator(".cell.problem-warning")).toHaveCount(1);
+  await expect(page.locator(".tree-row.problem-within")).toHaveCount(1);
+  await shot(page, "light-problems-grid");
+
+  // F8 goes to the first problem: book bk101 (its <tag>), shown as a row of the tags grid.
+  await page.locator(".grid").focus();
+  await page.keyboard.press("F8");
+  await expect(page.locator(".toast")).toContainText("Error 1/4: Invalid tag.");
+  await expect(page.locator(".crumb.group")).toHaveText("tag");
+
+  await page.getByRole("tab", { name: "Flat" }).click();
+  await page.locator(".flat-row").first().waitFor();
+  await expect(page.locator(".flat-row.attr.problem-error")).toHaveCount(1);
+  await page.mouse.move(0, 0);
+  await page.locator(".toast").click();
+  await expect(page).toHaveScreenshot("light-problems-flat.png");
+});

@@ -179,6 +179,33 @@ limitations.
   siblings. An element that holds text doesn't take child elements, since
   that would mix text and elements. The new element is selected after the
   edit.
+- **Editing the grid like a spreadsheet:** in a grid of repeating elements,
+  the right-click menu also has row and column actions:
+  - **Insert Row Below:** a copy of the row with every value emptied.
+  - **Move Row Up / Down** (Alt+Shift+↑/↓) swaps it with its neighbour of
+    the same tag.
+  - **Delete Rows** removes the selected rows.
+  - **Add Column:** a new attribute (`@name`) or child element on every row.
+    **Delete Column** removes it from every row.
+  - **Paste** (Ctrl/Cmd+V): paste a block copied from Excel, Google Sheets or
+    the grid itself at the selected cell. Values go into the cells right and
+    down from there, missing attributes and children are added, and rows past
+    the end become new elements. A header row that matches the column names
+    is skipped.
+  - **Clear Cells** (Delete) empties the selected values.
+
+  Each of these is one undo step.
+- **Export:** the grid's visible rows (after filters and sorting) as CSV or
+  JSON, from the Export button above the grid.
+- **Problems:** errors and warnings that the editor reports for the file,
+  such as XML Schema or DTD validation, are marked in the tree, the grid and
+  the Flat view, with the message as a tooltip. In VS Code they come from
+  other extensions (for example Red Hat's XML extension); in IntelliJ from
+  the IDE's own validation, as of the last time the Text tab analysed the
+  file. A counter above the view steps through them (F8 in VS Code, F2 in
+  IntelliJ, Shift for the previous one).
+- **Comments, processing instructions and the DOCTYPE** are shown, read-only
+  and in grey, in the tree and the Flat view.
 - **Find (Ctrl/Cmd+F):**
   - Match case, whole word and regex.
   - Scope: the current grid or the whole document.
@@ -244,8 +271,6 @@ CI never accepts regenerated output on its own.
 
 ## Known limitations
 
-- **Values only:** structure (elements and attributes) can't be added,
-  removed or renamed from the views.
 - **Grid model:**
   - Only elements without attributes and without element children count as
     text-only columns. Elements with attributes, such as
@@ -261,8 +286,9 @@ CI never accepts regenerated output on its own.
 - **Malformed input:** saxes (web view) and the JDK parser (IntelliJ) recover
   from errors differently. Partial trees can differ, and error columns can
   differ. Fixtures compare only the line.
-- **Comments, processing instructions and DTDs:** they aren't shown. Custom
-  DTD entities aren't expanded.
+- **Comments, processing instructions and DTDs:** they're shown but can't be
+  edited from the views, and the tree shows a leaf element's inline comments
+  only in the Flat view. Custom DTD entities aren't expanded.
 - **Line endings:** IntelliJ normalizes line endings to LF, so a CRLF file
   reports different offsets in each host. Navigation is correct in both.
 - **Large files:** both editors hold the whole model in memory, about 4–5×

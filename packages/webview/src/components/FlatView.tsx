@@ -1,4 +1,5 @@
-import { miscByParent, type FlatValues, type Matcher, type SkeletonMisc, type TreeSkeleton } from "@xmlgridview/core";
+import { miscByParent, type Diagnostic, type FlatValues, type Matcher, type SkeletonMisc, type TreeSkeleton } from "@xmlgridview/core";
+import { problemClass, problemTitle } from "../problems";
 import { miscIndex, miscRow } from "./Tree";
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { Highlight } from "./Highlight";
@@ -137,6 +138,8 @@ export interface FlatViewProps {
   onEdit?(pos: FlatPos, value: string): void;
   /** Right-click on a row. */
   onContextMenu?(pos: FlatPos, x: number, y: number): void;
+  /** Problems by element; ones inside an attribute's span mark that attribute's row. */
+  problems?: Map<number, Diagnostic[]>;
 }
 
 let measureCtx: CanvasRenderingContext2D | null = null;
@@ -348,10 +351,22 @@ export function FlatView(p: FlatViewProps) {
     const valueSel = inRows && c1 === 1;
     const isFocus = i === focusIndex;
     const b = misc ? (misc.parent < 0 ? 0 : bands[misc.parent]) : bands[id];
+    // Problems of this row: an attribute row takes those inside its span, the element row the rest.
+    const all = misc ? undefined : p.problems?.get(id);
+    const attrSpans = all && v ? v.attrs : null;
+    const inAttr = (d: Diagnostic, a: { start: number; end: number }) => d.offset >= a.start && d.offset < a.end;
+    const rowProblems = !all
+      ? undefined
+      : isAttr
+        ? attrSpans
+          ? all.filter((d) => inAttr(d, attrSpans[attr]))
+          : undefined
+        : all.filter((d) => !attrSpans?.some((a) => inAttr(d, a)));
     const cls =
       "flat-row" +
       (isAttr ? " attr" : "") +
       (misc ? " misc" : "") +
+      problemClass(rowProblems) +
       (inRows ? " row-sel" : "") +
       (!isAttr && p.hits?.has(id) ? " hit" : "") +
       (b ? (b === 1 ? " band-a" : " band-b") + (misc || isAttr || sk.childCount[id] === 0 ? " val" : " node") : "");
@@ -396,6 +411,7 @@ export function FlatView(p: FlatViewProps) {
           class={"flat-name" + (nameSel ? " sel" : "") + (isFocus && curCol === 0 ? " focus" : "")}
           role="gridcell"
           aria-selected={nameSel}
+          title={problemTitle(rowProblems)}
           style={{ width: nameW, paddingLeft: `calc(${depth} * var(--xgv-tree-indent) + 4px)` }}
           onMouseDown={cellDown(0)}
           onMouseEnter={cellEnter(0)}

@@ -68,6 +68,23 @@ export class XmlGridEditorProvider implements vscode.CustomTextEditorProvider {
         settings: { ...readSettings(), readOnly: readSettings().readOnly || isReadOnly(document) },
       });
 
+    // Problems other extensions report for the document (e.g. XML schema validation), as offsets.
+    const sendDiagnostics = () => {
+      if (!ready) return;
+      const items = vscode.languages.getDiagnostics(document.uri).map((d) => {
+        const offset = document.offsetAt(d.range.start);
+        return {
+          offset,
+          length: document.offsetAt(d.range.end) - offset,
+          severity:
+            d.severity === vscode.DiagnosticSeverity.Error ? ("error" as const) : d.severity === vscode.DiagnosticSeverity.Warning ? ("warning" as const) : ("info" as const),
+          message: d.message,
+          source: d.source,
+        };
+      });
+      post({ type: "diagnostics", items });
+    };
+
     const entry: ViewEntry = {
       uri: document.uri,
       panel,
@@ -83,6 +100,7 @@ export class XmlGridEditorProvider implements vscode.CustomTextEditorProvider {
           case "ready":
             ready = true;
             sendInit();
+            sendDiagnostics();
             break;
           case "navigate":
             await revealInTextEditor(document, msg.offset, msg.length);
@@ -137,6 +155,9 @@ export class XmlGridEditorProvider implements vscode.CustomTextEditorProvider {
       }),
       panel.onDidChangeViewState((e) => {
         if (e.webviewPanel.active) this.activeView = entry;
+      }),
+      vscode.languages.onDidChangeDiagnostics((e) => {
+        if (e.uris.some((u) => u.toString() === document.uri.toString())) sendDiagnostics();
       }),
     );
 

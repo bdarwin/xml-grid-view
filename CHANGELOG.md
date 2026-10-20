@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.5.0
+
+- **Grid editing like a spreadsheet:** insert, move and delete rows, add and
+  delete columns, clear cells with Delete, and paste a block copied from
+  Excel or Google Sheets (rows past the end become new elements). Each is
+  one undo step.
+- **Export:** the grid's visible rows as CSV or JSON.
+- **Problems:** schema, DTD and other validation errors that the editor
+  reports are marked in the tree, grid and Flat view. A counter steps
+  through them.
+- **Comments, processing instructions and the DOCTYPE** are shown in the
+  tree and the Flat view.
+
 ## 0.4.0
 
 - **Structural editing:** right-click an element in the tree, the Grid or

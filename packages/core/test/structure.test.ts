@@ -27,3 +27,19 @@ describe("structure fixtures", () => {
     }
   });
 });
+
+describe("elementAtOffset", () => {
+  it("finds the innermost element containing an offset", async () => {
+    const { parseXml, XmlModel, elementAtOffset } = await import("../src/index.js");
+    const text = '<a x="1">\n  <b>hi</b>\n  <c/>\n</a> ';
+    const sk = new XmlModel(parseXml(text)).skeleton();
+    const at = (s: string, d = 0) => elementAtOffset(sk, text.indexOf(s) + d);
+    expect(at("x=")).toBe(0);
+    expect(at("hi")).toBe(1);
+    expect(at("</b>", 3)).toBe(1);
+    expect(at("\n  <c")).toBe(0);
+    expect(at("<c/>", 3)).toBe(2);
+    expect(at("</a>")).toBe(0);
+    expect(elementAtOffset(sk, text.length - 1)).toBe(-1);
+  });
+});

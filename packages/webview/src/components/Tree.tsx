@@ -1,4 +1,5 @@
-import { miscByParent, miscDisplay, type Matcher, type TreeSkeleton } from "@xmlgridview/core";
+import { miscByParent, miscDisplay, type Diagnostic, type Matcher, type TreeSkeleton } from "@xmlgridview/core";
+import { problemClass, problemTitle } from "../problems";
 import { useEffect, useMemo } from "preact/hooks";
 import { Highlight, PreviewText } from "./Highlight";
 import { scrollRowIntoView, useViewport } from "./useViewport";
@@ -19,6 +20,9 @@ export interface TreeProps {
   onToggle(id: number, expand?: boolean): void;
   onSelect(id: number): void;
   onActivate(id: number): void;
+  /** Problems by element, and the ancestors of elements with problems (marked while collapsed). */
+  problems?: Map<number, Diagnostic[]>;
+  problemWithin?: Set<number>;
   /** Double-click on a comment, PI or DOCTYPE: go to its source. */
   onActivateOffset?(offset: number, length: number): void;
   onInspect?(id: number): void;
@@ -155,7 +159,13 @@ export function Tree(p: TreeProps) {
     }
     const hasKids = sk.firstChild[id] >= 0;
     const open = hasKids && (p.filter ? true : p.expanded.has(id));
-    const cls = "tree-row" + (id === p.selected ? " selected" : "") + (p.hits?.has(id) ? " hit" : "");
+    const own = p.problems?.get(id);
+    const cls =
+      "tree-row" +
+      (id === p.selected ? " selected" : "") +
+      (p.hits?.has(id) ? " hit" : "") +
+      problemClass(own) +
+      (!own && hasKids && !open && p.problemWithin?.has(id) ? " problem-within" : "");
     items.push(
       <div
         key={id}
@@ -164,6 +174,7 @@ export function Tree(p: TreeProps) {
         aria-level={sk.depth[id] + 1}
         aria-expanded={hasKids ? open : undefined}
         aria-selected={id === p.selected}
+        title={problemTitle(own)}
         style={{ top: i * TREE_ROW_HEIGHT, paddingLeft: `calc(${sk.depth[id]} * var(--xgv-tree-indent) + 4px)` }}
         onMouseDown={(e) => {
           if ((e.target as HTMLElement).classList.contains("twisty")) return;

@@ -127,6 +127,7 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
     this.project = project;
     Disposer.register(parent, this);
     loader = new ModelLoader(project, document, this, navigator, (previous, built) -> modelChanged(built), this);
+    problems = new DocumentProblems(project, document, this, () -> table.repaint());
 
     findBar = new FindBar(this, new FindBar.Listener() {
       @Override
@@ -341,10 +342,32 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
     loader.apply(built);
   }
 
+  private final DocumentProblems problems;
+
+  /** Problems of a Flat row: an attribute row takes those inside its span, the element row the rest. */
+  private List<DocumentProblems.Problem> problemsOf(FlatRow r) {
+    if (r.kind() == FlatRow.Kind.MISC) return List.of();
+    List<DocumentProblems.Problem> all = problems.of(r.node());
+    if (all.isEmpty()) return all;
+    List<DocumentProblems.Problem> out = new ArrayList<>();
+    for (DocumentProblems.Problem p : all) {
+      dev.xmlgridview.intellij.model.XAttr in = null;
+      for (dev.xmlgridview.intellij.model.XAttr a : r.node().attrs()) if (p.offset() >= a.start() && p.offset() < a.end()) in = a;
+      if (r.kind() == FlatRow.Kind.ATTR ? in == r.attr() : in == null) out.add(p);
+    }
+    return out;
+  }
+
+  @TestOnly
+  DocumentProblems problemsForTest() {
+    return problems;
+  }
+
   private void modelChanged(@NotNull XmlDocumentModel built) {
     String selected = selectedKey();
     boolean first = model == null;
     model = built;
+    problems.refresh(built);
     sectionLevel = FlatRow.sectionLevel(built);
     boxFilter = null; // the tree re-applies its filter box to the new model and reports back
     int version = ++modelVersion;
@@ -898,14 +921,20 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
           };
           append(label, selected ? new SimpleTextAttributes(SimpleTextAttributes.STYLE_ITALIC, null) : SimpleTextAttributes.GRAY_ITALIC_ATTRIBUTES);
         }
-        else if (attr) {
-          append("@", base);
-          Highlight.append(this, r.attr().name(), base, highlight ? m : null);
-        }
         else {
-          Highlight.append(this, r.node().tag(), base, highlight ? m : null);
+          List<DocumentProblems.Problem> ps = problemsOf(r);
+          if (!ps.isEmpty()) {
+            base = new SimpleTextAttributes(base.getBgColor(), base.getFgColor(), DocumentProblems.color(ps), base.getStyle() | SimpleTextAttributes.STYLE_WAVED);
+          }
+          if (attr) {
+            append("@", base);
+            Highlight.append(this, r.attr().name(), base, highlight ? m : null);
+          }
+          else {
+            Highlight.append(this, r.node().tag(), base, highlight ? m : null);
+          }
+          setToolTipText(ps.isEmpty() ? r.node().path() : DocumentProblems.tooltip(ps));
         }
-        setToolTipText(r.node().path());
       }
       else {
         setIpad(JBUI.emptyInsets());

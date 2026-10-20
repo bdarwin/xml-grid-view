@@ -78,6 +78,12 @@ final class XmlTreeView extends JPanel {
   private @Nullable Consumer<@Nullable Set<XNode>> boxFilterListener;
 
   private @Nullable java.util.function.IntConsumer offsetNavigator;
+  private @Nullable DocumentProblems problems;
+
+  void setProblems(@NotNull DocumentProblems problems) {
+    this.problems = problems;
+  }
+
 
   /** Where Enter on a comment, PI or DOCTYPE goes (its source offset). */
   void setOffsetNavigator(@NotNull java.util.function.IntConsumer navigator) {
@@ -359,7 +365,15 @@ final class XmlTreeView extends JPanel {
       if (n == fs.currentNode()) {
         tagAttrs = new SimpleTextAttributes(tagAttrs.getStyle() | SimpleTextAttributes.STYLE_SEARCH_MATCH, null);
       }
+      List<DocumentProblems.Problem> own = problems == null ? List.of() : problems.of(n);
+      if (!own.isEmpty()) {
+        tagAttrs = new SimpleTextAttributes(tagAttrs.getBgColor(), tagAttrs.getFgColor(), DocumentProblems.color(own),
+                                            tagAttrs.getStyle() | SimpleTextAttributes.STYLE_WAVED);
+      }
       Highlight.append(this, n.tag(), tagAttrs, fs.targets().names() ? fs.matcher() : null);
+      if (own.isEmpty() && problems != null && !expanded && problems.within(n)) {
+        append(" ●", new SimpleTextAttributes(SimpleTextAttributes.STYLE_PLAIN, DocumentProblems.ERROR));
+      }
       for (String k : KEY_ATTRS) {
         XAttr a = n.attr(k);
         if (a == null) continue;
@@ -375,7 +389,7 @@ final class XmlTreeView extends JPanel {
         append("  ", SimpleTextAttributes.REGULAR_ATTRIBUTES);
         Highlight.append(this, t.replace('\n', ' '), SimpleTextAttributes.GRAYED_ATTRIBUTES, fs.targets().text() ? fs.matcher() : null);
       }
-      setToolTipText(n.path());
+      setToolTipText(own.isEmpty() ? n.path() : DocumentProblems.tooltip(own));
     }
   }
 

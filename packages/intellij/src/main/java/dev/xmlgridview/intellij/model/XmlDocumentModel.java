@@ -44,6 +44,24 @@ public final class XmlDocumentModel {
 
   public @NotNull String text() { return text; }
 
+  /** The innermost element whose span contains {@code offset} (start inclusive, end exclusive), or null. */
+  public @Nullable XNode elementAt(int offset) {
+    int lo = 0;
+    int hi = elements.size() - 1;
+    int found = -1;
+    while (lo <= hi) {
+      int mid = (lo + hi) >>> 1;
+      if (elements.get(mid).start() <= offset) {
+        found = mid;
+        lo = mid + 1;
+      }
+      else hi = mid - 1;
+    }
+    XNode n = found < 0 ? null : elements.get(found);
+    while (n != null && n.end() <= offset) n = n.parent();
+    return n;
+  }
+
   /** Comments, processing instructions and the DOCTYPE, in document order. */
   public @NotNull List<XMisc> misc() { return misc; }
 

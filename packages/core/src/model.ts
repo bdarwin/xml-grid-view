@@ -51,6 +51,25 @@ export interface SkeletonMisc {
   before: number;
 }
 
+/**
+ * The innermost element whose source span contains `offset` (start inclusive, end exclusive), or
+ * -1. Elements are in document order, so their start offsets are ascending.
+ */
+export function elementAtOffset(sk: TreeSkeleton, offset: number): number {
+  let lo = 0;
+  let hi = sk.count - 1;
+  let found = -1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if (sk.start[mid] <= offset) {
+      found = mid;
+      lo = mid + 1;
+    } else hi = mid - 1;
+  }
+  while (found >= 0 && sk.end[found] <= offset) found = sk.parent[found];
+  return found;
+}
+
 /** Indices into `sk.misc` by parent element id (-1: top level), in document order. */
 export function miscByParent(sk: TreeSkeleton): Map<number, number[]> {
   const out = new Map<number, number[]>();

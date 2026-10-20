@@ -5,12 +5,14 @@ import {
   DEFAULT_SETTINGS,
   createMatcher,
   idAtPath,
+  elementAtOffset,
   isQName,
   miscDisplay,
   pathKey,
   pathOfId,
   parsePathKey,
   type DocSearchResult,
+  type Diagnostic,
   type EditTarget,
   type ElementPath,
   type TextEdit,
@@ -137,6 +139,9 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
   const flatPending = useRef(new Set<number>());
   const [inspector, setInspector] = useState<InspectorTarget | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  /** Problems the editor reports for the document (schema validation etc.). */
+  const [diagnostics, setDiagnostics] = useState<Diagnostic[]>([]);
+  const [problemIndex, setProblemIndex] = useState(-1);
   const docVersionRef = useRef<number | undefined>(undefined);
   /** Host document version of the text the current model was parsed from. */
   const modelDocVersion = useRef<number | undefined>(undefined);
@@ -314,6 +319,9 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
           if (msg.text.length > settingsRef.current.largeFileThreshold && !largeConfirmed.current) setPhase("large");
           else scheduleLoad(!!msg.fromEdit); // our own edits re-parse immediately
           break;
+        case "diagnostics":
+          setDiagnostics(msg.items.filter((d) => d.severity !== "info"));
+          break;
         case "editResult":
           pendingEdit.current?.(msg);
           pendingEdit.current = null;
@@ -332,6 +340,28 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
     host.post({ type: "ready" });
     return () => window.removeEventListener("error", onError);
   }, []);
+
+  // ----- problems (diagnostics) -------------------------------------------
+
+  /** Problems mapped to elements, in document order; plus every ancestor of an element with a problem. */
+  const problems = useMemo(() => {
+    if (!skeleton || !diagnostics.length) return null;
+    const list = diagnostics
+      .map((d) => ({ d, id: elementAtOffset(skeleton, d.offset) }))
+      .filter((x) => x.id >= 0)
+      .sort((a, b) => a.d.offset - b.d.offset);
+    const byElement = new Map<number, Diagnostic[]>();
+    const within = new Set<number>();
+    for (const x of list) {
+      const l = byElement.get(x.id);
+      if (l) l.push(x.d);
+      else byElement.set(x.id, [x.d]);
+      for (let a = skeleton.parent[x.id]; a >= 0 && !within.has(a); a = skeleton.parent[a]) within.add(a);
+    }
+    return { list, byElement, within, errors: list.filter((x) => x.d.severity === "error").length };
+  }, [skeleton, diagnostics]);
+
+  useEffect(() => setProblemIndex(-1), [problems]);
 
   // ----- grid table --------------------------------------------------------
 
@@ -376,6 +406,48 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
   }, [table]);
 
   const view = useMemo(() => (table ? computeView(table, quick, filters, sort) : new Int32Array(0)), [table, quick, filters, sort]);
+
+  /**
+   * Problems on grid cells (table coordinates r * ncols + c) and rows: a problem inside a row's
+   * child goes to that child's column, one in an attribute to its column, the rest to the row.
+   */
+  const gridProblems = useMemo(() => {
+    if (!table || !problems || !skeleton) return null;
+    const ncols = table.columns.length;
+    const rowOf = new Map<number, number>();
+    table.rowIds.forEach((id, r) => rowOf.set(id, r));
+    const cells = new Map<number, Diagnostic[]>();
+    const rows = new Map<number, Diagnostic[]>();
+    const add = (m: Map<number, Diagnostic[]>, k: number, d: Diagnostic) => {
+      const l = m.get(k);
+      if (l) l.push(d);
+      else m.set(k, [d]);
+    };
+    for (const { d, id } of problems.list) {
+      let child = -1;
+      let e = id;
+      while (e >= 0 && !rowOf.has(e)) {
+        child = e;
+        e = skeleton.parent[e];
+      }
+      if (e < 0) continue;
+      const r = rowOf.get(e)!;
+      let c = -1;
+      if (child >= 0) {
+        const name = skeleton.names[skeleton.nameIdx[child]];
+        c = table.columns.findIndex((col) => col.key === name);
+      } else {
+        for (let k = 0; k < ncols && c < 0; k++) {
+          if (table.columns[k].kind !== "attr") continue;
+          const at = table.spans[(r * ncols + k) * 2];
+          if (at >= 0 && d.offset >= at && d.offset < at + table.spans[(r * ncols + k) * 2 + 1]) c = k;
+        }
+      }
+      if (c >= 0) add(cells, r * ncols + c, d);
+      else add(rows, r, d);
+    }
+    return { cells, rows };
+  }, [table, problems, skeleton]);
 
   // After a grid edit (new row, move, paste), select the row it was about once the grid is rebuilt.
   useEffect(() => {
@@ -1227,6 +1299,35 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
     }
   };
   const nextHit = () => goToHit(findIndex + 1);
+
+  /** Shows problem `i` (wrapping): its element in the current view, with the message. */
+  const goToProblem = (i: number) => {
+    if (!problems || !skeleton || !problems.list.length) return;
+    const n = problems.list.length;
+    const idx = ((i % n) + n) % n;
+    setProblemIndex(idx);
+    const { d, id } = problems.list[idx];
+    setToast(`${d.severity === "error" ? "Error" : "Warning"} ${idx + 1}/${n}: ${d.message}`);
+    if (mode === "flat") {
+      revealFlat(skeleton, id);
+      setFlatSel({ anchor: { id, attr: -1, col: 0 }, focus: { id, attr: -1, col: 1 } });
+      selectElement(id, { reveal: true });
+      return;
+    }
+    const p = skeleton.parent[id];
+    if (p < 0) return selectElement(id, { reveal: true });
+    const name = skeleton.names[skeleton.nameIdx[id]];
+    if (table && table.elementId === p && table.group === name) {
+      const r = table.rowIds.indexOf(id);
+      const v = view.indexOf(r);
+      if (v >= 0) setGridSel({ anchor: { v, c: 0 }, focus: { v, c: 0 } });
+      return;
+    }
+    pendingGridRow.current = { id, c: 0 };
+    selectElement(p, { group: name, reveal: true });
+  };
+  const problemNav = useRef(goToProblem);
+  problemNav.current = (step: number) => goToProblem(problemIndex < 0 ? (step > 0 ? 0 : -1) : problemIndex + step);
   const prevHit = () => goToHit(findIndex < 0 ? findCount - 1 : findIndex - 1);
 
   const resultItems: ResultItem[] = useMemo(() => {
@@ -1257,6 +1358,9 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
       if (mod && !e.altKey && e.key.toLowerCase() === "f") {
         e.preventDefault();
         openFind();
+      } else if (e.key === "F8") {
+        e.preventDefault();
+        problemNav.current(e.shiftKey ? -1 : 1);
       } else if (e.key === "F3") {
         e.preventDefault();
         if (!stateRef.current.find.open) openFind();
@@ -1370,6 +1474,16 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
             {m === "grid" ? "Grid" : "Flat"}
           </button>
         ))}
+        {problems && (
+          <button
+            class={"problems-btn " + (problems.errors ? "has-errors" : "has-warnings")}
+            title="Problems the editor reports for this file. Click (or F8 / Shift+F8) to go to the next / previous."
+            onClick={(e) => problemNav.current(e.shiftKey ? -1 : 1)}
+          >
+            {problems.errors > 0 && <span class="problems-errors">✖ {problems.errors}</span>}
+            {problems.list.length - problems.errors > 0 && <span class="problems-warnings">⚠ {problems.list.length - problems.errors}</span>}
+          </button>
+        )}
         {mode === "flat" && (
           <span class="modebar-actions">
             <button class="secondary small" onClick={() => setFlatCollapsed(new Set())} title="Expand all">
@@ -1431,6 +1545,8 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
               onSelect={(id) => (mode === "flat" ? showInFlat(id) : selectElement(id))}
               onActivate={activateElement}
               onActivateOffset={navigateTo}
+              problems={problems?.byElement}
+              problemWithin={problems?.within}
               onInspect={(id) => void inspectElement(id)}
               onContextMenu={(id, x, y) => openStructureMenu(id, null, x, y)}
             />
@@ -1460,6 +1576,7 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
                 })
               }
               onSelect={selectFlat}
+              problems={problems?.byElement}
               onActivate={(pos) => void activateFlat(pos)}
               onCopy={(sel) => void copyFlat(sel, rowsForFlat)}
               onInspect={(pos) => void inspectFlat(pos)}
@@ -1592,6 +1709,8 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
                   if (e) void requestEdit(e.target, value, e.label);
                 }}
                 onContextMenu={openGridMenu}
+                problemCells={gridProblems?.cells}
+                problemRows={gridProblems?.rows}
                 onClear={clearCells}
                 onMoveRow={(v, up, c) => moveRow(v, up, c)}
                 onPaste={(focus) => void pasteGrid(focus)}

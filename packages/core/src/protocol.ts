@@ -95,12 +95,27 @@ export interface ThemeMessage {
 export interface FocusFindMessage {
   type: "focusFind";
 }
+/** A problem reported for the document by the editor (schema validation, linters, …). */
+export interface Diagnostic {
+  /** UTF-16 offset and length in the current document text. */
+  offset: number;
+  length: number;
+  severity: "error" | "warning" | "info";
+  message: string;
+  /** Who reported it, e.g. "xml". */
+  source?: string;
+}
+/** The document's current problems; sent whenever they change. */
+export interface DiagnosticsMessage {
+  type: "diagnostics";
+  items: Diagnostic[];
+}
 /** Reply to `readClipboard`. */
 export interface ClipboardMessage {
   type: "clipboard";
   text: string;
 }
-export type HostToView = InitMessage | UpdateMessage | ThemeMessage | FocusFindMessage | EditResultMessage | ClipboardMessage;
+export type HostToView = InitMessage | UpdateMessage | ThemeMessage | FocusFindMessage | EditResultMessage | ClipboardMessage | DiagnosticsMessage;
 
 export interface ReadyMessage {
   type: "ready";
@@ -138,7 +153,7 @@ export interface SaveMessage {
 }
 export type ViewToHost = ReadyMessage | NavigateMessage | CopyMessage | ErrorMessage | EditMessage | ReadClipboardMessage | SaveMessage;
 
-const HOST_TYPES = new Set(["init", "update", "theme", "focusFind", "editResult", "clipboard"]);
+const HOST_TYPES = new Set(["init", "update", "theme", "focusFind", "editResult", "clipboard", "diagnostics"]);
 const VIEW_TYPES = new Set(["ready", "navigate", "copy", "error", "edit", "readClipboard", "save"]);
 
 export function isHostToView(m: unknown): m is HostToView {

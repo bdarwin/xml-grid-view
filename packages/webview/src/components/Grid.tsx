@@ -1,8 +1,9 @@
-import type { GridTable, Matcher } from "@xmlgridview/core";
+import type { Diagnostic, GridTable, Matcher } from "@xmlgridview/core";
 import { useEffect, useRef } from "preact/hooks";
 import { cellString, isFilterActive, type CellRange, type Filters, type SortState } from "../gridView";
 import { Highlight } from "./Highlight";
 import { isInspectable } from "../inspect";
+import { problemClass, problemTitle } from "../problems";
 import { CellEditor, type EditMove } from "./CellEditor";
 import { useState } from "preact/hooks";
 import { useViewport } from "./useViewport";
@@ -57,6 +58,9 @@ export interface GridProps {
   onEdit?(pos: CellPos, value: string): void;
   /** Right-click on a cell (c = -1 for the row number). */
   onContextMenu?(pos: CellPos, x: number, y: number): void;
+  /** Problems by cell (table coordinates r * ncols + c) and by table row. */
+  problemCells?: Map<number, Diagnostic[]>;
+  problemRows?: Map<number, Diagnostic[]>;
   /** Delete: empty the selected cells. */
   onClear?(range: CellRange): void;
   /** Alt+Shift+Up/Down: move the focused row. */
@@ -301,7 +305,8 @@ export function Grid(p: GridProps) {
         (hit ? " hit" : "") +
         (key === p.currentHit ? " current-hit" : "") +
         (raw === null ? " empty" : "") +
-        (col.kind === "attr" ? " attr-cell" : "");
+        (col.kind === "attr" ? " attr-cell" : "") +
+        problemClass(p.problemCells?.get(key));
       const pos = { v, c };
       let content;
       if (typeof raw === "number") {
@@ -352,7 +357,7 @@ export function Grid(p: GridProps) {
           style={{ width: widths[c] }}
           role="gridcell"
           aria-selected={!!inSel}
-          title={typeof raw === "string" && raw.length > 40 ? raw.slice(0, 1000) : undefined}
+          title={problemTitle(p.problemCells?.get(key)) ?? (typeof raw === "string" && raw.length > 40 ? raw.slice(0, 1000) : undefined)}
           onMouseDown={(e) => cellDown(e, pos)}
           onMouseEnter={() => cellEnter(pos)}
           onContextMenu={(e) => {
@@ -371,7 +376,7 @@ export function Grid(p: GridProps) {
     }
     rows.push(
       <div key={r} class={"grid-row" + (rowSelected ? " row-sel" : "") + (v % 2 ? " odd" : "")} role="row" style={{ top: v * ROW_HEIGHT }}>
-        <div class="rownum" style={{ width: rowNumWidth }} onMouseDown={(e) => rowHeaderDown(e, v)} onDblClick={() => p.onActivate({ v, c: -1 })} onContextMenu={(e) => {
+        <div class={"rownum" + problemClass(p.problemRows?.get(r))} title={problemTitle(p.problemRows?.get(r))} style={{ width: rowNumWidth }} onMouseDown={(e) => rowHeaderDown(e, v)} onDblClick={() => p.onActivate({ v, c: -1 })} onContextMenu={(e) => {
           if (!p.onContextMenu) return;
           e.preventDefault();
           p.onContextMenu({ v, c: -1 }, e.clientX, e.clientY);

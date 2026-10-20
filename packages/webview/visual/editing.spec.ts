@@ -22,7 +22,7 @@ const XML = `<catalog>
 </catalog>
 `;
 
-async function open(page: Page, settings: Record<string, unknown> = {}) {
+async function open(page: Page, settings: Record<string, unknown> = {}, text = XML) {
   await page.route("http://xgv.test/**", (route) => {
     const name = new URL(route.request().url()).pathname.slice(1);
     const file = name === "harness.html" ? join(HERE, name) : join(DIST, name);
@@ -35,7 +35,7 @@ async function open(page: Page, settings: Record<string, unknown> = {}) {
   await page.evaluate(
     ([text, theme, s]) =>
       (window as unknown as { __init(m: unknown): void }).__init({ type: "init", version: 1, fileName: "books.xml", text, docVersion: 1, theme, settings: s }),
-    [XML, themeVars(), { readOnly: false, ...settings }] as const,
+    [text, themeVars(), { readOnly: false, ...settings }] as const,
   );
   await page.locator(".tree-row").first().waitFor();
 }
@@ -127,4 +127,27 @@ test("read-only documents show the menu disabled", async ({ page }) => {
   await treeRow(page, "bk101").click({ button: "right" });
   await expect(page.locator(".menu-note")).toHaveText("This document is read-only.");
   await expect(page.locator(".menu-item.disabled")).toHaveCount(await page.locator(".menu-item").count());
+});
+
+test("edit values in the element summary", async ({ page }) => {
+  await open(page, {}, '<catalog updated="2026-10-20">\n  <book id="b1"/>\n  <book id="b2"/>\n  <note>List prices.</note>\n</catalog>\n');
+  // catalog's grid shows the books; its own attribute and note are in the summary above.
+  const updated = page.locator(".summary-item", { hasText: "@updated" });
+  await expect(updated).toContainText("2026-10-20");
+  await updated.dblclick();
+  await page.locator(".summary-edit input").fill("2026-11-01");
+  await page.keyboard.press("Enter");
+  await expect.poll(() => doc(page)).toContain('<catalog updated="2026-11-01">');
+  await expect(page.locator(".summary-item", { hasText: "@updated" })).toContainText("2026-11-01");
+
+  await page.locator(".summary-item", { hasText: "note" }).dblclick();
+  await page.locator(".summary-edit input").fill("Net prices.");
+  await page.keyboard.press("Enter");
+  await expect.poll(() => doc(page)).toContain("<note>Net prices.</note>");
+
+  // Right-click acts on the element the value belongs to.
+  await page.locator(".summary-item", { hasText: "note" }).click({ button: "right" });
+  await page.locator(".menu-item", { hasText: "Delete <note>" }).click();
+  await expect.poll(() => doc(page)).not.toContain("note");
+  await expect(page.locator(".summary-item", { hasText: "note" })).toHaveCount(0);
 });

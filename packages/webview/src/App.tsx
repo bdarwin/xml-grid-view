@@ -32,6 +32,7 @@ import { Grid, selectionRange, type CellPos, type GridSelection } from "./compon
 import { PromptDialog, type PromptDialogProps, type PromptField } from "./components/PromptDialog";
 import { Results, type ResultItem } from "./components/Results";
 import { Split } from "./components/Split";
+import { Summary } from "./components/Summary";
 import { Tree } from "./components/Tree";
 import { ValueInspector, type InspectorTarget } from "./components/ValueInspector";
 import { autoFitWidth, computeView, isFilterActive, toTsv, type CellRange, type ColumnFilter, type Filters, type SortState } from "./gridView";
@@ -109,6 +110,8 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
   const [selected, setSelected] = useState(-1);
   const [group, setGroup] = useState<string | null>(null);
   const [table, setTable] = useState<GridTable | null>(null);
+  /** The selected element's one-row fields table, for the summary above a grid of its children. */
+  const [fields, setFields] = useState<GridTable | null>(null);
   const [sort, setSort] = useState<SortState | null>(null);
   const [filters, setFilters] = useState<Filters>({});
   const [quick, setQuick] = useState("");
@@ -348,6 +351,21 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
       cancelled = true;
     };
   }, [skeleton, gen, selected, group]);
+
+  useEffect(() => {
+    if (!table || table.group === null || table.group === SELF_GROUP) {
+      setFields(table?.group === SELF_GROUP ? table : null);
+      return;
+    }
+    let cancelled = false;
+    worker
+      .request<"table">({ type: "table", gen, elementId: table.elementId, group: SELF_GROUP })
+      .then((t) => !cancelled && setFields(t))
+      .catch(() => !cancelled && setFields(null));
+    return () => {
+      cancelled = true;
+    };
+  }, [table]);
 
   const view = useMemo(() => (table ? computeView(table, quick, filters, sort) : new Int32Array(0)), [table, quick, filters, sort]);
 
@@ -680,12 +698,14 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
 
   /** Grid cell → the element it shows: a leaf cell's child element, else the row element (with its attribute for @ cells). */
   const openGridMenu = (pos: CellPos, x: number, y: number) => {
-    if (!table || !skeleton) return;
-    const r = view[pos.v];
-    if (r === undefined) return;
-    const rowId = table.rowIds[r];
-    const col = pos.c >= 0 ? table.columns[pos.c] : null;
-    const raw = col ? table.cells[r * table.columns.length + pos.c] : null;
+    if (table) openCellMenu(table, view[pos.v], pos.c, x, y);
+  };
+
+  const openCellMenu = (t: GridTable, r: number | undefined, c: number, x: number, y: number) => {
+    if (!skeleton || r === undefined) return;
+    const rowId = t.rowIds[r];
+    const col = c >= 0 ? t.columns[c] : null;
+    const raw = col ? t.cells[r * t.columns.length + c] : null;
     if (col?.kind === "attr" && raw !== null) return openStructureMenu(rowId, col.label.slice(1), x, y);
     if (col?.kind === "leaf" && raw !== null) {
       const child = childNamed(rowId, col.label);
@@ -719,13 +739,13 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
   };
 
   /** Edit target for a grid cell, or null when it is not editable (absent, complex, has child elements). */
-  const gridEditTarget = (pos: CellPos): { target: EditTarget; label: string } | null => {
-    if (!table || !skeleton || !canEditDoc || pos.c < 0) return null;
-    const r = view[pos.v];
-    if (r === undefined) return null;
-    const col = table.columns[pos.c];
-    const raw = table.cells[r * table.columns.length + pos.c];
-    const rowId = table.rowIds[r];
+  const gridEditTarget = (pos: CellPos) => (table ? cellEditTarget(table, view[pos.v], pos.c) : null);
+
+  const cellEditTarget = (t: GridTable, r: number | undefined, c: number): { target: EditTarget; label: string } | null => {
+    if (!skeleton || !canEditDoc || c < 0 || r === undefined) return null;
+    const col = t.columns[c];
+    const raw = t.cells[r * t.columns.length + c];
+    const rowId = t.rowIds[r];
     if (col.kind === "attr" && typeof raw === "string") {
       return { target: { kind: "attr", path: pathOfId(skeleton, rowId), name: col.label.slice(1) }, label: `Edit ${col.label}` };
     }
@@ -765,14 +785,16 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
   const elementValues = async (id: number) => flatValues.get(id) ?? (await fetchFlatValues([id]).catch(() => null))?.get(id);
 
   const inspectCell = (pos: CellPos) => {
-    if (!table) return;
-    const r = view[pos.v];
-    if (r === undefined || pos.c < 0) return;
-    const col = table.columns[pos.c];
-    const raw = table.cells[r * table.columns.length + pos.c];
+    if (table) inspectTableCell(table, view[pos.v], pos.c);
+  };
+
+  const inspectTableCell = (t: GridTable, r: number | undefined, c: number) => {
+    if (r === undefined || c < 0) return;
+    const col = t.columns[c];
+    const raw = t.cells[r * t.columns.length + c];
     if (typeof raw !== "string") return;
-    const rowId = table.rowIds[r];
-    const editable = gridEditTarget(pos);
+    const rowId = t.rowIds[r];
+    const editable = cellEditTarget(t, r, c);
     setInspector({
       title: col.kind === "text" ? elementTitle(rowId) : `${elementTitle(rowId)} › ${col.label}`,
       text: raw,
@@ -1243,20 +1265,7 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
                 {table?.group && (
                   <span class="crumb-wrap">
                     <span class="crumb-sep">›</span>
-                    <select
-                      class="group-select"
-                      value={table.group}
-                      aria-label="Tag group"
-                      title="Rows: one child tag, or (fields) for this element as a single row"
-                      onChange={(e) => chooseGroup((e.target as HTMLSelectElement).value)}
-                    >
-                      <option value={SELF_GROUP}>(fields)</option>
-                      {table.groups.map((g) => (
-                        <option key={g.name} value={g.name}>
-                          {g.name} ({g.count})
-                        </option>
-                      ))}
-                    </select>
+                    <span class="crumb group">{table.group === SELF_GROUP ? "(fields)" : table.group}</span>
                   </span>
                 )}
               </nav>
@@ -1276,6 +1285,21 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
                 />
               </div>
             </div>
+            {table && (
+              <Summary
+                key={table.elementId}
+                table={table}
+                fields={fields}
+                onGroup={chooseGroup}
+                canEdit={(c) => !!fields && cellEditTarget(fields, 0, c) !== null}
+                onEdit={(c, value) => {
+                  const e = fields && cellEditTarget(fields, 0, c);
+                  if (e) void requestEdit(e.target, value, e.label);
+                }}
+                onInspect={(c) => fields && inspectTableCell(fields, 0, c)}
+                onContextMenu={(c, x, y) => fields && openCellMenu(fields, 0, c, x, y)}
+              />
+            )}
             {table ? (
               <Grid
                 table={table}

@@ -157,3 +157,27 @@ test("namespaces and attributes-only records", async ({ page }) => {
   await ready(page);
   await shot(page, "light-namespaces");
 });
+
+test("element summary expanded, with hover", async ({ page }) => {
+  await open(page, { theme: "dark" });
+  await ready(page);
+  await page.locator(".grid-row").first().locator(".drill").first().click();
+  await page.locator(".crumb-sep").nth(1).waitFor();
+  await page.locator(".summary-more").click();
+  await expect(page.locator(".summary-more")).toHaveText("less");
+  await page.locator(".summary-item", { hasText: "description" }).hover();
+  await expect(page).toHaveScreenshot("dark-summary-expanded.png");
+});
+
+test("element summary switches groups", async ({ page }) => {
+  await open(page);
+  await ready(page);
+  await treeRow(page, "bk101").click();
+  await page.getByRole("tab", { name: /^tags/ }).click();
+  await expect(page.locator(".crumb.group")).toHaveText("tags");
+  await page.getByRole("tab", { name: "(fields)" }).click();
+  await expect(page.locator(".crumb.group")).toHaveText("(fields)");
+  // Fields view: the grid already shows the values, so only the chips remain.
+  await expect(page.locator(".summary-item")).toHaveCount(0);
+  await shot(page, "light-summary-fields");
+});

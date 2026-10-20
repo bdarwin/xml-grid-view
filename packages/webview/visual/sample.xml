@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<catalog xmlns:media="urn:example:media" updated="2026-10-20">
+  <book id="bk101" format="hardcover">
+    <author>Gambardella, Matthew</author>
+    <title>XML Developer's Guide</title>
+    <genre>Computer</genre>
+    <price currency="USD">44.95</price>
+    <publish_date>2000-10-01</publish_date>
+    <description>An in-depth look at creating applications with XML.</description>
+    <tags><tag>xml</tag><tag>reference</tag></tags>
+    <media:thumbnail url="https://example.com/bk101.png"/>
+  </book>
+  <book id="bk102" format="paperback">
+    <author>Ralls, Kim</author>
+    <title>Midnight Rain</title>
+    <genre>Fantasy</genre>
+    <price currency="USD">5.95</price>
+    <publish_date>2000-12-16</publish_date>
+    <description>A former architect battles corporate zombies &amp; an evil sorceress.</description>
+    <tags><tag>fantasy</tag></tags>
+  </book>
+  <book id="bk103" format="ebook">
+    <author>Corets, Eva</author>
+    <title>Maeve Ascendant</title>
+    <genre>Fantasy</genre>
+    <price currency="EUR">5.95</price>
+    <publish_date>2000-11-17</publish_date>
+    <description>After the collapse of a nanotechnology society, the young survivors lay the foundation for a new society.</description>
+    <tags><tag>fantasy</tag><tag>series</tag><tag>sequel</tag></tags>
+  </book>
+  <book id="bk104" format="hardcover">
+    <author>Corets, Eva</author>
+    <title>Oberon's Legacy</title>
+    <genre>Fantasy</genre>
+    <price currency="USD">95</price>
+    <publish_date>2001-03-10</publish_date>
+    <description>In post-apocalypse England, the mysterious agent known only as Oberon helps to create a new life.</description>
+  </book>
+  <config><![CDATA[{"theme":"dark","pageSize":25,"features":{"search":true,"export":["csv","json"]},"limit":12345678901234567890}]]></config>
+  <note>Prices are list prices.</note>
+</catalog>

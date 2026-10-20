@@ -6,13 +6,17 @@
   "scripts": {
     "build": "node build.mjs",
     "watch": "node build.mjs --watch",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "visual": "node build.mjs && docker run --rm --ipc=host -v \"$PWD/../..\":/work -w /work/packages/webview mcr.microsoft.com/playwright:v1.63.0-noble ./node_modules/.bin/playwright test -c visual/playwright.config.ts",
+    "visual:update": "node build.mjs && docker run --rm --ipc=host -v \"$PWD/../..\":/work -w /work/packages/webview mcr.microsoft.com/playwright:v1.63.0-noble ./node_modules/.bin/playwright test -c visual/playwright.config.ts --update-snapshots",
+    "visual:ci": "playwright test -c visual/playwright.config.ts"
   },
   "dependencies": {
     "@xmlgridview/core": "workspace:*",
     "preact": "^10.29.0"
   },
   "devDependencies": {
+    "@playwright/test": "1.63.0",
     "esbuild": "^0.25.0"
   }
 }

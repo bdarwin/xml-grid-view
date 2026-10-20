@@ -13,3 +13,4 @@ packages/vscode/media/
 packages/vscode/LICENSE
 packages/vscode/CHANGELOG.md
 packages/intellij/screenshots/project/.idea/
+packages/webview/test-results/

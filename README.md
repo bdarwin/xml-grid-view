@@ -46,6 +46,22 @@ cd packages/intellij
 The VS Code smoke test runs with `pnpm --filter xml-grid-view-plus test` and
 downloads VS Code on first use.
 
+**Visual tests.** The web view has screenshot tests (Light+ and Dark+ themes:
+grid, fields grid, Flat, find, inspector, drill-down, filters, banners,
+narrow window). They run in the Playwright Docker image, so they render the
+same on a Mac as in CI:
+
+```sh
+pnpm --filter @xmlgridview/webview visual          # compare with visual/__screenshots__
+pnpm --filter @xmlgridview/webview visual:update   # accept changes, then review the PNG diff
+```
+
+On IntelliJ, `VisualStyleTest` paints the Grid and Flat panels off screen and
+checks the painted pixels against the style rules: section and stripe
+backgrounds across whole cells, tag and attribute colours, and headers and
+names that fit. The renders go to `build/reports/visual`, and CI uploads them
+with the test reports.
+
 ## Installing
 
 Prebuilt `.vsix` and IntelliJ plugin `.zip` files are attached to each

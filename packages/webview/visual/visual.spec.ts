@@ -1,0 +1,159 @@
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { test, expect, type Page } from "@playwright/test";
+import { themeVars } from "../../vscode/src/theme";
+
+// Screenshot tests of the web view as VS Code shows it (Light+ and Dark+ variables, real theme
+// mapping). Each scene drives the UI the way a user would, then compares against a baseline.
+// Update baselines with `pnpm visual:update` and review the PNG diff before committing.
+
+const HERE = dirname(fileURLToPath(import.meta.url));
+const DIST = join(HERE, "..", "dist");
+const FIXTURES = join(HERE, "..", "..", "..", "fixtures", "cases");
+const sample = readFileSync(join(HERE, "sample.xml"), "utf8");
+
+type Theme = "light" | "dark";
+
+async function open(page: Page, opts: { theme?: Theme; text?: string; settings?: Record<string, unknown>; width?: number } = {}) {
+  await page.route("http://xgv.test/**", (route) => {
+    const name = new URL(route.request().url()).pathname.slice(1);
+    const file = name === "harness.html" ? join(HERE, name) : join(DIST, name);
+    const type = name.endsWith(".css") ? "text/css" : name.endsWith(".js") ? "text/javascript" : "text/html";
+    return route.fulfill({ body: readFileSync(file), contentType: type });
+  });
+  if (opts.width) await page.setViewportSize({ width: opts.width, height: 620 });
+  await page.goto("http://xgv.test/harness.html");
+  await page.evaluate((t) => document.documentElement.classList.add(t), opts.theme ?? "light");
+  await page.waitForFunction(() => (window as unknown as { __ready: boolean }).__ready);
+  await page.evaluate(
+    ([text, theme, settings]) =>
+      (window as unknown as { __init(m: unknown): void }).__init({
+        type: "init",
+        version: 1,
+        fileName: "sample.xml",
+        text,
+        docVersion: 1,
+        theme,
+        settings,
+      }),
+    [opts.text ?? sample, themeVars(), { readOnly: false, ...opts.settings }] as const,
+  );
+}
+
+async function ready(page: Page) {
+  await page.locator(".tree-row").first().waitFor();
+  await page.locator(".grid-row, .grid-empty").first().waitFor();
+}
+
+async function shot(page: Page, name: string) {
+  await page.mouse.move(0, 0); // no hover effects
+  await expect(page).toHaveScreenshot(`${name}.png`);
+}
+
+function treeRow(page: Page, text: string) {
+  return page.locator(".tree-row", { hasText: text }).first();
+}
+
+for (const theme of ["light", "dark"] as const) {
+  test.describe(theme, () => {
+    test("grid of repeating children", async ({ page }) => {
+      await open(page, { theme });
+      await ready(page);
+      await shot(page, `${theme}-grid`);
+    });
+
+    test("fields grid of one element", async ({ page }) => {
+      await open(page, { theme });
+      await ready(page);
+      await treeRow(page, "bk102").click();
+      await page.locator(".grid-row").first().waitFor();
+      await shot(page, `${theme}-grid-fields`);
+    });
+
+    test("flat sheet with section colours", async ({ page }) => {
+      await open(page, { theme });
+      await ready(page);
+      await page.getByRole("tab", { name: "Flat" }).click();
+      await page.locator(".flat-row").first().waitFor();
+      await shot(page, `${theme}-flat`);
+    });
+
+    test("find with highlighted matches", async ({ page }) => {
+      await open(page, { theme });
+      await ready(page);
+      await page.locator(".grid").click();
+      await page.keyboard.press("ControlOrMeta+f");
+      await page.locator(".find-input input").fill("fantasy");
+      await page.locator(".counter").filter({ hasText: /\d/ }).waitFor();
+      await shot(page, `${theme}-find`);
+    });
+
+    test("value inspector with JSON", async ({ page }) => {
+      await open(page, { theme });
+      await ready(page);
+      await treeRow(page, "config").click();
+      await page.locator(".grid-row .cell").first().dblclick();
+      await page.locator(".inspector").waitFor();
+      await shot(page, `${theme}-inspector`);
+    });
+  });
+}
+
+test("drill into a nested repeat", async ({ page }) => {
+  await open(page);
+  await ready(page);
+  await page.locator(".grid-row").first().locator(".drill").first().click();
+  await page.locator(".crumb-sep").nth(1).waitFor();
+  await shot(page, "light-grid-drill");
+});
+
+test("sorted and filtered grid", async ({ page }) => {
+  await open(page);
+  await ready(page);
+  await page.locator(".hcell", { hasText: "price" }).locator(".hlabel").click();
+  await page.locator(".quick-filter").fill("Corets");
+  await expect(page.locator(".grid-row")).toHaveCount(2);
+  await shot(page, "light-grid-sorted-filtered");
+});
+
+test("flat sheet collapsed", async ({ page }) => {
+  await open(page, { theme: "dark" });
+  await ready(page);
+  await page.getByRole("tab", { name: "Flat" }).click();
+  await page.getByRole("button", { name: "Collapse all" }).click();
+  await shot(page, "dark-flat-collapsed");
+});
+
+test("tree filter box", async ({ page }) => {
+  await open(page);
+  await ready(page);
+  await page.locator(".tree-filter input").fill("Corets");
+  await expect(page.locator(".tree-row", { hasText: "bk101" })).toHaveCount(0);
+  await page.locator(".tree-row", { hasText: "bk103" }).waitFor();
+  await shot(page, "light-tree-filter");
+});
+
+test("malformed document banner", async ({ page }) => {
+  await open(page, { text: readFileSync(join(FIXTURES, "malformed-unclosed.xml"), "utf8") });
+  await page.locator(".banner, .notice").first().waitFor();
+  await shot(page, "light-malformed");
+});
+
+test("large file notice", async ({ page }) => {
+  await open(page, { settings: { largeFileThreshold: 1024 } });
+  await page.getByRole("button", { name: "Load anyway" }).waitFor();
+  await shot(page, "light-large-notice");
+});
+
+test("narrow window", async ({ page }) => {
+  await open(page, { width: 640 });
+  await ready(page);
+  await shot(page, "light-narrow");
+});
+
+test("namespaces and attributes-only records", async ({ page }) => {
+  await open(page, { text: readFileSync(join(FIXTURES, "namespaces.xml"), "utf8") });
+  await ready(page);
+  await shot(page, "light-namespaces");
+});

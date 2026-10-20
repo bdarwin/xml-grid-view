@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>XML Grid View (visual tests)</title>
+    <link rel="stylesheet" href="webview.css" />
+    <style>
+      /* A subset of VS Code's Light+ / Dark+ variables, so the view is themed the way it is in VS Code. */
+      :root {
+        --vscode-font-family: "DejaVu Sans", sans-serif;
+        --vscode-font-size: 13px;
+        --vscode-editor-font-family: "DejaVu Sans Mono", monospace;
+        --vscode-editor-font-size: 12px;
+      }
+      html.light {
+        --vscode-editor-background: #ffffff;
+        --vscode-editor-foreground: #3b3b3b;
+        --vscode-foreground: #3b3b3b;
+        --vscode-descriptionForeground: #717171;
+        --vscode-editorWidget-border: #c8c8c8;
+        --vscode-sideBarSectionHeader-background: #f3f3f3;
+        --vscode-sideBarSectionHeader-foreground: #3b3b3b;
+        --vscode-list-hoverBackground: #f2f2f2;
+        --vscode-list-activeSelectionBackground: #e8e8e8;
+        --vscode-list-activeSelectionForeground: #000000;
+        --vscode-list-inactiveSelectionBackground: #e4e6f1;
+        --vscode-focusBorder: #005fb8;
+        --vscode-input-background: #ffffff;
+        --vscode-input-foreground: #3b3b3b;
+        --vscode-input-border: #cecece;
+        --vscode-button-background: #005fb8;
+        --vscode-button-foreground: #ffffff;
+        --vscode-button-hoverBackground: #0258a8;
+        --vscode-textLink-foreground: #005fb8;
+        --vscode-editor-findMatchHighlightBackground: rgba(234, 92, 0, 0.33);
+        --vscode-editor-findMatchBackground: #a8ac94;
+        --vscode-inputValidation-warningBackground: #f6f5d2;
+        --vscode-errorForeground: #f85149;
+        --vscode-symbolIcon-classForeground: #d67e00;
+        --vscode-debugTokenExpression-name: #9b46b0;
+        --vscode-debugTokenExpression-string: #a31515;
+        --vscode-debugTokenExpression-number: #098658;
+        --vscode-debugTokenExpression-boolean: #0000ff;
+      }
+      html.dark {
+        --vscode-editor-background: #1f1f1f;
+        --vscode-editor-foreground: #cccccc;
+        --vscode-foreground: #cccccc;
+        --vscode-descriptionForeground: #9d9d9d;
+        --vscode-editorWidget-border: #313131;
+        --vscode-sideBarSectionHeader-background: #181818;
+        --vscode-sideBarSectionHeader-foreground: #cccccc;
+        --vscode-list-hoverBackground: #2a2d2e;
+        --vscode-list-activeSelectionBackground: #04395e;
+        --vscode-list-activeSelectionForeground: #ffffff;
+        --vscode-list-inactiveSelectionBackground: #37373d;
+        --vscode-focusBorder: #0078d4;
+        --vscode-input-background: #313131;
+        --vscode-input-foreground: #cccccc;
+        --vscode-input-border: #3c3c3c;
+        --vscode-button-background: #0078d4;
+        --vscode-button-foreground: #ffffff;
+        --vscode-button-hoverBackground: #026ec1;
+        --vscode-textLink-foreground: #4daafc;
+        --vscode-editor-findMatchHighlightBackground: rgba(234, 92, 0, 0.33);
+        --vscode-editor-findMatchBackground: #9e6a03;
+        --vscode-inputValidation-warningBackground: #352a05;
+        --vscode-errorForeground: #f85149;
+        --vscode-symbolIcon-classForeground: #ee9d28;
+        --vscode-debugTokenExpression-name: #c586c0;
+        --vscode-debugTokenExpression-string: #ce9178;
+        --vscode-debugTokenExpression-number: #b5cea8;
+        --vscode-debugTokenExpression-boolean: #4e94ce;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script>
+      // Acts as the host: the test calls window.__init(...) once the view is ready.
+      window.__hostLog = [];
+      window.__ready = false;
+      window.addEventListener("xgv-host", (e) => {
+        window.__hostLog.push(e.detail);
+        if (e.detail.type === "ready") window.__ready = true;
+      });
+      window.__init = (msg) => window.postMessage(msg, "*");
+    </script>
+    <script src="webview.js"></script>
+  </body>
+</html>

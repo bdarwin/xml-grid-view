@@ -844,11 +844,12 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
       Matcher m = fs.matcher();
       if (column == NAME_COL) {
         setIconOnTheRight(false);
-        setIpad(JBUI.insetsLeft(r.depth() * indentWidth()));
+        setIpad(JBUI.emptyInsets());
         Icon icon = AllIcons.General.ArrowDown;
         boolean filtering = findBar.isVisible() && findBar.showOnlyMatches() && fs.active();
-        if (r.expandable() && !filtering) setIcon(isExpanded(r) ? AllIcons.General.ArrowDown : AllIcons.General.ArrowRight);
-        else setIcon(EmptyIcon.create(icon));
+        Icon twisty = r.expandable() && !filtering ? (isExpanded(r) ? AllIcons.General.ArrowDown : AllIcons.General.ArrowRight) : EmptyIcon.create(icon);
+        // The indent is part of the icon (not ipad), so it gets the row's section colour.
+        setIcon(new IndentedIcon(r.depth() * indentWidth(), twisty));
         int style = isCurrent ? SimpleTextAttributes.STYLE_BOLD : SimpleTextAttributes.STYLE_PLAIN;
         SimpleTextAttributes base = selected ? new SimpleTextAttributes(style, null)
                                              : attr ? XmlColors.attrNameAttrs(style) : XmlColors.tagAttrs(style);
@@ -876,10 +877,31 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
         setToolTipText(inspect ? "Double-click, Shift+Enter or click the icon to inspect the full value" : null);
       }
       if (!selected) setBackground(XmlColors.band(FlatRow.band(r.node(), sectionLevel), r.isValueRow(), tbl.getBackground()));
+      // SimpleColoredComponent fills the icon area (indent and twisty, or the inspect icon) with the
+      // table's background; leave it unfilled so the row's section colour shows there too.
+      setTransparentIconBackground(true);
     }
 
     private boolean currentKeyIs(String key) {
       return current >= 0 && current < matchKeys.size() && matchKeys.get(current).equals(key);
+    }
+  }
+
+  /** An icon drawn {@code indent} pixels in from the left. */
+  private record IndentedIcon(int indent, Icon icon) implements Icon {
+    @Override
+    public void paintIcon(java.awt.Component c, java.awt.Graphics g, int x, int y) {
+      icon.paintIcon(c, g, x + indent, y);
+    }
+
+    @Override
+    public int getIconWidth() {
+      return indent + icon.getIconWidth();
+    }
+
+    @Override
+    public int getIconHeight() {
+      return icon.getIconHeight();
     }
   }
 

@@ -56,6 +56,34 @@ jobs:
           name: vsix
           path: packages/vscode/*.vsix
 
+  visual:
+    # Screenshot tests of the web view, in the same image `pnpm visual` uses locally.
+    runs-on: ubuntu-latest
+    container: mcr.microsoft.com/playwright:v1.63.0-noble
+    env:
+      HOME: /root
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build the web view
+        run: pnpm --filter @xmlgridview/webview build
+      - name: Screenshot tests
+        run: pnpm --filter @xmlgridview/webview visual:ci
+        env:
+          CI: "1"
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: visual-diffs
+          path: |
+            packages/webview/test-results/visual
+            packages/webview/test-results/visual-report
+
   intellij:
     runs-on: ubuntu-latest
     defaults:
@@ -76,7 +104,9 @@ jobs:
         if: always()
         with:
           name: intellij-test-reports
-          path: packages/intellij/build/reports/tests
+          path: |
+            packages/intellij/build/reports/tests
+            packages/intellij/build/reports/visual
       - uses: actions/upload-artifact@v7
         with:
           name: intellij-plugin

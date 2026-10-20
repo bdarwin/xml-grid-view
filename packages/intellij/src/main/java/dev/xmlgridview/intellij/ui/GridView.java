@@ -614,6 +614,9 @@ final class GridView extends JPanel implements UiDataProvider {
       if (c.kind() == GridColumn.Kind.COMPLEX && t.cell(row, col) != null) setToolTipText("Double-click or Alt+Down to drill down");
       else setToolTipText(inspect ? "Double-click, Shift+Enter or click the icon to inspect the full value" : null);
       if (!selected) setBackground(XmlColors.stripe(viewRow, tbl.getBackground()));
+      // SimpleColoredComponent fills the icon area with the table's background; leave it unfilled
+      // so striped rows stay striped behind the inspect icon.
+      setTransparentIconBackground(true);
     }
   }
 }

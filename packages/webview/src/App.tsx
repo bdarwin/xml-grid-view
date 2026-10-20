@@ -89,6 +89,7 @@ function ancestors(sk: TreeSkeleton, id: number): number[] {
 }
 
 function formatSize(chars: number) {
+  if (chars < 1024 * 1024) return `${Math.max(1, Math.round(chars / 1024))} KB`;
   return `${(chars / (1024 * 1024)).toFixed(1)} MB`;
 }
 

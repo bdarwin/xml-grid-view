@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- **IntelliJ Flat view:** the indent and the inspect icon area are now painted
+  with the row's section colour. They used to show white patches.
+- **IntelliJ Grid:** striped rows stay striped behind the inspect icon.
+- **Visual tests:** screenshot tests for the web view and painted style checks
+  for the IntelliJ panels guard against layout and colour regressions.
+- **Large-file notice:** sizes under 1 MB show as KB, not "0.0 MB".
+
 ## 0.3.1
 
 Large files load much faster in IntelliJ.

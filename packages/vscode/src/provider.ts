@@ -90,6 +90,12 @@ export class XmlGridEditorProvider implements vscode.CustomTextEditorProvider {
           case "copy":
             await vscode.env.clipboard.writeText(msg.text);
             break;
+          case "readClipboard":
+            post({ type: "clipboard", text: await vscode.env.clipboard.readText() });
+            break;
+          case "save":
+            await saveExport(document.uri, msg.fileName, msg.text);
+            break;
           case "error":
             this.log.appendLine(`[${document.uri.fsPath}] ${msg.message}`);
             break;
@@ -189,6 +195,20 @@ function isReadOnly(document: vscode.TextDocument): boolean {
 }
 
 /** Opens (or focuses) the text editor beside the view, selects the range and centers it. */
+/** Asks where to save an export (next to the document by default) and writes it. */
+export async function saveExport(docUri: vscode.Uri, fileName: string, text: string): Promise<void> {
+  const ext = fileName.slice(fileName.lastIndexOf(".") + 1);
+  const target = await vscode.window.showSaveDialog({
+    defaultUri: vscode.Uri.joinPath(docUri, "..", fileName),
+    filters: ext === "csv" ? { CSV: ["csv"] } : ext === "json" ? { JSON: ["json"] } : {},
+    saveLabel: "Export",
+  });
+  if (!target) return;
+  await vscode.workspace.fs.writeFile(target, new TextEncoder().encode(text));
+  const open = await vscode.window.showInformationMessage(`Exported ${vscode.workspace.asRelativePath(target, false)}.`, "Open");
+  if (open) await vscode.commands.executeCommand("vscode.open", target);
+}
+
 export async function revealInTextEditor(document: vscode.TextDocument, offset: number, length: number): Promise<vscode.TextEditor> {
   const visible = vscode.window.visibleTextEditors.find((e) => e.document.uri.toString() === document.uri.toString());
   const editor = await vscode.window.showTextDocument(document, {

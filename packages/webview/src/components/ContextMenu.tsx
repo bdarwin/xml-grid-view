@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 
-export type MenuItem = { label: string; onClick(): void; disabled?: boolean; danger?: boolean } | "separator";
+export type MenuItem = { label: string; onClick(): void; disabled?: boolean; danger?: boolean; hint?: string } | "separator";
 
 export interface ContextMenuProps {
   x: number;
@@ -83,6 +83,7 @@ export function ContextMenu(p: ContextMenuProps) {
             onClick={() => pick(item)}
           >
             {item.label}
+            {item.hint && <span class="menu-hint">{item.hint}</span>}
           </div>
         );
       })}

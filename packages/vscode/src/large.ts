@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { PROTOCOL_VERSION, isViewToHost, type HostToView } from "@xmlgridview/core/protocol";
-import { readSettings, viewHtml, type ViewEntry } from "./provider";
+import { readSettings, saveExport, viewHtml, type ViewEntry } from "./provider";
 import { themeVars } from "./theme";
 
 export const LARGE_VIEW_TYPE = "xmlGridView.largeEditor";
@@ -92,6 +92,12 @@ export class LargeFileEditorProvider implements vscode.CustomReadonlyEditorProvi
           }
           case "copy":
             await vscode.env.clipboard.writeText(msg.text);
+            break;
+          case "readClipboard":
+            post({ type: "clipboard", text: await vscode.env.clipboard.readText() });
+            break;
+          case "save":
+            await saveExport(uri, msg.fileName, msg.text);
             break;
           case "error":
             this.log.appendLine(`[${uri.fsPath}] ${msg.message}`);

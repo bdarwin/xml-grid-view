@@ -24,14 +24,19 @@ public class StructureFixturesTest extends BasePlatformTestCase {
     return ReadAction.compute(() -> XmlModelBuilder.build(getProject(), text));
   }
 
-  private static StructureEdits.Op op(JsonObject o) {
+  private static String path(com.google.gson.JsonArray segs) {
     StringBuilder path = new StringBuilder();
-    for (JsonElement seg : o.getAsJsonArray("path")) {
+    for (JsonElement seg : segs) {
       if (!path.isEmpty()) path.append('/');
       path.append(seg.getAsInt());
     }
-    String p = path.toString();
+    return path.toString();
+  }
+
+  private static StructureEdits.Op op(JsonObject o) {
+    String p = o.has("path") ? path(o.getAsJsonArray("path")) : "";
     String name = o.has("name") ? o.get("name").getAsString() : null;
+    String group = o.has("group") ? o.get("group").getAsString() : null;
     return switch (o.get("kind").getAsString()) {
       case "deleteElement" -> StructureEdits.Op.deleteElement(p);
       case "deleteAttr" -> StructureEdits.Op.deleteAttr(p, name);
@@ -39,6 +44,32 @@ public class StructureFixturesTest extends BasePlatformTestCase {
       case "renameElement" -> StructureEdits.Op.rename(p, name);
       case "duplicateElement" -> StructureEdits.Op.duplicate(p);
       case "insertElement" -> StructureEdits.Op.insert(p, StructureEdits.Where.valueOf(o.get("where").getAsString().toUpperCase()), name);
+      case "newRow" -> StructureEdits.Op.newRow(p);
+      case "moveElement" -> StructureEdits.Op.move(p, o.get("direction").getAsString().equals("up"), o.get("sameName").getAsBoolean());
+      case "deleteElements" -> {
+        List<String> paths = new ArrayList<>();
+        for (JsonElement e : o.getAsJsonArray("paths")) paths.add(path(e.getAsJsonArray()));
+        yield StructureEdits.Op.deleteElements(paths);
+      }
+      case "addColumn" -> StructureEdits.Op.addColumn(p, group, name);
+      case "deleteColumn" -> StructureEdits.Op.deleteColumn(p, group, o.get("key").getAsString());
+      case "setCells" -> {
+        List<StructureEdits.Cell> cells = new ArrayList<>();
+        for (JsonElement e : o.getAsJsonArray("cells")) {
+          JsonObject c = e.getAsJsonObject();
+          cells.add(new StructureEdits.Cell(path(c.getAsJsonArray("path")), c.get("key").getAsString(), c.get("value").getAsString()));
+        }
+        yield StructureEdits.Op.setCells(cells);
+      }
+      case "insertRows" -> {
+        List<java.util.Map<String, String>> rows = new ArrayList<>();
+        for (JsonElement e : o.getAsJsonArray("rows")) {
+          java.util.Map<String, String> row = new java.util.LinkedHashMap<>();
+          for (var en : e.getAsJsonObject().entrySet()) row.put(en.getKey(), en.getValue().getAsString());
+          rows.add(row);
+        }
+        yield StructureEdits.Op.insertRows(p, group, rows);
+      }
       default -> throw new IllegalArgumentException(o.toString());
     };
   }

@@ -57,6 +57,12 @@ export interface GridProps {
   onEdit?(pos: CellPos, value: string): void;
   /** Right-click on a cell (c = -1 for the row number). */
   onContextMenu?(pos: CellPos, x: number, y: number): void;
+  /** Delete: empty the selected cells. */
+  onClear?(range: CellRange): void;
+  /** Alt+Shift+Up/Down: move the focused row. */
+  onMoveRow?(v: number, up: boolean, c: number): void;
+  /** Ctrl/Cmd+V: paste the clipboard at the focused cell. */
+  onPaste?(focus: CellPos): void;
 }
 
 export function Grid(p: GridProps) {
@@ -138,12 +144,27 @@ export function Grid(p: GridProps) {
         return;
       }
     }
+    if (e.altKey && e.shiftKey && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
+      if (p.sel && p.onMoveRow) p.onMoveRow(p.sel.focus.v, e.key === "ArrowUp", p.sel.focus.c);
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
     switch (e.key) {
       case "ArrowDown":
         select({ v: mod ? view.length - 1 : cur.v + 1, c: cur.c }, ext);
         break;
       case "ArrowUp":
         select({ v: mod ? 0 : cur.v - 1, c: cur.c }, ext);
+        break;
+      case "Delete":
+        if (!range || !p.onClear) return;
+        p.onClear(range);
+        break;
+      case "v":
+      case "V":
+        if (!mod || !p.sel || !p.onPaste || e.shiftKey || e.altKey) return;
+        p.onPaste(p.sel.focus);
         break;
       case "ArrowRight":
         select({ v: cur.v, c: mod ? ncols - 1 : cur.c + 1 }, ext);

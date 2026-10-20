@@ -1,0 +1,493 @@
+{
+  "cases": [
+    {
+      "op": {
+        "kind": "newRow",
+        "path": [0, 0]
+      },
+      "expected": {
+        "edits": [{ "offset": 177, "length": 0, "text": "\n  <book id=\"\" lang=\"\">\n    <title/>\n    <price/>\n    <tags><tag/></tags>\n  </book>" }],
+        "result": "<?xml version=\"1.0\"?>\n<library xmlns:m=\"urn:media\">\n  <book id=\"b1\" lang=\"en\">\n    <title>First</title>\n    <price>10</price>\n    <tags><tag>a</tag><tag>b</tag></tags>\n  </book>\n  <book id=\"\" lang=\"\">\n    <title/>\n    <price/>\n    <tags><tag/></tags>\n  </book>\n  <note>between</note>\n  <book id=\"b2\">\n    <title>Second</title>\n  </book>\n  <book id=\"b3\"/>\n  <book id=\"b4\"><title>Inline</title><price>4</price></book>\n  <shelf/>\n  <labels><label>x</label></labels>\n  <m:item m:code=\"1\"><m:name>N</m:name></m:item>\n</library>\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "newRow",
+        "path": [0, 3]
+      },
+      "expected": {
+        "edits": [{ "offset": 271, "length": 0, "text": "\n  <book id=\"\"/>" }],
+        "result": "<?xml version=\"1.0\"?>\n<library xmlns:m=\"urn:media\">\n  <book id=\"b1\" lang=\"en\">\n    <title>First</title>\n    <price>10</price>\n    <tags><tag>a</tag><tag>b</tag></tags>\n  </book>\n  <note>between</note>\n  <book id=\"b2\">\n    <title>Second</title>\n  </book>\n  <book id=\"b3\"/>\n  <book id=\"\"/>\n  <book id=\"b4\"><title>Inline</title><price>4</price></book>\n  <shelf/>\n  <labels><label>x</label></labels>\n  <m:item m:code=\"1\"><m:name>N</m:name></m:item>\n</library>\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "newRow",
+        "path": [0, 4]
+      },
+      "expected": {
+        "edits": [{ "offset": 332, "length": 0, "text": "\n  <book id=\"\"><title/><price/></book>" }],
+        "result": "<?xml version=\"1.0\"?>\n<library xmlns:m=\"urn:media\">\n  <book id=\"b1\" lang=\"en\">\n    <title>First</title>\n    <price>10</price>\n    <tags><tag>a</tag><tag>b</tag></tags>\n  </book>\n  <note>between</note>\n  <book id=\"b2\">\n    <title>Second</title>\n  </book>\n  <book id=\"b3\"/>\n  <book id=\"b4\"><title>Inline</title><price>4</price></book>\n  <book id=\"\"><title/><price/></book>\n  <shelf/>\n  <labels><label>x</label></labels>\n  <m:item m:code=\"1\"><m:name>N</m:name></m:item>\n</library>\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "newRow",
+        "path": [0, 7]
+      },
+      "expected": {
+        "edits": [{ "offset": 428, "length": 0, "text": "\n  <m:item m:code=\"\"><m:name/></m:item>" }],
+        "result": "<?xml version=\"1.0\"?>\n<library xmlns:m=\"urn:media\">\n  <book id=\"b1\" lang=\"en\">\n    <title>First</title>\n    <price>10</price>\n    <tags><tag>a</tag><tag>b</tag></tags>\n  </book>\n  <note>between</note>\n  <book id=\"b2\">\n    <title>Second</title>\n  </book>\n  <book id=\"b3\"/>\n  <book id=\"b4\"><title>Inline</title><price>4</price></book>\n  <shelf/>\n  <labels><label>x</label></labels>\n  <m:item m:code=\"1\"><m:name>N</m:name></m:item>\n  <m:item m:code=\"\"><m:name/></m:item>\n</library>\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "newRow",
+        "path": [0]
+      },
+      "expected": { "error": true }
+    },
+    {
+      "op": {
+        "kind": "moveElement",
+        "path": [0, 2],
+        "direction": "up",
+        "sameName": true
+      },
+      "expected": {
+        "edits": [
+          { "offset": 203, "length": 50, "text": "<book id=\"b1\" lang=\"en\">\n    <title>First</title>\n    <price>10</price>\n    <tags><tag>a</tag><tag>b</tag></tags>\n  </book>" },
+          { "offset": 54, "length": 123, "text": "<book id=\"b2\">\n    <title>Second</title>\n  </book>" }
+        ],
+        "result": "<?xml version=\"1.0\"?>\n<library xmlns:m=\"urn:media\">\n  <book id=\"b2\">\n    <title>Second</title>\n  </book>\n  <note>between</note>\n  <book id=\"b1\" lang=\"en\">\n    <title>First</title>\n    <price>10</price>\n    <tags><tag>a</tag><tag>b</tag></tags>\n  </book>\n  <book id=\"b3\"/>\n  <book id=\"b4\"><title>Inline</title><price>4</price></book>\n  <shelf/>\n  <labels><label>x</label></labels>\n  <m:item m:code=\"1\"><m:name>N</m:name></m:item>\n</library>\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "moveElement",
+        "path": [0, 2],
+        "direction": "up",
+        "sameName": false
+      },
+      "expected": {
+        "edits": [
+          { "offset": 203, "length": 50, "text": "<note>between</note>" },
+          { "offset": 180, "length": 20, "text": "<book id=\"b2\">\n    <title>Second</title>\n  </book>" }
+        ],
+        "result": "<?xml version=\"1.0\"?>\n<library xmlns:m=\"urn:media\">\n  <book id=\"b1\" lang=\"en\">\n    <title>First</title>\n    <price>10</price>\n    <tags><tag>a</tag><tag>b</tag></tags>\n  </book>\n  <book id=\"b2\">\n    <title>Second</title>\n  </book>\n  <note>between</note>\n  <book id=\"b3\"/>\n  <book id=\"b4\"><title>Inline</title><price>4</price></book>\n  <shelf/>\n  <labels><label>x</label></labels>\n  <m:item m:code=\"1\"><m:name>N</m:name></m:item>\n</library>\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "moveElement",
+        "path": [0, 0],
+        "direction": "up",
+        "sameName": true
+      },
+      "expected": { "error": true }
+    },
+    {
+      "op": {
+        "kind": "moveElement",
+        "path": [0, 4],
+        "direction": "down",
+        "sameName": true
+      },
+      "expected": { "error": true }
+    },
+    {
+      "op": {
+        "kind": "moveElement",
+        "path": [0, 3],
+        "direction": "down",
+        "sameName": true
+      },
+      "expected": {
+        "edits": [
+          { "offset": 274, "length": 58, "text": "<book id=\"b3\"/>" },
+          { "offset": 256, "length": 15, "text": "<book id=\"b4\"><title>Inline</title><price>4</price></book>" }
+        ],
+        "result": "<?xml version=\"1.0\"?>\n<library xmlns:m=\"urn:media\">\n  <book id=\"b1\" lang=\"en\">\n    <title>First</title>\n    <price>10</price>\n    <tags><tag>a</tag><tag>b</tag></tags>\n  </book>\n  <note>between</note>\n  <book id=\"b2\">\n    <title>Second</title>\n  </book>\n  <book id=\"b4\"><title>Inline</title><price>4</price></book>\n  <book id=\"b3\"/>\n  <shelf/>\n  <labels><label>x</label></labels>\n  <m:item m:code=\"1\"><m:name>N</m:name></m:item>\n</library>\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "deleteElements",
+        "paths": [[0, 2], [0, 3]]
+      },
+      "expected": {
+        "edits": [
+          { "offset": 254, "length": 18, "text": "" },
+          { "offset": 201, "length": 53, "text": "" }
+        ],
+        "result": "<?xml version=\"1.0\"?>\n<library xmlns:m=\"urn:media\">\n  <book id=\"b1\" lang=\"en\">\n    <title>First</title>\n    <price>10</price>\n    <tags><tag>a</tag><tag>b</tag></tags>\n  </book>\n  <note>between</note>\n  <book id=\"b4\"><title>Inline</title><price>4</price></book>\n  <shelf/>\n  <labels><label>x</label></labels>\n  <m:item m:code=\"1\"><m:name>N</m:name></m:item>\n</library>\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "deleteElements",
+        "paths": [[0, 0], [0, 0, 1], [0, 4]]
+      },
+      "expected": {
+        "edits": [
+          { "offset": 272, "length": 61, "text": "" },
+          { "offset": 52, "length": 126, "text": "" }
+        ],
+        "result": "<?xml version=\"1.0\"?>\n<library xmlns:m=\"urn:media\">\n  <note>between</note>\n  <book id=\"b2\">\n    <title>Second</title>\n  </book>\n  <book id=\"b3\"/>\n  <shelf/>\n  <labels><label>x</label></labels>\n  <m:item m:code=\"1\"><m:name>N</m:name></m:item>\n</library>\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "deleteElements",
+        "paths": [[0]]
+      },
+      "expected": { "error": true }
+    },
+    {
+      "op": {
+        "kind": "addColumn",
+        "path": [0],
+        "group": "book",
+        "name": "@year"
+      },
+      "expected": {
+        "edits": [
+          { "offset": 287, "length": 0, "text": " year=\"\"" },
+          { "offset": 269, "length": 0, "text": " year=\"\"" },
+          { "offset": 216, "length": 0, "text": " year=\"\"" },
+          { "offset": 77, "length": 0, "text": " year=\"\"" }
+        ],
+        "result": "<?xml version=\"1.0\"?>\n<library xmlns:m=\"urn:media\">\n  <book id=\"b1\" lang=\"en\" year=\"\">\n    <title>First</title>\n    <price>10</price>\n    <tags><tag>a</tag><tag>b</tag></tags>\n  </book>\n  <note>between</note>\n  <book id=\"b2\" year=\"\">\n    <title>Second</title>\n  </book>\n  <book id=\"b3\" year=\"\"/>\n  <book id=\"b4\" year=\"\"><title>Inline</title><price>4</price></book>\n  <shelf/>\n  <labels><label>x</label></labels>\n  <m:item m:code=\"1\"><m:name>N</m:name></m:item>\n</library>\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "addColumn",
+        "path": [0],
+        "group": "book",
+        "name": "author"
+      },
+      "expected": {
+        "edits": [
+          { "offset": 325, "length": 0, "text": "<author/>" },
+          { "offset": 269, "length": 2, "text": ">\n    <author/>\n  </book>" },
+          { "offset": 243, "length": 0, "text": "\n    <author/>" },
+          { "offset": 167, "length": 0, "text": "\n    <author/>" }
+        ],
+        "result": "<?xml version=\"1.0\"?>\n<library xmlns:m=\"urn:media\">\n  <book id=\"b1\" lang=\"en\">\n    <title>First</title>\n    <price>10</price>\n    <tags><tag>a</tag><tag>b</tag></tags>\n    <author/>\n  </book>\n  <note>between</note>\n  <book id=\"b2\">\n    <title>Second</title>\n    <author/>\n  </book>\n  <book id=\"b3\">\n    <author/>\n  </book>\n  <book id=\"b4\"><title>Inline</title><price>4</price><author/></book>\n  <shelf/>\n  <labels><label>x</label></labels>\n  <m:item m:code=\"1\"><m:name>N</m:name></m:item>\n</library>\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "addColumn",
+        "path": [0],
+        "group": "book",
+        "name": "title"
+      },
+      "expected": {
+        "edits": [{ "offset": 269, "length": 2, "text": ">\n    <title/>\n  </book>" }],
+        "result": "<?xml version=\"1.0\"?>\n<library xmlns:m=\"urn:media\">\n  <book id=\"b1\" lang=\"en\">\n    <title>First</title>\n    <price>10</price>\n    <tags><tag>a</tag><tag>b</tag></tags>\n  </book>\n  <note>between</note>\n  <book id=\"b2\">\n    <title>Second</title>\n  </book>\n  <book id=\"b3\">\n    <title/>\n  </book>\n  <book id=\"b4\"><title>Inline</title><price>4</price></book>\n  <shelf/>\n  <labels><label>x</label></labels>\n  <m:item m:code=\"1\"><m:name>N</m:name></m:item>\n</library>\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "addColumn",
+        "path": [0],
+        "group": "book",
+        "name": "@id"
+      },
+      "expected": { "error": true }
+    },
+    {
+      "op": {
+        "kind": "addColumn",
+        "path": [0],
+        "group": "book",
+        "name": "x:y"
+      },
+      "expected": { "error": true }
+    },
+    {
+      "op": {
+        "kind": "addColumn",
+        "path": [0],
+        "group": "note",
+        "name": "child"
+      },
+      "expected": { "error": true }
+    },
+    {
+      "op": {
+        "kind": "deleteColumn",
+        "path": [0],
+        "group": "book",
+        "key": "price"
+      },
+      "expected": {
+        "edits": [
+          { "offset": 309, "length": 16, "text": "" },
+          { "offset": 104, "length": 22, "text": "" }
+        ],
+        "result": "<?xml version=\"1.0\"?>\n<library xmlns:m=\"urn:media\">\n  <book id=\"b1\" lang=\"en\">\n    <title>First</title>\n    <tags><tag>a</tag><tag>b</tag></tags>\n  </book>\n  <note>between</note>\n  <book id=\"b2\">\n    <title>Second</title>\n  </book>\n  <book id=\"b3\"/>\n  <book id=\"b4\"><title>Inline</title></book>\n  <shelf/>\n  <labels><label>x</label></labels>\n  <m:item m:code=\"1\"><m:name>N</m:name></m:item>\n</library>\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "deleteColumn",
+        "path": [0],
+        "group": "book",
+        "key": "@id"
+      },
+      "expected": {
+        "edits": [
+          { "offset": 279, "length": 8, "text": "" },
+          { "offset": 261, "length": 8, "text": "" },
+          { "offset": 208, "length": 8, "text": "" },
+          { "offset": 59, "length": 8, "text": "" }
+        ],
+        "result": "<?xml version=\"1.0\"?>\n<library xmlns:m=\"urn:media\">\n  <book lang=\"en\">\n    <title>First</title>\n    <price>10</price>\n    <tags><tag>a</tag><tag>b</tag></tags>\n  </book>\n  <note>between</note>\n  <book>\n    <title>Second</title>\n  </book>\n  <book/>\n  <book><title>Inline</title><price>4</price></book>\n  <shelf/>\n  <labels><label>x</label></labels>\n  <m:item m:code=\"1\"><m:name>N</m:name></m:item>\n</library>\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "deleteColumn",
+        "path": [0],
+        "group": "book",
+        "key": "#text"
+      },
+      "expected": { "error": true }
+    },
+    {
+      "op": {
+        "kind": "setCells",
+        "cells": [
+          {
+            "path": [0, 0],
+            "key": "@id",
+            "value": "B1"
+          },
+          {
+            "path": [0, 0],
+            "key": "title",
+            "value": "Uno & <one>"
+          },
+          {
+            "path": [0, 0],
+            "key": "@year",
+            "value": "2001"
+          },
+          {
+            "path": [0, 0],
+            "key": "author",
+            "value": "Ann"
+          }
+        ]
+      },
+      "expected": {
+        "edits": [
+          { "offset": 167, "length": 0, "text": "\n    <author>Ann</author>" },
+          { "offset": 90, "length": 5, "text": "Uno &amp; &lt;one&gt;" },
+          { "offset": 77, "length": 0, "text": " year=\"2001\"" },
+          { "offset": 64, "length": 2, "text": "B1" }
+        ],
+        "result": "<?xml version=\"1.0\"?>\n<library xmlns:m=\"urn:media\">\n  <book id=\"B1\" lang=\"en\" year=\"2001\">\n    <title>Uno &amp; &lt;one&gt;</title>\n    <price>10</price>\n    <tags><tag>a</tag><tag>b</tag></tags>\n    <author>Ann</author>\n  </book>\n  <note>between</note>\n  <book id=\"b2\">\n    <title>Second</title>\n  </book>\n  <book id=\"b3\"/>\n  <book id=\"b4\"><title>Inline</title><price>4</price></book>\n  <shelf/>\n  <labels><label>x</label></labels>\n  <m:item m:code=\"1\"><m:name>N</m:name></m:item>\n</library>\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "setCells",
+        "cells": [
+          {
+            "path": [0, 3],
+            "key": "@year",
+            "value": "2003"
+          },
+          {
+            "path": [0, 3],
+            "key": "title",
+            "value": "Third"
+          },
+          {
+            "path": [0, 4],
+            "key": "price",
+            "value": ""
+          },
+          {
+            "path": [0, 4],
+            "key": "author",
+            "value": "Bo"
+          }
+        ]
+      },
+      "expected": {
+        "edits": [
+          { "offset": 325, "length": 0, "text": "<author>Bo</author>" },
+          { "offset": 316, "length": 1, "text": "" },
+          { "offset": 269, "length": 2, "text": " year=\"2003\">\n    <title>Third</title>\n  </book>" }
+        ],
+        "result": "<?xml version=\"1.0\"?>\n<library xmlns:m=\"urn:media\">\n  <book id=\"b1\" lang=\"en\">\n    <title>First</title>\n    <price>10</price>\n    <tags><tag>a</tag><tag>b</tag></tags>\n  </book>\n  <note>between</note>\n  <book id=\"b2\">\n    <title>Second</title>\n  </book>\n  <book id=\"b3\" year=\"2003\">\n    <title>Third</title>\n  </book>\n  <book id=\"b4\"><title>Inline</title><price></price><author>Bo</author></book>\n  <shelf/>\n  <labels><label>x</label></labels>\n  <m:item m:code=\"1\"><m:name>N</m:name></m:item>\n</library>\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "setCells",
+        "cells": [
+          {
+            "path": [0, 1],
+            "key": "#text",
+            "value": "changed"
+          }
+        ]
+      },
+      "expected": {
+        "edits": [{ "offset": 186, "length": 7, "text": "changed" }],
+        "result": "<?xml version=\"1.0\"?>\n<library xmlns:m=\"urn:media\">\n  <book id=\"b1\" lang=\"en\">\n    <title>First</title>\n    <price>10</price>\n    <tags><tag>a</tag><tag>b</tag></tags>\n  </book>\n  <note>changed</note>\n  <book id=\"b2\">\n    <title>Second</title>\n  </book>\n  <book id=\"b3\"/>\n  <book id=\"b4\"><title>Inline</title><price>4</price></book>\n  <shelf/>\n  <labels><label>x</label></labels>\n  <m:item m:code=\"1\"><m:name>N</m:name></m:item>\n</library>\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "setCells",
+        "cells": [
+          {
+            "path": [0, 0],
+            "key": "tags",
+            "value": "x"
+          }
+        ]
+      },
+      "expected": { "error": true }
+    },
+    {
+      "op": {
+        "kind": "setCells",
+        "cells": [
+          {
+            "path": [0, 5],
+            "key": "@kind",
+            "value": "oak"
+          },
+          {
+            "path": [0, 5],
+            "key": "book",
+            "value": "z"
+          }
+        ]
+      },
+      "expected": {
+        "edits": [{ "offset": 341, "length": 2, "text": " kind=\"oak\">\n    <book>z</book>\n  </shelf>" }],
+        "result": "<?xml version=\"1.0\"?>\n<library xmlns:m=\"urn:media\">\n  <book id=\"b1\" lang=\"en\">\n    <title>First</title>\n    <price>10</price>\n    <tags><tag>a</tag><tag>b</tag></tags>\n  </book>\n  <note>between</note>\n  <book id=\"b2\">\n    <title>Second</title>\n  </book>\n  <book id=\"b3\"/>\n  <book id=\"b4\"><title>Inline</title><price>4</price></book>\n  <shelf kind=\"oak\">\n    <book>z</book>\n  </shelf>\n  <labels><label>x</label></labels>\n  <m:item m:code=\"1\"><m:name>N</m:name></m:item>\n</library>\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "setCells",
+        "cells": [
+          {
+            "path": [0, 1],
+            "key": "x",
+            "value": "1"
+          }
+        ]
+      },
+      "expected": { "error": true }
+    },
+    {
+      "op": {
+        "kind": "insertRows",
+        "path": [0],
+        "group": "book",
+        "rows": [
+          { "@id": "b5", "title": "Fifth", "price": "5" },
+          { "@id": "b6", "title": "", "price": "6 < 7" }
+        ]
+      },
+      "expected": {
+        "edits": [{ "offset": 332, "length": 0, "text": "\n  <book id=\"b5\"><title>Fifth</title><price>5</price></book>\n  <book id=\"b6\"><title/><price>6 &lt; 7</price></book>" }],
+        "result": "<?xml version=\"1.0\"?>\n<library xmlns:m=\"urn:media\">\n  <book id=\"b1\" lang=\"en\">\n    <title>First</title>\n    <price>10</price>\n    <tags><tag>a</tag><tag>b</tag></tags>\n  </book>\n  <note>between</note>\n  <book id=\"b2\">\n    <title>Second</title>\n  </book>\n  <book id=\"b3\"/>\n  <book id=\"b4\"><title>Inline</title><price>4</price></book>\n  <book id=\"b5\"><title>Fifth</title><price>5</price></book>\n  <book id=\"b6\"><title/><price>6 &lt; 7</price></book>\n  <shelf/>\n  <labels><label>x</label></labels>\n  <m:item m:code=\"1\"><m:name>N</m:name></m:item>\n</library>\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "insertRows",
+        "path": [0],
+        "group": "label",
+        "rows": [{ "#text": "y" }]
+      },
+      "expected": {
+        "edits": [{ "offset": 428, "length": 0, "text": "\n  <label>y</label>" }],
+        "result": "<?xml version=\"1.0\"?>\n<library xmlns:m=\"urn:media\">\n  <book id=\"b1\" lang=\"en\">\n    <title>First</title>\n    <price>10</price>\n    <tags><tag>a</tag><tag>b</tag></tags>\n  </book>\n  <note>between</note>\n  <book id=\"b2\">\n    <title>Second</title>\n  </book>\n  <book id=\"b3\"/>\n  <book id=\"b4\"><title>Inline</title><price>4</price></book>\n  <shelf/>\n  <labels><label>x</label></labels>\n  <m:item m:code=\"1\"><m:name>N</m:name></m:item>\n  <label>y</label>\n</library>\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "insertRows",
+        "path": [0, 6],
+        "group": "label",
+        "rows": [
+          { "#text": "y" },
+          { "#text": "z" }
+        ]
+      },
+      "expected": {
+        "edits": [{ "offset": 370, "length": 0, "text": "<label>y</label><label>z</label>" }],
+        "result": "<?xml version=\"1.0\"?>\n<library xmlns:m=\"urn:media\">\n  <book id=\"b1\" lang=\"en\">\n    <title>First</title>\n    <price>10</price>\n    <tags><tag>a</tag><tag>b</tag></tags>\n  </book>\n  <note>between</note>\n  <book id=\"b2\">\n    <title>Second</title>\n  </book>\n  <book id=\"b3\"/>\n  <book id=\"b4\"><title>Inline</title><price>4</price></book>\n  <shelf/>\n  <labels><label>x</label><label>y</label><label>z</label></labels>\n  <m:item m:code=\"1\"><m:name>N</m:name></m:item>\n</library>\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "insertRows",
+        "path": [0, 5],
+        "group": "book",
+        "rows": [{ "@id": "s1", "title": "On shelf" }]
+      },
+      "expected": {
+        "edits": [{ "offset": 341, "length": 2, "text": ">\n    <book id=\"s1\">\n      <title>On shelf</title>\n    </book>\n  </shelf>" }],
+        "result": "<?xml version=\"1.0\"?>\n<library xmlns:m=\"urn:media\">\n  <book id=\"b1\" lang=\"en\">\n    <title>First</title>\n    <price>10</price>\n    <tags><tag>a</tag><tag>b</tag></tags>\n  </book>\n  <note>between</note>\n  <book id=\"b2\">\n    <title>Second</title>\n  </book>\n  <book id=\"b3\"/>\n  <book id=\"b4\"><title>Inline</title><price>4</price></book>\n  <shelf>\n    <book id=\"s1\">\n      <title>On shelf</title>\n    </book>\n  </shelf>\n  <labels><label>x</label></labels>\n  <m:item m:code=\"1\"><m:name>N</m:name></m:item>\n</library>\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "insertRows",
+        "path": [0, 7],
+        "group": "m:item",
+        "rows": [{ "@m:code": "2", "m:name": "M" }]
+      },
+      "expected": {
+        "edits": [{ "offset": 419, "length": 0, "text": "<m:item m:code=\"2\"><m:name>M</m:name></m:item>" }],
+        "result": "<?xml version=\"1.0\"?>\n<library xmlns:m=\"urn:media\">\n  <book id=\"b1\" lang=\"en\">\n    <title>First</title>\n    <price>10</price>\n    <tags><tag>a</tag><tag>b</tag></tags>\n  </book>\n  <note>between</note>\n  <book id=\"b2\">\n    <title>Second</title>\n  </book>\n  <book id=\"b3\"/>\n  <book id=\"b4\"><title>Inline</title><price>4</price></book>\n  <shelf/>\n  <labels><label>x</label></labels>\n  <m:item m:code=\"1\"><m:name>N</m:name><m:item m:code=\"2\"><m:name>M</m:name></m:item></m:item>\n</library>\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "insertRows",
+        "path": [0],
+        "group": "book",
+        "rows": [{ "q:x": "1" }]
+      },
+      "expected": { "error": true }
+    }
+  ]
+}

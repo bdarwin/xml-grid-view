@@ -11,6 +11,8 @@ import {
   parsePathKey,
   type DocSearchResult,
   type EditTarget,
+  type ElementPath,
+  type TextEdit,
   type FlatValues,
   type GridTable,
   type HostToView,
@@ -35,7 +37,7 @@ import { Split } from "./components/Split";
 import { Summary } from "./components/Summary";
 import { Tree } from "./components/Tree";
 import { ValueInspector, type InspectorTarget } from "./components/ValueInspector";
-import { autoFitWidth, computeView, isFilterActive, toTsv, type CellRange, type ColumnFilter, type Filters, type SortState } from "./gridView";
+import { autoFitWidth, computeView, isFilterActive, parseTsv, toCsv, toJsonRows, toTsv, type CellRange, type ColumnFilter, type Filters, type SortState } from "./gridView";
 import type { HostBridge } from "./host";
 import { StaleError, type WorkerClient } from "./workerClient";
 
@@ -43,6 +45,8 @@ type Phase = "waiting" | "large" | "loading" | "ready";
 type ViewMode = "grid" | "flat";
 
 /** Path plus tag name, so a restored path only applies when the element is still the same kind. */
+const MOD = typeof navigator !== "undefined" && /Mac/.test(navigator.platform) ? { alt: "⌥", shift: "⇧", ctrl: "⌘" } : { alt: "Alt+", shift: "Shift+", ctrl: "Ctrl+" };
+
 type NamedPath = [path: string, name: string];
 
 /** Everything restored across updates and across view reloads. */
@@ -252,6 +256,9 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
           setFlatCollapsed((prev) => new Set([...prev].filter((c) => !ancestors(sk, newId).includes(c))));
           setFlatSel({ anchor: { id: newId, attr: -1, col: 0 }, focus: { id: newId, attr: -1, col: 1 } });
         }
+        const wantRow = gridSelectAfterLoad.current;
+        gridSelectAfterLoad.current = null;
+        pendingGridRow.current = wantRow ? { id: resolveNamed(r.skeleton, wantRow.row), c: wantRow.c } : null;
         pendingRestore.current = null;
         modelDocVersion.current = version;
         setSkeleton(r.skeleton);
@@ -368,6 +375,22 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
   }, [table]);
 
   const view = useMemo(() => (table ? computeView(table, quick, filters, sort) : new Int32Array(0)), [table, quick, filters, sort]);
+
+  // After a grid edit (new row, move, paste), select the row it was about once the grid is rebuilt.
+  useEffect(() => {
+    const want = pendingGridRow.current;
+    if (!want || !table) return;
+    const r = table.rowIds.indexOf(want.id);
+    if (r < 0) return;
+    pendingGridRow.current = null;
+    const v = view.indexOf(r);
+    if (v >= 0) {
+      const c = Math.min(Math.max(0, want.c), table.columns.length - 1);
+      setGridSel({ anchor: { v, c }, focus: { v, c } });
+      // Keep typing in the grid (a menu or dialog may have taken focus).
+      gridWrap.current?.querySelector<HTMLElement>(".grid")?.focus({ preventScroll: true });
+    }
+  }, [table, view]);
 
   const fonts = () => {
     const cs = getComputedStyle(gridWrap.current ?? document.body);
@@ -602,6 +625,215 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
   const [prompt, setPrompt] = useState<PromptDialogProps | null>(null);
   /** Element to select once the edited document has been re-parsed (e.g. the one just inserted). */
   const selectAfterLoad = useRef<NamedPath | null>(null);
+  /** Grid row (and column) to select after a grid edit, staying on the same grid. */
+  const gridSelectAfterLoad = useRef<{ row: NamedPath; c: number } | null>(null);
+  const pendingGridRow = useRef<{ id: number; c: number } | null>(null);
+
+  /** Computes several structural edits on the same model and applies them as one undoable step. */
+  const requestOps = async (ops: StructureOp[], label: string, gridRow?: { row: NamedPath; c: number }) => {
+    try {
+      const edits: TextEdit[] = [];
+      for (const op of ops) {
+        const r = await worker.request<"structure">({ type: "structure", gen, op });
+        if ("error" in r) return setToast(r.error);
+        edits.push(...r.edits);
+      }
+      if (!edits.length) return;
+      edits.sort((a, b) => b.offset - a.offset);
+      gridSelectAfterLoad.current = gridRow ?? null;
+      const result = await postEdits(edits, label);
+      if (!result.ok) {
+        gridSelectAfterLoad.current = null;
+        setToast(result.message ?? "The edit was not applied.");
+      }
+    } catch (e) {
+      setToast(e instanceof StaleError ? "The document changed while editing; please try again." : String((e as Error).message ?? e));
+    }
+  };
+
+  /** The grid's rows are children of the shown element sharing one tag (not the fields or leaf view). */
+  const isRowGrid = (t: GridTable | null): t is GridTable => !!t && t === table && t.group !== null && t.group !== SELF_GROUP;
+
+  /** View rows covered by the grid selection, or just `v` when it lies outside the selection. */
+  const selectedViewRows = (v: number): number[] => {
+    if (gridSel) {
+      const r = selectionRange(gridSel);
+      if (v >= r.r0 && v <= r.r1) return Array.from({ length: r.r1 - r.r0 + 1 }, (_, i) => r.r0 + i);
+    }
+    return [v];
+  };
+
+  const rowNamedPath = (id: number): NamedPath => [pathKey(pathOfId(skeleton!, id)), skeleton!.names[skeleton!.nameIdx[id]]];
+
+  /** The nearest sibling of `id` with the same name before (up) or after it, or -1. */
+  const sameNameSibling = (id: number, up: boolean): number => {
+    const sk = skeleton!;
+    const name = sk.nameIdx[id];
+    let prev = -1;
+    for (let c = sk.firstChild[sk.parent[id]]; c >= 0; c = sk.nextSibling[c]) {
+      if (sk.nameIdx[c] !== name) continue;
+      if (c === id) {
+        if (up) return prev;
+      } else if (!up && prev === id) return c;
+      prev = c;
+    }
+    return -1;
+  };
+
+  const moveRow = (v: number, up: boolean, c = 0) => {
+    if (!isRowGrid(table) || !skeleton || !canEditDoc) return;
+    const r = view[v];
+    if (r === undefined) return;
+    const id = table.rowIds[r];
+    const other = sameNameSibling(id, up);
+    if (other < 0) return;
+    // After the swap, the moved row sits where its sibling was.
+    void requestOps([{ kind: "moveElement", path: pathOfId(skeleton, id), direction: up ? "up" : "down", sameName: true }], `Move <${table.group}> ${up ? "Up" : "Down"}`, {
+      row: rowNamedPath(other),
+      c,
+    });
+  };
+
+  /** Empties the selected cells that have a value (complex cells and absent values are left alone). */
+  const clearCells = (range: CellRange) => {
+    if (!table || !skeleton || !canEditDoc) return;
+    const cells: { path: ElementPath; key: string; value: string }[] = [];
+    for (let v = range.r0; v <= range.r1; v++) {
+      const r = view[v];
+      if (r === undefined) continue;
+      for (let c = range.c0; c <= range.c1; c++) {
+        const col = table.columns[c];
+        const raw = table.cells[r * table.columns.length + c];
+        if (typeof raw !== "string" || raw === "" || col.kind === "complex") continue;
+        if (!cellEditTarget(table, r, c)) continue;
+        cells.push({ path: pathOfId(skeleton, table.rowIds[r]), key: col.key, value: "" });
+      }
+    }
+    if (cells.length) void requestOps([{ kind: "setCells", cells }], cells.length === 1 ? "Clear Cell" : `Clear ${cells.length} Cells`);
+  };
+
+  /**
+   * Pastes tab-separated text at `focus`: values go into the cells right and down from it (missing
+   * attributes and children are added), rows beyond the last become new rows. A header row that
+   * matches the column labels is skipped; nested-table columns are left alone.
+   */
+  const pasteGrid = async (focus: CellPos) => {
+    if (!table || !skeleton) return;
+    if (!canEditDoc) return setToast(settings.readOnly ? "This document is read-only." : "Fix the XML errors to edit.");
+    let rows = parseTsv(await host.readClipboard());
+    if (!rows.length) return setToast("The clipboard is empty.");
+    const labels = table.columns.slice(focus.c).map((c) => c.label);
+    if (rows.length > 1 && rows[0].every((h, j) => h === labels[j])) rows = rows.slice(1);
+    const rowGrid = isRowGrid(table);
+    const cells: { path: ElementPath; key: string; value: string }[] = [];
+    const added: Record<string, string>[] = [];
+    rows.forEach((values, i) => {
+      const v = focus.v + i;
+      const r = view[v];
+      if (r === undefined && (!rowGrid || v < view.length)) return;
+      const rec: Record<string, string> = {};
+      values.forEach((value, j) => {
+        const col = table.columns[focus.c + j];
+        if (!col || col.kind === "complex") return;
+        if (r !== undefined) cells.push({ path: pathOfId(skeleton, table.rowIds[r]), key: col.key, value });
+        else rec[col.key] = value;
+      });
+      if (r === undefined && Object.keys(rec).length) added.push(rec);
+    });
+    const ops: StructureOp[] = [];
+    if (cells.length) ops.push({ kind: "setCells", cells });
+    if (added.length && rowGrid) ops.push({ kind: "insertRows", path: pathOfId(skeleton, table.elementId), group: table.group!, rows: added });
+    if (!ops.length) return setToast("Nothing to paste here.");
+    const n = rows.length;
+    void requestOps(ops, n === 1 ? "Paste" : `Paste ${n} Rows`);
+  };
+
+  const exportGrid = (kind: "csv" | "json") => {
+    if (!table || !skeleton) return;
+    const base = (fileName.replace(/^.*[\\/]/, "").replace(/\.[^.]*$/, "") || "export") + "-" + (table.group && table.group !== SELF_GROUP ? table.group : skeleton.names[skeleton.nameIdx[table.elementId]]);
+    host.post({ type: "save", fileName: `${base.replace(/[^\w.-]+/g, "_")}.${kind}`, text: kind === "csv" ? toCsv(table, view) : toJsonRows(table, view) });
+  };
+
+  /** Row and column actions for a cell of a row grid, shown above the element actions. */
+  const gridRowItems = (t: GridTable, r: number, c: number): MenuItem[] => {
+    if (!isRowGrid(t) || !skeleton) return [];
+    const ro = !canEditDoc;
+    const v = view.indexOf(r);
+    const id = t.rowIds[r];
+    const rowPath = pathOfId(skeleton, id);
+    const parentPath = pathOfId(skeleton, t.elementId);
+    const group = t.group!;
+    const col = c >= 0 ? t.columns[c] : null;
+    const rows = selectedViewRows(v).map((x) => t.rowIds[view[x]]);
+    const items: MenuItem[] = [
+      {
+        label: "Insert Row Below",
+        disabled: ro,
+        onClick: () =>
+          void requestOps([{ kind: "newRow", path: rowPath }], `New <${group}>`, {
+            row: [pathKey([...rowPath.slice(0, -1), rowPath[rowPath.length - 1] + 1]), group],
+            c: Math.max(0, c),
+          }),
+      },
+      { label: "Move Row Up", hint: `${MOD.alt}${MOD.shift}↑`, disabled: ro || sameNameSibling(id, true) < 0, onClick: () => moveRow(v, true, Math.max(0, c)) },
+      { label: "Move Row Down", hint: `${MOD.alt}${MOD.shift}↓`, disabled: ro || sameNameSibling(id, false) < 0, onClick: () => moveRow(v, false, Math.max(0, c)) },
+      {
+        label: rows.length === 1 ? "Delete Row" : `Delete ${rows.length} Rows`,
+        danger: true,
+        disabled: ro,
+        onClick: () =>
+          void requestOps([{ kind: "deleteElements", paths: rows.map((x) => pathOfId(skeleton, x)) }], rows.length === 1 ? "Delete Row" : `Delete ${rows.length} Rows`),
+      },
+      "separator",
+      {
+        label: "Paste",
+        hint: `${MOD.ctrl}V`,
+        disabled: ro,
+        onClick: () => void pasteGrid({ v, c: Math.max(0, c) }),
+      },
+      {
+        label: "Clear Cells",
+        hint: "Del",
+        disabled: ro,
+        onClick: () => {
+          const s = gridSel ? selectionRange(gridSel) : null;
+          const inSel = s && v >= s.r0 && v <= s.r1 && c >= s.c0 && c <= s.c1;
+          clearCells(inSel ? s : { r0: v, r1: v, c0: Math.max(0, c), c1: Math.max(0, c) });
+        },
+      },
+      {
+        label: "Add Column…",
+        disabled: ro,
+        onClick: () =>
+          setPrompt({
+            title: `New column for <${group}>`,
+            fields: [
+              {
+                label: "Name (@name for an attribute)",
+                initial: "",
+                validate: (x) => (isQName(x.trim().replace(/^@/, "")) ? null : "Not a valid XML name."),
+              },
+            ],
+            okLabel: "Add",
+            onCancel: () => setPrompt(null),
+            onSubmit: ([n]) => {
+              setPrompt(null);
+              void requestOps([{ kind: "addColumn", path: parentPath, group, name: n.trim() }], `Add Column ${n.trim()}`);
+            },
+          }),
+      },
+    ];
+    if (col && col.kind !== "text") {
+      items.push({
+        label: `Delete Column ${col.label}`,
+        danger: true,
+        disabled: ro,
+        onClick: () => void requestOps([{ kind: "deleteColumn", path: parentPath, group, key: col.key }], `Delete Column ${col.label}`),
+      });
+    }
+    items.push("separator");
+    return items;
+  };
 
   /** Computes a structural edit in the worker and asks the host to apply it. */
   const requestStructure = async (op: StructureOp, label: string, select?: NamedPath) => {
@@ -621,7 +853,7 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
   };
 
   /** Opens the element (and attribute) actions menu at (x, y). */
-  const openStructureMenu = (id: number, attr: string | null, x: number, y: number) => {
+  const openStructureMenu = (id: number, attr: string | null, x: number, y: number, extra: MenuItem[] = []) => {
     if (!skeleton || id < 0) return;
     const sk = skeleton;
     const path = pathOfId(sk, id);
@@ -652,6 +884,7 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
         void requestStructure({ kind: "insertElement", path, where, name: n.trim() }, `Insert <${n.trim()}>`, [pathKey(selectPath), n.trim()]),
       );
     const items: MenuItem[] = [
+      ...extra,
       { label: "Insert Child Element…", disabled: ro, onClick: insert("child", `New child of ${tag}`, [...path, sk.childCount[id]]) },
       { label: "Insert Element Before…", disabled: ro || isRoot, onClick: insert("before", `New element before ${tag}`, path) },
       { label: "Insert Element After…", disabled: ro || isRoot, onClick: insert("after", `New element after ${tag}`, next) },
@@ -706,12 +939,13 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
     const rowId = t.rowIds[r];
     const col = c >= 0 ? t.columns[c] : null;
     const raw = col ? t.cells[r * t.columns.length + c] : null;
-    if (col?.kind === "attr" && raw !== null) return openStructureMenu(rowId, col.label.slice(1), x, y);
+    const extra = gridRowItems(t, r, c);
+    if (col?.kind === "attr" && raw !== null) return openStructureMenu(rowId, col.label.slice(1), x, y, extra);
     if (col?.kind === "leaf" && raw !== null) {
       const child = childNamed(rowId, col.label);
-      if (child >= 0) return openStructureMenu(child, null, x, y);
+      if (child >= 0) return openStructureMenu(child, null, x, y, extra);
     }
-    openStructureMenu(rowId, null, x, y);
+    openStructureMenu(rowId, null, x, y, extra);
   };
 
   /** Computes the text edit in the worker and asks the host to apply it (one undoable step). */
@@ -1275,6 +1509,25 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
                     Clear filters ({activeFilterCount})
                   </button>
                 )}
+                {table && (
+                  <button
+                    class="secondary small"
+                    title="Export the visible rows"
+                    onClick={(e) => {
+                      const b = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                      setMenu({
+                        x: b.left,
+                        y: b.bottom + 2,
+                        items: [
+                          { label: "Export as CSV…", onClick: () => exportGrid("csv") },
+                          { label: "Export as JSON…", onClick: () => exportGrid("json") },
+                        ],
+                      });
+                    }}
+                  >
+                    Export
+                  </button>
+                )}
                 <input
                   class="quick-filter"
                   type="search"
@@ -1332,6 +1585,9 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
                   if (e) void requestEdit(e.target, value, e.label);
                 }}
                 onContextMenu={openGridMenu}
+                onClear={clearCells}
+                onMoveRow={(v, up, c) => moveRow(v, up, c)}
+                onPaste={(focus) => void pasteGrid(focus)}
               />
             ) : (
               <div class="grid-empty">Select an element.</div>

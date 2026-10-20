@@ -95,7 +95,12 @@ export interface ThemeMessage {
 export interface FocusFindMessage {
   type: "focusFind";
 }
-export type HostToView = InitMessage | UpdateMessage | ThemeMessage | FocusFindMessage | EditResultMessage;
+/** Reply to `readClipboard`. */
+export interface ClipboardMessage {
+  type: "clipboard";
+  text: string;
+}
+export type HostToView = InitMessage | UpdateMessage | ThemeMessage | FocusFindMessage | EditResultMessage | ClipboardMessage;
 
 export interface ReadyMessage {
   type: "ready";
@@ -121,10 +126,20 @@ export interface EditMessage {
   /** Short description for the undo history, e.g. "Edit @id". */
   label: string;
 }
-export type ViewToHost = ReadyMessage | NavigateMessage | CopyMessage | ErrorMessage | EditMessage;
+/** Ask for the clipboard text; the host answers with a `clipboard` message. */
+export interface ReadClipboardMessage {
+  type: "readClipboard";
+}
+/** Offer to save `text` as a new file (export); the host asks where. */
+export interface SaveMessage {
+  type: "save";
+  fileName: string;
+  text: string;
+}
+export type ViewToHost = ReadyMessage | NavigateMessage | CopyMessage | ErrorMessage | EditMessage | ReadClipboardMessage | SaveMessage;
 
-const HOST_TYPES = new Set(["init", "update", "theme", "focusFind", "editResult"]);
-const VIEW_TYPES = new Set(["ready", "navigate", "copy", "error", "edit"]);
+const HOST_TYPES = new Set(["init", "update", "theme", "focusFind", "editResult", "clipboard"]);
+const VIEW_TYPES = new Set(["ready", "navigate", "copy", "error", "edit", "readClipboard", "save"]);
 
 export function isHostToView(m: unknown): m is HostToView {
   return typeof m === "object" && m !== null && HOST_TYPES.has((m as { type?: string }).type ?? "");

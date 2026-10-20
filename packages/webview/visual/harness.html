@@ -88,6 +88,9 @@
         const msg = e.detail;
         window.__hostLog.push(msg);
         if (msg.type === "ready") window.__ready = true;
+        if (msg.type === "copy") window.__clipboard = msg.text;
+        if (msg.type === "readClipboard") send({ type: "clipboard", text: window.__clipboard ?? "" });
+        if (msg.type === "save") window.__saved = { fileName: msg.fileName, text: msg.text };
         if (msg.type !== "edit") return;
         if (msg.docVersion !== undefined && msg.docVersion !== window.__version) {
           send({ type: "editResult", ok: false, message: "The document changed while editing; please try again." });

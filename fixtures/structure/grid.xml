@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<library xmlns:m="urn:media">
+  <book id="b1" lang="en">
+    <title>First</title>
+    <price>10</price>
+    <tags><tag>a</tag><tag>b</tag></tags>
+  </book>
+  <note>between</note>
+  <book id="b2">
+    <title>Second</title>
+  </book>
+  <book id="b3"/>
+  <book id="b4"><title>Inline</title><price>4</price></book>
+  <shelf/>
+  <labels><label>x</label></labels>
+  <m:item m:code="1"><m:name>N</m:name></m:item>
+</library>

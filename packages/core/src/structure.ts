@@ -7,8 +7,8 @@
  */
 import type { XmlModel } from "./model.js";
 import type { XElement } from "./types.js";
-import { elementAtPath, type ElementPath } from "./paths.js";
-import { escapeAttr, type TextEdit } from "./edits.js";
+import { elementAtPath, pathOfElement as pathOf, type ElementPath } from "./paths.js";
+import { computeValueEdit, escapeAttr, escapeText, type TextEdit } from "./edits.js";
 
 export type StructureOp =
   | { kind: "deleteElement"; path: ElementPath }
@@ -16,7 +16,15 @@ export type StructureOp =
   | { kind: "addAttr"; path: ElementPath; name: string; value: string }
   | { kind: "renameElement"; path: ElementPath; name: string }
   | { kind: "insertElement"; path: ElementPath; where: "before" | "after" | "child"; name: string }
-  | { kind: "duplicateElement"; path: ElementPath };
+  | { kind: "duplicateElement"; path: ElementPath }
+  // Grid operations: rows are the children of `path` named `group`; column keys are `@attr`, a child name or `#text`.
+  | { kind: "newRow"; path: ElementPath }
+  | { kind: "moveElement"; path: ElementPath; direction: "up" | "down"; sameName: boolean }
+  | { kind: "deleteElements"; paths: ElementPath[] }
+  | { kind: "addColumn"; path: ElementPath; group: string; name: string }
+  | { kind: "deleteColumn"; path: ElementPath; group: string; key: string }
+  | { kind: "setCells"; cells: { path: ElementPath; key: string; value: string }[] }
+  | { kind: "insertRows"; path: ElementPath; group: string; rows: Record<string, string>[] };
 
 export type StructureResult = { edits: TextEdit[] } | { error: string };
 
@@ -121,6 +129,14 @@ function insertAfter(source: string, after: XElement, text: string): TextEdit {
 }
 
 export function computeStructureEdit(source: string, model: XmlModel, op: StructureOp): StructureResult {
+  if (model.errors.length) return { error: "The document is not well-formed; fix it before editing." };
+  switch (op.kind) {
+    case "deleteElements":
+      return deleteElements(source, model, op.paths);
+    case "setCells":
+      return setCells(source, model, op.cells);
+    default:
+  }
   const el = elementAtPath(model.doc, op.path);
   if (!el) return { error: "The element no longer exists." };
   if (model.errors.length) return { error: "The document is not well-formed; fix it before editing." };
@@ -204,7 +220,265 @@ export function computeStructureEdit(source: string, model: XmlModel, op: Struct
       const inner = childIndent === null ? tag : nl + childIndent + tag + nl + indent;
       return { edits: [{ offset: el.openEnd, length: close - el.openEnd, text: inner }] };
     }
+
+    case "newRow": {
+      if (isRoot) return { error: "The root element can't be repeated (a document has one root)." };
+      return { edits: [insertAfter(source, el, blankCopy(source, el, ownLineIndent(source, el.start) ?? ""))] };
+    }
+
+    case "moveElement": {
+      if (isRoot) return { error: "The root element can't be moved." };
+      const sibs = el.parent!.elements.filter((s) => !op.sameName || s.name === el.name);
+      const i = sibs.indexOf(el);
+      const other = sibs[op.direction === "up" ? i - 1 : i + 1];
+      if (!other) return { error: `<${el.name}> is already the ${op.direction === "up" ? "first" : "last"}.` };
+      const [a, b] = other.start < el.start ? [other, el] : [el, other];
+      return {
+        edits: [
+          { offset: b.start, length: b.end - b.start, text: source.slice(a.start, a.end) },
+          { offset: a.start, length: a.end - a.start, text: source.slice(b.start, b.end) },
+        ],
+      };
+    }
+
+    case "addColumn": {
+      const rows = el.elements.filter((c) => c.name === op.group);
+      if (!rows.length) return { error: `<${el.name}> has no <${op.group}> children.` };
+      const isAttr = op.name.startsWith("@");
+      const name = isAttr ? op.name.slice(1) : op.name;
+      const edits: TextEdit[] = [];
+      for (const row of rows) {
+        const has = isAttr ? row.attrs.some((a) => a.name === name) : row.elements.some((c) => c.name === name);
+        if (has) continue;
+        const r = computeStructureEdit(
+          source,
+          model,
+          isAttr ? { kind: "addAttr", path: pathOf(row), name, value: "" } : { kind: "insertElement", path: pathOf(row), where: "child", name },
+        );
+        if ("error" in r) return r;
+        edits.push(...r.edits);
+      }
+      if (!edits.length) return { error: `Every <${op.group}> already has ${isAttr ? "an attribute" : "a child"} ${name}.` };
+      return { edits: sortEdits(edits) };
+    }
+
+    case "deleteColumn": {
+      const rows = el.elements.filter((c) => c.name === op.group);
+      if (op.key === "#text") return { error: "The text column can't be deleted; clear its cells instead." };
+      const edits: TextEdit[] = [];
+      for (const row of rows) {
+        if (op.key.startsWith("@")) {
+          if (!row.attrs.some((a) => a.name === op.key.slice(1))) continue;
+          const r = computeStructureEdit(source, model, { kind: "deleteAttr", path: pathOf(row), name: op.key.slice(1) });
+          if ("error" in r) return r;
+          edits.push(...r.edits);
+        } else {
+          for (const c of row.elements) {
+            if (c.name !== op.key) continue;
+            const r = computeStructureEdit(source, model, { kind: "deleteElement", path: pathOf(c) });
+            if ("error" in r) return r;
+            edits.push(...r.edits);
+          }
+        }
+      }
+      if (!edits.length) return { error: `No <${op.group}> has ${op.key}.` };
+      return { edits: sortEdits(edits) };
+    }
+
+    case "insertRows": {
+      const rows = el.elements.filter((c) => c.name === op.group);
+      if (!op.rows.length) return { edits: [] };
+      if (!isQName(op.group)) return { error: `"${op.group}" is not a valid XML element name.` };
+      for (const row of op.rows) {
+        for (const key of Object.keys(row)) {
+          const n = key.startsWith("@") ? key.slice(1) : key;
+          if (key !== "#text") {
+            const bad = checkName(n, el, key.startsWith("@") ? "attribute" : "element");
+            if (bad) return { error: bad };
+          }
+        }
+      }
+      const template = rows[rows.length - 1] ?? null;
+      const nl = newline(source);
+      if (template) {
+        const indent = ownLineIndent(source, template.start);
+        const tmplChild = template.elements[0];
+        const childIndent = tmplChild ? ownLineIndent(source, tmplChild.start) : indent === null ? null : indent + indentUnit(source, model);
+        const text = op.rows.map((r) => buildRow(op.group, r, childIndent, indent, nl)).join(indent === null ? "" : nl + indent);
+        return { edits: [insertAfter(source, template, text)] };
+      }
+      // No rows yet: append them as children of the element, laid out like its last child (or one level in).
+      const indent = ownLineIndent(source, el.start);
+      const last = el.elements[el.elements.length - 1];
+      const rowIndent = last ? ownLineIndent(source, last.start) : indent === null ? null : indent + indentUnit(source, model);
+      const childIndent = rowIndent === null ? null : rowIndent + indentUnit(source, model);
+      const text = op.rows.map((r) => buildRow(op.group, r, childIndent, rowIndent, nl)).join(rowIndent === null ? "" : nl + rowIndent);
+      return appendChildren(source, model, el, text);
+    }
+
+    default:
+      return { error: "Unknown operation." };
   }
+}
+
+/** Descending offset order, as hosts apply them. */
+function sortEdits(edits: TextEdit[]): TextEdit[] {
+  return [...edits].sort((a, b) => b.offset - a.offset);
+}
+
+/** A row element with the given values: attributes in the start tag, child values as leaf children, `#text` as its text. */
+function buildRow(name: string, values: Record<string, string>, childIndent: string | null, indent: string | null, nl: string): string {
+  let attrs = "";
+  const children: string[] = [];
+  let text = "";
+  for (const [key, value] of Object.entries(values)) {
+    if (key.startsWith("@")) attrs += ` ${key.slice(1)}="${escapeAttr(value, '"')}"`;
+    else if (key === "#text") text = escapeText(value);
+    else children.push(value === "" ? `<${key}/>` : `<${key}>${escapeText(value)}</${key}>`);
+  }
+  if (children.length) {
+    const inner = childIndent === null || indent === null ? children.join("") : children.map((c) => nl + childIndent + c).join("") + nl + indent;
+    return `<${name}${attrs}>${inner}</${name}>`;
+  }
+  return text ? `<${name}${attrs}>${text}</${name}>` : `<${name}${attrs}/>`;
+}
+
+/**
+ * A copy of `el` with every value emptied: attributes keep their names with "" values, text is
+ * dropped, element children are kept (one of each name) and emptied the same way. Line layout
+ * follows the original: children on their own lines stay on their own lines.
+ */
+function blankCopy(source: string, el: XElement, indent: string): string {
+  let tag = `<${el.name}`;
+  for (const [prefix, uri] of Object.entries(el.nsDecls)) tag += ` ${prefix ? "xmlns:" + prefix : "xmlns"}="${escapeAttr(uri, '"')}"`;
+  for (const a of el.attrs) tag += ` ${a.name}=""`;
+  const seen = new Set<string>();
+  const kids = el.elements.filter((c) => !seen.has(c.name) && seen.add(c.name));
+  if (!kids.length) return tag + "/>";
+  const nl = newline(source);
+  let inner = "";
+  for (const c of kids) {
+    const ci = ownLineIndent(source, c.start);
+    inner += ci === null ? blankCopy(source, c, indent) : nl + ci + blankCopy(source, c, ci);
+  }
+  const close = closeStart(source, el);
+  if (close >= 0 && ownLineIndent(source, close) !== null) inner += nl + indent;
+  return `${tag}>${inner}</${el.name}>`;
+}
+
+/** Inserts `text` (one or more elements) as the last children of `el`. */
+function appendChildren(source: string, model: XmlModel, el: XElement, text: string): StructureResult {
+  const nl = newline(source);
+  const indent = ownLineIndent(source, el.start);
+  const childIndent = indent === null ? null : indent + indentUnit(source, model);
+  if (el.elements.length) return { edits: [insertAfter(source, el.elements[el.elements.length - 1], text)] };
+  const inner = childIndent === null ? text : nl + childIndent + text + nl + indent;
+  const close = closeStart(source, el);
+  if (close < 0) return { edits: [{ offset: el.openEnd - 2, length: 2, text: `>${inner}</${el.name}>` }] };
+  const content = source.slice(el.openEnd, close);
+  if ([...content].some((c) => !isXmlWs(c))) return { error: `<${el.name}> has text; adding an element would mix text and elements.` };
+  return { edits: [{ offset: el.openEnd, length: close - el.openEnd, text: inner }] };
+}
+
+/** Deletes several elements (descendants of another listed element are covered by it). */
+function deleteElements(source: string, model: XmlModel, paths: ElementPath[]): StructureResult {
+  const els: XElement[] = [];
+  for (const p of paths) {
+    const el = elementAtPath(model.doc, p);
+    if (!el) return { error: "The element no longer exists." };
+    els.push(el);
+  }
+  const listed = new Set(els);
+  const edits: TextEdit[] = [];
+  for (const el of new Set(els)) {
+    let covered = false;
+    for (let a = el.parent; a; a = a.parent) if (listed.has(a)) covered = true;
+    if (covered) continue;
+    const r = computeStructureEdit(source, model, { kind: "deleteElement", path: pathOf(el) });
+    if ("error" in r) return r;
+    edits.push(...r.edits);
+  }
+  return { edits: sortEdits(edits) };
+}
+
+/**
+ * Sets grid cells: existing attributes and leaf children get value edits; missing ones are
+ * added (attributes at the end of the start tag, children as last children), one insertion per
+ * element so edits never touch the same offset.
+ */
+function setCells(source: string, model: XmlModel, cells: { path: ElementPath; key: string; value: string }[]): StructureResult {
+  const byRow = new Map<XElement, { key: string; value: string }[]>();
+  for (const c of cells) {
+    const el = elementAtPath(model.doc, c.path);
+    if (!el) return { error: "The element no longer exists." };
+    const list = byRow.get(el) ?? [];
+    list.push(c);
+    byRow.set(el, list);
+  }
+  const edits: TextEdit[] = [];
+  for (const [el, list] of byRow) {
+    const path = pathOf(el);
+    let newAttrs = "";
+    const newKids: string[] = [];
+    for (const { key, value } of list) {
+      if (key.startsWith("@")) {
+        const name = key.slice(1);
+        if (el.attrs.some((a) => a.name === name)) {
+          const r = computeValueEdit(source, model, { kind: "attr", path, name }, value);
+          if ("error" in r) return r;
+          edits.push(r.edit);
+        } else {
+          const bad = checkName(name, el, "attribute");
+          if (bad) return { error: bad };
+          newAttrs += ` ${name}="${escapeAttr(value, '"')}"`;
+        }
+      } else if (key === "#text") {
+        const r = computeValueEdit(source, model, { kind: "text", path }, value);
+        if ("error" in r) return r;
+        edits.push(r.edit);
+      } else {
+        const child = el.elements.find((c) => c.name === key);
+        if (child) {
+          const r = computeValueEdit(source, model, { kind: "text", path: pathOf(child) }, value);
+          if ("error" in r) return r;
+          edits.push(r.edit);
+        } else {
+          const bad = checkName(key, el, "element");
+          if (bad) return { error: bad };
+          newKids.push(value === "" ? `<${key}/>` : `<${key}>${escapeText(value)}</${key}>`);
+        }
+      }
+    }
+    // Attribute insertion point: after the last attribute, before any whitespace and `>` or `/>`.
+    let at = el.openEnd - 1;
+    if (source[at - 1] === "/") at--;
+    while (isXmlWs(source[at - 1])) at--;
+    if (newKids.length) {
+      const nl = newline(source);
+      const indent = ownLineIndent(source, el.start);
+      const childIndent = indent === null ? null : indent + indentUnit(source, model);
+      if (el.elements.length) {
+        const last = el.elements[el.elements.length - 1];
+        const ci = ownLineIndent(source, last.start);
+        edits.push({ offset: last.end, length: 0, text: newKids.map((k) => (ci === null ? k : nl + ci + k)).join("") });
+      } else {
+        const inner = childIndent === null ? newKids.join("") : newKids.map((k) => nl + childIndent + k).join("") + nl + indent;
+        const close = closeStart(source, el);
+        if (close < 0) {
+          // <a .../>: one edit for the new attributes, the opened tag and the children.
+          const slash = el.openEnd - 2;
+          edits.push({ offset: at, length: el.openEnd - at, text: newAttrs + source.slice(at, slash) + `>${inner}</${el.name}>` });
+          newAttrs = "";
+        } else {
+          const content = source.slice(el.openEnd, close);
+          if ([...content].some((c) => !isXmlWs(c))) return { error: `<${el.name}> has text; adding an element would mix text and elements.` };
+          edits.push({ offset: el.openEnd, length: close - el.openEnd, text: inner });
+        }
+      }
+    }
+    if (newAttrs) edits.push({ offset: at, length: 0, text: newAttrs });
+  }
+  return { edits: sortEdits(edits) };
 }
 
 /** Applies edits given in any order (for tests and previews). */

@@ -1276,6 +1276,14 @@ button.icon {
   white-space: nowrap;
   cursor: default;
 }
+.menu-item {
+  display: flex;
+  gap: 24px;
+}
+.menu-hint {
+  margin-left: auto;
+  opacity: 0.65;
+}
 .menu-item.active {
   background: var(--xgv-selection-bg);
   color: var(--xgv-selection-fg);

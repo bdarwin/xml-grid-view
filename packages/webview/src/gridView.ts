@@ -181,3 +181,82 @@ export function autoFitWidth(t: GridTable, view: Int32Array, col: number, font: 
   }
   return Math.round(Math.min(MAX_COL, Math.max(MIN_COL, w)));
 }
+
+/**
+ * Parses tab-separated text as copied from a spreadsheet (or this grid): fields in double quotes
+ * may hold tabs, line breaks and doubled quotes. A trailing line break doesn't add a row.
+ */
+export function parseTsv(text: string): string[][] {
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let field = "";
+  let i = 0;
+  let quoted = false;
+  let atFieldStart = true;
+  while (i < text.length) {
+    const ch = text[i];
+    if (quoted) {
+      if (ch === '"' && text[i + 1] === '"') {
+        field += '"';
+        i += 2;
+        continue;
+      }
+      if (ch === '"') quoted = false;
+      else field += ch;
+      i++;
+      continue;
+    }
+    if (ch === '"' && atFieldStart) {
+      quoted = true;
+      atFieldStart = false;
+      i++;
+      continue;
+    }
+    if (ch === "\t") {
+      row.push(field);
+      field = "";
+      atFieldStart = true;
+      i++;
+      continue;
+    }
+    if (ch === "\r" || ch === "\n") {
+      row.push(field);
+      rows.push(row);
+      row = [];
+      field = "";
+      atFieldStart = true;
+      i += ch === "\r" && text[i + 1] === "\n" ? 2 : 1;
+      continue;
+    }
+    field += ch;
+    atFieldStart = false;
+    i++;
+  }
+  if (field !== "" || row.length) {
+    row.push(field);
+    rows.push(row);
+  }
+  return rows;
+}
+
+/** CSV (RFC 4180) of the visible rows and every column, with a header row. */
+export function toCsv(t: GridTable, view: Int32Array): string {
+  const field = (s: string) => (/[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s);
+  const lines = [t.columns.map((c) => field(c.label)).join(",")];
+  for (const r of view) lines.push(t.columns.map((_, c) => field(cellString(t, r, c))).join(","));
+  return lines.join("\r\n") + "\r\n";
+}
+
+/** The visible rows as JSON objects keyed by column label; complex cells are left out, numbers stay strings. */
+export function toJsonRows(t: GridTable, view: Int32Array): string {
+  const out = [];
+  for (const r of view) {
+    const o: Record<string, string> = {};
+    t.columns.forEach((col, c) => {
+      const v = t.cells[r * t.columns.length + c];
+      if (typeof v === "string") o[col.label] = v;
+    });
+    out.push(o);
+  }
+  return JSON.stringify(out, null, 2) + "\n";
+}

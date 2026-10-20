@@ -10,6 +10,8 @@ export interface HostBridge {
   setState(s: PersistedState): void;
   /** Asks the host to write text to the clipboard. */
   copy(text: string): void;
+  /** Reads the clipboard through the host. */
+  readClipboard(): Promise<string>;
 }
 
 interface VsCodeApi {
@@ -30,6 +32,7 @@ declare global {
 
 export function createHostBridge(): HostBridge {
   const listeners: ((m: HostToView) => void)[] = [];
+  const clipboardWaiters: ((text: string) => void)[] = [];
   const deliver = (raw: unknown) => {
     let m = raw;
     if (typeof m === "string") {
@@ -39,7 +42,12 @@ export function createHostBridge(): HostBridge {
         return;
       }
     }
-    if (isHostToView(m)) for (const l of listeners) l(m);
+    if (!isHostToView(m)) return;
+    if (m.type === "clipboard") {
+      for (const w of clipboardWaiters.splice(0)) w(m.text);
+      return;
+    }
+    for (const l of listeners) l(m);
   };
   window.addEventListener("message", (e) => deliver(e.data));
   window.__xgvReceive = deliver;
@@ -63,5 +71,14 @@ export function createHostBridge(): HostBridge {
       else memoryState = s;
     },
     copy: (text) => post({ type: "copy", text }),
+    readClipboard: () =>
+      new Promise<string>((resolve) => {
+        const timer = setTimeout(() => resolve(""), 5000);
+        clipboardWaiters.push((t) => {
+          clearTimeout(timer);
+          resolve(t);
+        });
+        post({ type: "readClipboard" });
+      }),
   };
 }

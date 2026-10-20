@@ -39,6 +39,7 @@ import dev.xmlgridview.intellij.model.InvalidQueryException;
 import dev.xmlgridview.intellij.model.Matcher;
 import dev.xmlgridview.intellij.model.SearchEngine;
 import dev.xmlgridview.intellij.model.SearchTargets;
+import dev.xmlgridview.intellij.model.XMisc;
 import dev.xmlgridview.intellij.model.XNode;
 import dev.xmlgridview.intellij.model.XPathEngine;
 import dev.xmlgridview.intellij.model.XmlDocumentModel;
@@ -552,7 +553,11 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
       toggle(row);
     }
     else {
-      XNode parent = r.kind() == FlatRow.Kind.ATTR ? r.node() : r.node().parent();
+      XNode parent = switch (r.kind()) {
+        case ATTR -> r.node();
+        case MISC -> r.misc().parent();
+        case ELEMENT -> r.node().parent();
+      };
       if (parent != null) selectKey(parent.path());
     }
   }
@@ -673,6 +678,7 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
       int row = leadRow();
       if (m == null || row < 0 || row >= rowsModel.rows.size()) return null;
       FlatRow r = rowsModel.rows.get(row);
+      if (r.kind() == FlatRow.Kind.MISC) return null;
       return new StructureActions.Target(m, r.node(), r.kind() == FlatRow.Kind.ATTR ? r.attr().name() : null);
     }, new StructureActions.Applier() {
       @Override
@@ -883,7 +889,16 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
         SimpleTextAttributes base = selected ? new SimpleTextAttributes(style, null)
                                              : attr ? XmlColors.attrNameAttrs(style) : XmlColors.tagAttrs(style);
         boolean highlight = attr ? fs.targets().attrNames() : fs.targets().names();
-        if (attr) {
+        if (r.kind() == FlatRow.Kind.MISC) {
+          XMisc x = r.misc();
+          String label = switch (x.kind()) {
+            case COMMENT -> "<!-- -->";
+            case PI -> "<?" + x.name() + "?>";
+            case DOCTYPE -> "<!DOCTYPE>";
+          };
+          append(label, selected ? new SimpleTextAttributes(SimpleTextAttributes.STYLE_ITALIC, null) : SimpleTextAttributes.GRAY_ITALIC_ATTRIBUTES);
+        }
+        else if (attr) {
           append("@", base);
           Highlight.append(this, r.attr().name(), base, highlight ? m : null);
         }
@@ -895,7 +910,9 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
       else {
         setIpad(JBUI.emptyInsets());
         int style = isCurrent ? SimpleTextAttributes.STYLE_BOLD : SimpleTextAttributes.STYLE_PLAIN;
-        SimpleTextAttributes base = attr && !selected ? XmlColors.attrValueAttrs(style) : new SimpleTextAttributes(style, null);
+        SimpleTextAttributes base = r.kind() == FlatRow.Kind.MISC
+                                    ? (selected ? new SimpleTextAttributes(SimpleTextAttributes.STYLE_ITALIC, null) : SimpleTextAttributes.GRAY_ITALIC_ATTRIBUTES)
+                                    : attr && !selected ? XmlColors.attrValueAttrs(style) : new SimpleTextAttributes(style, null);
         String raw = r.value();
         String shown = oneLine(raw);
         boolean highlight = attr ? fs.targets().attrValues() : fs.targets().text();

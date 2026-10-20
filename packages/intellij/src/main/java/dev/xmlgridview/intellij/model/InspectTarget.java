@@ -59,7 +59,11 @@ public final class InspectTarget {
   }
 
   public static @NotNull InspectTarget ofFlatRow(@NotNull FlatRow r) {
-    return r.kind() == FlatRow.Kind.ATTR ? ofAttr(r.node(), r.attr()) : ofNode(r.node());
+    return switch (r.kind()) {
+      case ATTR -> ofAttr(r.node(), r.attr());
+      case MISC -> new InspectTarget(r.misc().display().length() > 60 ? r.name() : r.misc().display(), r.value());
+      case ELEMENT -> ofNode(r.node());
+    };
   }
 
   /**

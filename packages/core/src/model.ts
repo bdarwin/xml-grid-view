@@ -34,6 +34,41 @@ export interface TreeSkeleton {
   end: Int32Array;
   /** Short preview: a summary of the first attributes followed by the element text. */
   preview: string[];
+  /** Comments, processing instructions and the DOCTYPE, in document order. */
+  misc: SkeletonMisc[];
+}
+
+/** A comment, PI or DOCTYPE for the tree and Flat view (see XMisc). */
+export interface SkeletonMisc {
+  kind: "comment" | "pi" | "doctype";
+  name: string;
+  value: string;
+  start: number;
+  end: number;
+  /** Parent element id, -1 at top level. */
+  parent: number;
+  /** Number of element siblings before it. */
+  before: number;
+}
+
+/** Indices into `sk.misc` by parent element id (-1: top level), in document order. */
+export function miscByParent(sk: TreeSkeleton): Map<number, number[]> {
+  const out = new Map<number, number[]>();
+  sk.misc.forEach((m, i) => {
+    const list = out.get(m.parent);
+    if (list) list.push(i);
+    else out.set(m.parent, [i]);
+  });
+  return out;
+}
+
+/** How a comment, PI or DOCTYPE is written, shortened: `<!-- text -->`, `<?target data?>`, `<!DOCTYPE …>`. */
+export function miscDisplay(m: SkeletonMisc): string {
+  let v = m.value.replace(/\s+/g, " ");
+  if (v.length > 200) v = v.slice(0, 199) + "…";
+  if (m.kind === "comment") return `<!-- ${v} -->`;
+  if (m.kind === "pi") return `<?${m.name}${v ? " " + v : ""}?>`;
+  return `<!DOCTYPE ${v}>`;
 }
 
 export type ColumnKind = "attr" | "leaf" | "complex" | "text";
@@ -284,6 +319,7 @@ function buildSkeleton(doc: XDocument, texts: string[]): TreeSkeleton {
     openEnd,
     end,
     preview,
+    misc: doc.misc.map((m) => ({ kind: m.kind, name: m.name, value: m.value, start: m.start, end: m.end, parent: m.parent ? m.parent.id : -1, before: m.before })),
   };
 }
 

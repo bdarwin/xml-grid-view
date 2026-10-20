@@ -6,6 +6,7 @@ import {
   createMatcher,
   idAtPath,
   isQName,
+  miscDisplay,
   pathKey,
   pathOfId,
   parsePathKey,
@@ -28,7 +29,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { FilterPopup } from "./components/FilterPopup";
 import { FindBar, type FindState } from "./components/FindBar";
-import { FlatView, flatRows, rowIndexOf, type FlatPos, type FlatSelection } from "./components/FlatView";
+import { FlatView, flatMisc, flatRows, miscLabel, rowIndexOf, type FlatPos, type FlatSelection } from "./components/FlatView";
 import { ContextMenu, type MenuItem } from "./components/ContextMenu";
 import { Grid, selectionRange, type CellPos, type GridSelection } from "./components/Grid";
 import { PromptDialog, type PromptDialogProps, type PromptField } from "./components/PromptDialog";
@@ -175,7 +176,7 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
       find: s.find,
       mode: s.mode,
       flatCollapsed: [...s.flatCollapsed].filter((id) => id < sk.count).map((id) => namedPath(sk, id)),
-      flatFocus: s.flatSel && s.flatSel.focus.id < sk.count ? [namedPath(sk, s.flatSel.focus.id), s.flatSel.focus.attr] : null,
+      flatFocus: s.flatSel && s.flatSel.focus.id >= 0 && s.flatSel.focus.id < sk.count ? [namedPath(sk, s.flatSel.focus.id), s.flatSel.focus.attr] : null,
     };
   }, []);
 
@@ -550,11 +551,13 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
   /** Flat selection: keeps the tree selection on the focused row's element. */
   const selectFlat = (sel: FlatSelection | null) => {
     setFlatSel(sel);
-    if (sel && skeleton && sel.focus.id !== selected) selectElement(sel.focus.id, { reveal: true });
+    if (sel && skeleton && sel.focus.id >= 0 && sel.focus.id !== selected) selectElement(sel.focus.id, { reveal: true });
   };
 
   const activateFlat = async (pos: FlatPos) => {
     if (!skeleton) return;
+    const m = flatMisc(skeleton, pos.id);
+    if (m) return navigateTo(m.start, m.end - m.start);
     if (pos.attr < 0) return activateElement(pos.id);
     const v = flatValues.get(pos.id) ?? (await fetchFlatValues([pos.id]).catch(() => null))?.get(pos.id);
     const a = v?.attrs[pos.attr];
@@ -568,7 +571,7 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
     const i1 = rowIndexOf(rows, sel.focus);
     if (i0 < 0 || i1 < 0) return;
     const [a, b] = i0 <= i1 ? [i0, i1] : [i1, i0];
-    const ids = [...new Set(Array.from(rows.ids.subarray(a, b + 1)))];
+    const ids = [...new Set(Array.from(rows.ids.subarray(a, b + 1)))].filter((id) => id >= 0);
     const missing = ids.filter((id) => !flatValues.has(id));
     const extra = missing.length ? await fetchFlatValues(missing).catch(() => new Map<number, FlatValues>()) : new Map<number, FlatValues>();
     const get = (id: number) => flatValues.get(id) ?? extra.get(id);
@@ -579,11 +582,12 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
     for (let i = a; i <= b; i++) {
       const id = rows.ids[i];
       const attr = rows.attrs[i];
+      const m = flatMisc(skeleton, id);
       const v = get(id);
       const cells: string[] = [];
-      if (withName) cells.push(tsvCell(attr >= 0 ? "@" + (v?.attrs[attr]?.name ?? "") : skeleton.names[skeleton.nameIdx[id]]));
+      if (withName) cells.push(tsvCell(m ? miscLabel(m) : attr >= 0 ? "@" + (v?.attrs[attr]?.name ?? "") : skeleton.names[skeleton.nameIdx[id]]));
       // Values are copied on one line, as displayed.
-      if (withValue) cells.push(tsvCell(((attr >= 0 ? v?.attrs[attr]?.value : v?.text) ?? "").replace(/\s+/g, " ")));
+      if (withValue) cells.push(tsvCell(((m ? m.value : attr >= 0 ? v?.attrs[attr]?.value : v?.text) ?? "").replace(/\s+/g, " ")));
       lines.push(cells.join("\t"));
     }
     host.copy(lines.join("\n"));
@@ -594,7 +598,7 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
     if (m === "flat" && selected >= 0) {
       revealFlat(skeleton, selected);
       setFlatSel({ anchor: { id: selected, attr: -1, col: 0 }, focus: { id: selected, attr: -1, col: 1 } });
-    } else if (m === "grid" && flatSel) {
+    } else if (m === "grid" && flatSel && flatSel.focus.id >= 0) {
       selectElement(flatSel.focus.id, { reveal: true });
     }
     setMode(m);
@@ -994,7 +998,7 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
   };
 
   const flatEditTarget = (pos: FlatPos): { target: EditTarget; label: string } | null => {
-    if (!skeleton || !canEditDoc) return null;
+    if (!skeleton || !canEditDoc || pos.id < 0) return null;
     if (pos.attr >= 0) {
       const name = flatValues.get(pos.id)?.attrs[pos.attr]?.name;
       return name ? { target: { kind: "attr", path: pathOfId(skeleton, pos.id), name }, label: `Edit @${name}` } : null;
@@ -1037,6 +1041,8 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
   };
 
   const inspectFlat = async (pos: FlatPos) => {
+    const m = skeleton ? flatMisc(skeleton, pos.id) : null;
+    if (m) return setInspector({ title: miscDisplay(m).slice(0, 60), text: m.value });
     const v = await elementValues(pos.id);
     if (!v) return;
     const a = pos.attr >= 0 ? v.attrs[pos.attr] : null;
@@ -1424,6 +1430,7 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
               }
               onSelect={(id) => (mode === "flat" ? showInFlat(id) : selectElement(id))}
               onActivate={activateElement}
+              onActivateOffset={navigateTo}
               onInspect={(id) => void inspectElement(id)}
               onContextMenu={(id, x, y) => openStructureMenu(id, null, x, y)}
             />
@@ -1462,7 +1469,7 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
                 if (e) void requestEdit(e.target, value, e.label);
               }}
               onContextMenu={(pos, x, y) =>
-                openStructureMenu(pos.id, pos.attr >= 0 ? (flatValues.get(pos.id)?.attrs[pos.attr]?.name ?? null) : null, x, y)
+                pos.id >= 0 && openStructureMenu(pos.id, pos.attr >= 0 ? (flatValues.get(pos.id)?.attrs[pos.attr]?.name ?? null) : null, x, y)
               }
             />
               )}

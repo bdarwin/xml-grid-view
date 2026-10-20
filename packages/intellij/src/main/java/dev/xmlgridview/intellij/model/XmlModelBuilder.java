@@ -29,6 +29,6 @@ public final class XmlModelBuilder {
     XmlFastParser.Result r = XmlFastParser.parse(s, progress == null ? null : f -> progress.accept(f * 0.9));
     List<ParseError> errors = XmlErrorScanner.scan(s);
     if (progress != null) progress.accept(1.0);
-    return new XmlDocumentModel(r.root(), r.elements(), errors, s);
+    return new XmlDocumentModel(r.root(), r.elements(), errors, s, r.misc());
   }
 }

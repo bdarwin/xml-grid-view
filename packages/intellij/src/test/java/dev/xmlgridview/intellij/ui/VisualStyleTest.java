@@ -265,6 +265,24 @@ public class VisualStyleTest extends BasePlatformTestCase {
     assertTrue("names are not clipped", p.nameColumnWidthForTest() >= p.nameContentWidthForTest());
   }
 
+  public void testCommentsPisAndDoctypeInFlat() throws Exception {
+    String xml = "<?xml version=\"1.0\"?>\n<!DOCTYPE c>\n<!-- top -->\n<c>\n  <!-- inside -->\n  <b id=\"1\"/>\n  <?pi data?>\n</c>\n";
+    VirtualFile f = myFixture.configureByText("misc.xml", xml).getVirtualFile();
+    flatEditor = (XmlFlatViewerEditor)new XmlFlatEditorProvider().createEditor(getProject(), f);
+    FlatPanel p = flatEditor.getPanel();
+    p.apply(ReadAction.compute(() -> XmlModelBuilder.build(getProject(), xml)));
+    settle(p);
+    List<FlatRow> rows = p.visibleRows();
+    assertEquals(List.of("doctype", "comment", "element", "comment", "element", "attr", "pi"), rows.stream().map(FlatRow::kindId).toList());
+    assertEquals(List.of(0, 0, 0, 1, 1, 2, 1), rows.stream().map(FlatRow::depth).toList());
+    JBTable t = table(p, 2);
+    t.clearSelection();
+    assertNotBlank(paint(p, "flat-misc"));
+    SimpleColoredComponent.ColoredIterator it = ((SimpleColoredComponent)t.prepareRenderer(t.getCellRenderer(1, 0), 1, 0)).iterator();
+    it.next();
+    assertEquals("comments are grey italic", SimpleTextAttributes.GRAY_ITALIC_ATTRIBUTES, it.getTextAttributes());
+  }
+
   public void testSelectionIsPaintedInFlat() throws Exception {
     FlatPanel p = flat();
     JBTable t = table(p, 2);

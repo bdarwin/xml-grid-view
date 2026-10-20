@@ -116,6 +116,7 @@ public final class XmlGridPanel extends JPanel implements Disposable {
     loader = new ModelLoader(project, document, this, navigator, (previous, built) -> modelChanged(built), this);
 
     tree = new XmlTreeView(this, () -> findState, this::onTreeSelect, n -> navigator.accept(n.start()));
+    tree.setOffsetNavigator(navigator);
     grid = new GridView(this, () -> findState, new GridView.Listener() {
       @Override
       public void drillDown(@NotNull XNode row, @NotNull String tag) {

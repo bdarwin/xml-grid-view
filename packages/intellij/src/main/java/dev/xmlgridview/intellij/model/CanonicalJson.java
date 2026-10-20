@@ -116,10 +116,10 @@ public final class CanonicalJson {
     for (FlatRow r : FlatRow.build(model)) {
       Map<String, Object> m = new LinkedHashMap<>();
       m.put("depth", r.depth());
-      m.put("kind", r.kind().id());
+      m.put("kind", r.kindId());
       m.put("name", r.name());
       m.put("value", r.value());
-      m.put("path", r.node().path());
+      m.put("path", r.pathKey());
       out.add(m);
     }
     return out;

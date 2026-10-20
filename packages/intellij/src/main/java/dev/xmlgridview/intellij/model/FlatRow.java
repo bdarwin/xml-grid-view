@@ -15,9 +15,14 @@ import java.util.function.Predicate;
  * after it one level deeper. Matches the canonical {@code <name>.flat.json}
  * format in fixtures/SCHEMA.md.
  */
-public record FlatRow(int depth, @NotNull Kind kind, @NotNull XNode node, int attrIndex) {
+public record FlatRow(int depth, @NotNull Kind kind, @NotNull XNode node, int attrIndex, @Nullable XMisc misc) {
+  public FlatRow(int depth, @NotNull Kind kind, @NotNull XNode node, int attrIndex) {
+    this(depth, kind, node, attrIndex, null);
+  }
+
+  /** ELEMENT and ATTR rows; MISC rows are comments, PIs and the DOCTYPE ({@link #misc()}; {@code node} is the parent, or the root at top level). */
   public enum Kind {
-    ELEMENT("element"), ATTR("attr");
+    ELEMENT("element"), ATTR("attr"), MISC("misc");
 
     private final String id;
 
@@ -26,14 +31,32 @@ public record FlatRow(int depth, @NotNull Kind kind, @NotNull XNode node, int at
     public String id() { return id; }
   }
 
-  /** {@code tag} for elements, {@code @name} for attributes. */
-  public @NotNull String name() {
-    return kind == Kind.ELEMENT ? node.tag() : "@" + attr().name();
+  /** The fixture kind: element, attr, comment, pi or doctype. */
+  public @NotNull String kindId() {
+    return kind == Kind.MISC ? misc.kind().id() : kind.id();
   }
 
-  /** Element text (trimmed, interior whitespace kept) or the attribute value. */
+  /** {@code tag} for elements, {@code @name} for attributes, {@code #comment} / PI target / {@code DOCTYPE}. */
+  public @NotNull String name() {
+    return switch (kind) {
+      case ELEMENT -> node.tag();
+      case ATTR -> "@" + attr().name();
+      case MISC -> misc.name();
+    };
+  }
+
+  /** Element text (trimmed, interior whitespace kept), the attribute value, or the comment / PI / DOCTYPE text. */
   public @NotNull String value() {
-    return kind == Kind.ELEMENT ? node.text() : attr().value();
+    return switch (kind) {
+      case ELEMENT -> node.text();
+      case ATTR -> attr().value();
+      case MISC -> misc.value();
+    };
+  }
+
+  /** Path for the fixtures: the element's (the owner's for attributes, the parent's for MISC; "" at top level). */
+  public @NotNull String pathKey() {
+    return kind == Kind.MISC && misc.parent() == null ? "" : node.path();
   }
 
   public @NotNull XAttr attr() {
@@ -43,7 +66,11 @@ public record FlatRow(int depth, @NotNull Kind kind, @NotNull XNode node, int at
 
   /** Source offset to navigate to: the element start tag, or the attribute. */
   public int offset() {
-    return kind == Kind.ELEMENT ? node.start() : attr().start();
+    return switch (kind) {
+      case ELEMENT -> node.start();
+      case ATTR -> attr().start();
+      case MISC -> misc.start();
+    };
   }
 
   /** True when the row has rows below it that collapsing would hide. */
@@ -53,12 +80,16 @@ public record FlatRow(int depth, @NotNull Kind kind, @NotNull XNode node, int at
 
   /** Stable key across refreshes: element path, plus {@code @name} for attributes. */
   public @NotNull String key() {
-    return kind == Kind.ELEMENT ? node.path() : node.path() + "@" + attr().name();
+    return switch (kind) {
+      case ELEMENT -> node.path();
+      case ATTR -> node.path() + "@" + attr().name();
+      case MISC -> pathKey() + "!" + misc.before() + misc.kind().id() + misc.name();
+    };
   }
 
   /** Value rows (attributes and leaf elements) get the lighter band tint; element rows with children the stronger one. */
   public boolean isValueRow() {
-    return kind == Kind.ATTR || node.children().isEmpty();
+    return kind != Kind.ELEMENT || node.children().isEmpty();
   }
 
   /**
@@ -106,19 +137,41 @@ public record FlatRow(int depth, @NotNull Kind kind, @NotNull XNode node, int at
     Rows out = new Rows(model);
     XNode root = model.root();
     if (root == null) return out;
-    // Iterative pre-order walk: documents can nest deeply.
-    ArrayDeque<XNode> todo = new ArrayDeque<>();
-    todo.push(root);
+    // Comments, PIs and DOCTYPE are shown among the elements, except in a filtered view.
+    boolean withMisc = only == null && !model.misc().isEmpty();
+    java.util.IdentityHashMap<XMisc, Integer> miscIndex = new java.util.IdentityHashMap<>();
+    if (withMisc) for (int i = 0; i < model.misc().size(); i++) miscIndex.put(model.misc().get(i), i);
+    // Iterative pre-order walk: documents can nest deeply. Items: element id, or -(misc index) - 1.
+    ArrayDeque<Integer> todo = new ArrayDeque<>();
+    pushChildren(todo, List.of(root), withMisc ? model.miscOf(null) : List.of(), miscIndex);
     while (!todo.isEmpty()) {
-      XNode n = todo.pop();
+      int item = todo.pop();
+      if (item < 0) {
+        out.add(-item - 1, MISC_ROW);
+        continue;
+      }
+      XNode n = model.elements().get(item);
       if (only != null && !only.test(n)) continue;
       out.add(n.id(), -1);
       if (only == null && collapsed.test(n)) continue;
       for (int i = 0; i < n.attrs().size(); i++) out.add(n.id(), i);
-      for (int i = n.childCount() - 1; i >= 0; i--) todo.push(n.child(i));
+      pushChildren(todo, n.children(), withMisc ? model.miscOf(n) : List.of(), miscIndex);
     }
     out.trim();
     return out;
+  }
+
+  /** Attribute-index marker of a MISC row; its id field is the index into {@link XmlDocumentModel#misc()}. */
+  private static final int MISC_ROW = -2;
+
+  /** Pushes children (with their comments etc. in between) so they pop in document order. */
+  private static void pushChildren(ArrayDeque<Integer> todo, List<XNode> kids, List<XMisc> misc, java.util.Map<XMisc, Integer> miscIndex) {
+    int m = misc.size() - 1;
+    for (int i = kids.size(); i >= 0; i--) {
+      // Misc entries with before == i come right before child i (or at the end for i == size).
+      while (m >= 0 && misc.get(m).before() >= i) todo.push(-miscIndex.get(misc.get(m--)) - 1);
+      if (i > 0) todo.push(kids.get(i - 1).id());
+    }
   }
 
   /**
@@ -127,11 +180,15 @@ public record FlatRow(int depth, @NotNull Kind kind, @NotNull XNode node, int at
    */
   private static final class Rows extends AbstractList<FlatRow> implements RandomAccess {
     private final List<XNode> elements;
+    private final List<XMisc> misc;
+    private final @Nullable XNode root;
     private long[] packed = new long[16];
     private int size;
 
     Rows(XmlDocumentModel model) {
       this.elements = model.elements();
+      this.misc = model.misc();
+      this.root = model.root();
     }
 
     void add(int id, int attrIndex) {
@@ -147,8 +204,13 @@ public record FlatRow(int depth, @NotNull Kind kind, @NotNull XNode node, int at
     public FlatRow get(int i) {
       if (i < 0 || i >= size) throw new IndexOutOfBoundsException(i);
       long p = packed[i];
-      XNode n = elements.get((int)(p >>> 32));
       int attr = (int)p;
+      if (attr == MISC_ROW) {
+        XMisc m = misc.get((int)(p >>> 32));
+        XNode parent = m.parent();
+        return new FlatRow(parent == null ? 0 : parent.depth() + 1, Kind.MISC, parent == null ? root : parent, -1, m);
+      }
+      XNode n = elements.get((int)(p >>> 32));
       return attr < 0 ? new FlatRow(n.depth(), Kind.ELEMENT, n, -1) : new FlatRow(n.depth() + 1, Kind.ATTR, n, attr);
     }
 

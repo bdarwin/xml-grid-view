@@ -20,7 +20,8 @@ import java.util.function.DoubleConsumer;
  *
  * <p>Text follows XML rules: line ends are normalized to LF, attribute-value whitespace
  * becomes spaces, predefined entities and character references are decoded (unknown
- * references are kept as written), CDATA is literal, comments and PIs are skipped.
+ * references are kept as written), CDATA is literal. Comments, PIs and the DOCTYPE are
+ * recorded as {@link XMisc} entries.
  */
 final class XmlFastParser {
   private static final String XML_NS = "http://www.w3.org/XML/1998/namespace";
@@ -35,6 +36,9 @@ final class XmlFastParser {
   private final ArrayList<XNode> elements = new ArrayList<>();
   private final ArrayList<Frame> stack = new ArrayList<>();
   private @Nullable XNode root;
+  private final ArrayList<XMisc> misc = new ArrayList<>();
+  /** Top-level elements seen so far (more than one only in malformed documents). */
+  private int topLevel;
   /** Tag and attribute names, shared: documents repeat a few names millions of times. */
   private final Map<String, String> names = new HashMap<>();
 
@@ -60,14 +64,15 @@ final class XmlFastParser {
   }
 
   /** The root element (null for a document without elements) and all elements in document order. */
-  record Result(@Nullable XNode root, List<XNode> elements) {
+  record Result(@Nullable XNode root, List<XNode> elements, List<XMisc> misc) {
   }
 
   static @NotNull Result parse(@NotNull String text, @Nullable DoubleConsumer progress) {
     XmlFastParser p = new XmlFastParser(text, progress);
     p.run();
     p.elements.trimToSize();
-    return new Result(p.root, p.elements);
+    p.misc.trimToSize();
+    return new Result(p.root, p.elements, p.misc);
   }
 
   private void run() {
@@ -86,7 +91,10 @@ final class XmlFastParser {
       if (lt > pos) text(pos, lt);
       pos = lt;
       if (s.startsWith("<!--", pos)) {
-        pos = skipPast("-->", pos + 4);
+        int start = pos;
+        int close = s.indexOf("-->", pos + 4);
+        pos = close < 0 ? n : close + 3;
+        addMisc(XMisc.Kind.COMMENT, "#comment", s.substring(start + 4, close < 0 ? n : close), start);
       }
       else if (s.startsWith("<![CDATA[", pos)) {
         int end = s.indexOf("]]>", pos + 9);
@@ -95,10 +103,20 @@ final class XmlFastParser {
         pos = end < 0 ? n : end + 3;
       }
       else if (s.startsWith("<?", pos)) {
-        pos = skipPast("?>", pos + 2);
+        int start = pos;
+        int close = s.indexOf("?>", pos + 2);
+        pos = close < 0 ? n : close + 2;
+        String body = s.substring(start + 2, close < 0 ? n : close);
+        int t = 0;
+        while (t < body.length() && !TextUtil.isXmlWhitespace(body.charAt(t))) t++;
+        String target = body.substring(0, t);
+        // The XML declaration is not a processing instruction.
+        if (!(start == 0 && target.equals("xml"))) addMisc(XMisc.Kind.PI, target, body.substring(t), start);
       }
       else if (s.startsWith("<!", pos)) {
+        int start = pos;
         skipDeclaration();
+        if (s.startsWith("<!DOCTYPE", start)) addMisc(XMisc.Kind.DOCTYPE, "DOCTYPE", s.substring(start + 9, Math.max(start + 9, s.charAt(pos - 1) == '>' ? pos - 1 : pos)), start);
       }
       else if (s.startsWith("</", pos)) {
         endTag();
@@ -114,6 +132,19 @@ final class XmlFastParser {
   private int skipPast(String terminator, int from) {
     int i = s.indexOf(terminator, from);
     return i < 0 ? n : i + terminator.length();
+  }
+
+  /** Records a comment, PI or DOCTYPE ending at {@code pos}; line ends are normalized and the value trimmed. */
+  private void addMisc(XMisc.Kind kind, String name, String raw, int start) {
+    String v = raw.indexOf('\r') < 0 ? raw : raw.replace("\r\n", "\n").replace('\r', '\n');
+    int a = 0;
+    int b = v.length();
+    while (a < b && TextUtil.isXmlWhitespace(v.charAt(a))) a++;
+    while (b > a && TextUtil.isXmlWhitespace(v.charAt(b - 1))) b--;
+    Frame top = stack.isEmpty() ? null : stack.get(stack.size() - 1);
+    XNode parent = top == null ? null : top.node;
+    int before = top == null ? topLevel : top.children == null ? 0 : top.children.size();
+    misc.add(new XMisc(kind, name, v.substring(a, b), start, pos, parent, before));
   }
 
   /** {@code <!DOCTYPE ...>} and friends: skips to the matching '>', honouring quotes and an internal subset. */
@@ -236,7 +267,10 @@ final class XmlFastParser {
                            nsDecls == null ? Map.of() : nsDecls, s, parent, index);
     elements.add(node);
     if (parentFrame != null) parentFrame.children.add(node);
-    else root = node;
+    else {
+      root = node;
+      topLevel++;
+    }
     if (selfClosing) {
       node.finish(pos, null, -1, 0, null);
     }

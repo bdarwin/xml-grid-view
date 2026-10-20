@@ -181,3 +181,25 @@ test("element summary switches groups", async ({ page }) => {
   await expect(page.locator(".summary-item")).toHaveCount(0);
   await shot(page, "light-summary-fields");
 });
+
+test("comments, processing instructions and DOCTYPE", async ({ page }) => {
+  const text = `<?xml version="1.0"?>
+<!DOCTYPE catalog SYSTEM "catalog.dtd">
+<!-- Exported 2026-10-20 -->
+<?xml-stylesheet type="text/xsl" href="catalog.xsl"?>
+<catalog>
+  <!-- first shelf -->
+  <book id="b1"><title>One</title></book>
+  <?page break?>
+  <book id="b2"><title>Two</title><!-- out of print --></book>
+</catalog>
+`;
+  await open(page, { text });
+  await ready(page);
+  await expect(page.locator(".tree-row.misc")).toHaveCount(5);
+  await shot(page, "light-misc-tree");
+  await page.getByRole("tab", { name: "Flat" }).click();
+  await page.locator(".flat-row.misc").first().waitFor();
+  await expect(page.locator(".flat-row.misc")).toHaveCount(6);
+  await shot(page, "light-misc-flat");
+});

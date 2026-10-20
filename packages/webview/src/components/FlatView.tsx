@@ -1,4 +1,5 @@
-import type { FlatValues, Matcher, TreeSkeleton } from "@xmlgridview/core";
+import { miscByParent, type FlatValues, type Matcher, type SkeletonMisc, type TreeSkeleton } from "@xmlgridview/core";
+import { miscIndex, miscRow } from "./Tree";
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { Highlight } from "./Highlight";
 import { isInspectable } from "../inspect";
@@ -7,7 +8,7 @@ import { useViewport } from "./useViewport";
 
 export const FLAT_ROW_HEIGHT = 22;
 
-/** A Flat row: an element (attr = -1) or the attr-th attribute of an element. */
+/** A Flat row: an element (attr = -1), the attr-th attribute of an element, or a comment, PI or DOCTYPE (id = miscRow(k)). */
 export interface FlatPos {
   id: number;
   attr: number;
@@ -34,30 +35,55 @@ export interface FlatRows {
 
 /** Visible Flat rows: each element, then its attributes, then its children; collapsed elements hide both. */
 export function flatRows(sk: TreeSkeleton, collapsed: Set<number>, filter: Set<number> | null): FlatRows {
-  let total = 0;
+  let total = sk.misc.length;
   for (let i = 0; i < sk.count; i++) total += 1 + sk.attrCount[i];
   const ids = new Int32Array(total);
   const attrs = new Int32Array(total);
   let n = 0;
   const stack: number[] = [];
-  const pushSiblings = (first: number) => {
+  // Comments, PIs and DOCTYPE come among the children in document order (not when filtering).
+  const misc = filter || !sk.misc.length ? null : miscByParent(sk);
+  const pushChildren = (parent: number, first: number) => {
     const sibs: number[] = [];
-    for (let c = first; c >= 0; c = sk.nextSibling[c]) if (!filter || filter.has(c)) sibs.push(c);
-    for (let i = sibs.length - 1; i >= 0; i--) stack.push(sibs[i]);
+    const ms = misc?.get(parent) ?? [];
+    let j = 0;
+    let i = 0;
+    for (let c = first; c >= 0; c = sk.nextSibling[c], i++) {
+      while (j < ms.length && sk.misc[ms[j]].before <= i) sibs.push(miscRow(ms[j++]));
+      if (!filter || filter.has(c)) sibs.push(c);
+    }
+    while (j < ms.length) sibs.push(miscRow(ms[j++]));
+    for (let k = sibs.length - 1; k >= 0; k--) stack.push(sibs[k]);
   };
-  pushSiblings(sk.firstRoot);
+  pushChildren(-1, sk.firstRoot);
   while (stack.length) {
     const id = stack.pop()!;
     ids[n] = id;
     attrs[n++] = -1;
-    if (collapsed.has(id)) continue;
+    if (id < 0 || collapsed.has(id)) continue;
     for (let a = 0; a < sk.attrCount[id]; a++) {
       ids[n] = id;
       attrs[n++] = a;
     }
-    if (sk.firstChild[id] >= 0) pushSiblings(sk.firstChild[id]);
+    pushChildren(id, sk.firstChild[id]);
   }
   return { ids: ids.subarray(0, n), attrs: attrs.subarray(0, n) };
+}
+
+/** The comment, PI or DOCTYPE of a Flat row id, or null for elements. */
+export function flatMisc(sk: TreeSkeleton, id: number): SkeletonMisc | null {
+  return id < 0 ? (sk.misc[miscIndex(id)] ?? null) : null;
+}
+
+/** Name-column label of a comment, PI or DOCTYPE row. */
+export function miscLabel(m: SkeletonMisc): string {
+  return m.kind === "comment" ? "<!-- -->" : m.kind === "pi" ? `<?${m.name}?>` : "<!DOCTYPE>";
+}
+
+/** Depth of a Flat row's element (or a misc row's position). */
+function rowDepth(sk: TreeSkeleton, id: number): number {
+  const m = flatMisc(sk, id);
+  return m ? (m.parent < 0 ? 0 : sk.depth[m.parent] + 1) : sk.depth[id];
 }
 
 /**
@@ -122,6 +148,8 @@ export function FlatView(p: FlatViewProps) {
   const [nameWidth, setNameWidth] = useState(0);
   const [editing, setEditing] = useState<{ id: number; attr: number; initial: string; selectAll: boolean } | null>(null);
   const currentValue = (pos: FlatPos) => {
+    const m = flatMisc(sk, pos.id);
+    if (m) return m.value;
     const v = p.values.get(pos.id);
     return (pos.attr >= 0 ? v?.attrs[pos.attr]?.value : v?.text) ?? "";
   };
@@ -150,11 +178,12 @@ export function FlatView(p: FlatViewProps) {
     for (let i = 0; i < n; i++) {
       const id = rows.ids[i];
       const attr = rows.attrs[i];
-      const name = attr >= 0 ? "@" + (p.values.get(id)?.attrs[attr]?.name ?? "") : sk.names[sk.nameIdx[id]];
+      const m = flatMisc(sk, id);
+      const name = m ? miscLabel(m) : attr >= 0 ? "@" + (p.values.get(id)?.attrs[attr]?.name ?? "") : sk.names[sk.nameIdx[id]];
       let tw = cache.get(name);
       if (tw === undefined) cache.set(name, (tw = width(name)));
       // padding-left 4 + twisty 14 + gap 4 + right padding 8 + border/slack 6
-      const depth = sk.depth[id] + (attr >= 0 ? 1 : 0);
+      const depth = rowDepth(sk, id) + (attr >= 0 ? 1 : 0);
       w = Math.max(w, depth * indent + 36 + tw);
     }
     return Math.round(Math.min(Math.max(w, 120), Math.max(240, vp.width * 0.6 || 600)));
@@ -171,7 +200,7 @@ export function FlatView(p: FlatViewProps) {
     const seen = new Set<number>();
     for (let i = first; i < last; i++) {
       const id = rows.ids[i];
-      if (!seen.has(id) && !p.values.has(id)) {
+      if (id >= 0 && !seen.has(id) && !p.values.has(id)) {
         seen.add(id);
         need.push(id);
       }
@@ -213,7 +242,7 @@ export function FlatView(p: FlatViewProps) {
     p.onSelect({ anchor: cellAt(from, 0), focus: cellAt(to, 1) });
   };
 
-  const collapsible = (id: number) => sk.firstChild[id] >= 0 || sk.attrCount[id] > 0;
+  const collapsible = (id: number) => id >= 0 && (sk.firstChild[id] >= 0 || sk.attrCount[id] > 0);
 
   const onKeyDown = (e: KeyboardEvent) => {
     const mod = e.ctrlKey || e.metaKey;
@@ -260,7 +289,7 @@ export function FlatView(p: FlatViewProps) {
         else if (curCol === 1) select(i, false, 0);
         else if (pos.attr < 0 && collapsible(pos.id) && !p.isCollapsed(pos.id)) p.onToggle(pos.id, false);
         else {
-          const owner = pos.attr >= 0 ? pos.id : sk.parent[pos.id];
+          const owner = pos.attr >= 0 ? pos.id : pos.id < 0 ? (flatMisc(sk, pos.id)?.parent ?? -1) : sk.parent[pos.id];
           if (owner >= 0) p.onSelect({ anchor: { id: owner, attr: -1, col: 0 }, focus: { id: owner, attr: -1, col: 0 } });
         }
         break;
@@ -307,23 +336,25 @@ export function FlatView(p: FlatViewProps) {
     const id = rows.ids[i];
     const attr = rows.attrs[i];
     const isAttr = attr >= 0;
+    const misc = flatMisc(sk, id);
     const v = p.values.get(id);
-    const depth = sk.depth[id] + (isAttr ? 1 : 0);
-    const name = isAttr ? "@" + (v?.attrs[attr]?.name ?? "…") : sk.names[sk.nameIdx[id]];
-    const raw = isAttr ? v?.attrs[attr]?.value : v?.text;
+    const depth = rowDepth(sk, id) + (isAttr ? 1 : 0);
+    const name = misc ? miscLabel(misc) : isAttr ? "@" + (v?.attrs[attr]?.name ?? "…") : sk.names[sk.nameIdx[id]];
+    const raw = misc ? misc.value : isAttr ? v?.attrs[attr]?.value : v?.text;
     const canToggle = !isAttr && collapsible(id);
     const open = canToggle && !p.isCollapsed(id);
     const inRows = i >= r0 && i <= r1 && r0 >= 0;
     const nameSel = inRows && c0 === 0;
     const valueSel = inRows && c1 === 1;
     const isFocus = i === focusIndex;
-    const b = bands[id];
+    const b = misc ? (misc.parent < 0 ? 0 : bands[misc.parent]) : bands[id];
     const cls =
       "flat-row" +
       (isAttr ? " attr" : "") +
+      (misc ? " misc" : "") +
       (inRows ? " row-sel" : "") +
       (!isAttr && p.hits?.has(id) ? " hit" : "") +
-      (b ? (b === 1 ? " band-a" : " band-b") + (isAttr || sk.childCount[id] === 0 ? " val" : " node") : "");
+      (b ? (b === 1 ? " band-a" : " band-b") + (misc || isAttr || sk.childCount[id] === 0 ? " val" : " node") : "");
     const cellDown = (col: FlatCol) => (e: MouseEvent) => {
       if (e.button !== 0 || (e.target as HTMLElement).classList.contains("twisty")) return;
       ref.current?.focus({ preventScroll: true });
@@ -378,7 +409,7 @@ export function FlatView(p: FlatViewProps) {
               if (canToggle) p.onToggle(id, !open);
             }}
           />
-          <span class={isAttr ? "attr-name" : "tag"}>
+          <span class={misc ? "misc-text" : isAttr ? "attr-name" : "tag"}>
             <Highlight text={name} matcher={p.highlightNames ? p.matcher : null} />
           </span>
         </div>

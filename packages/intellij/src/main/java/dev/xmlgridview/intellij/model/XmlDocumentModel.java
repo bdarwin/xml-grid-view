@@ -16,8 +16,16 @@ public final class XmlDocumentModel {
   private final List<ParseError> errors;
   private final String text;
   private final Map<String, GridTable> tableCache = new ConcurrentHashMap<>();
+  private final List<XMisc> misc;
+  /** Comments, PIs and DOCTYPE by parent element (null key: top level), built on first use. */
+  private volatile @Nullable Map<XNode, List<XMisc>> miscByParent;
 
   XmlDocumentModel(@Nullable XNode root, List<XNode> elements, List<ParseError> errors, String text) {
+    this(root, elements, errors, text, List.of());
+  }
+
+  XmlDocumentModel(@Nullable XNode root, List<XNode> elements, List<ParseError> errors, String text, List<XMisc> misc) {
+    this.misc = java.util.Collections.unmodifiableList(misc);
     this.root = root;
     // Not copied: millions of entries in large documents. The parser hands over its own list.
     this.elements = java.util.Collections.unmodifiableList(elements);
@@ -35,6 +43,21 @@ public final class XmlDocumentModel {
   public boolean hasErrors() { return !errors.isEmpty(); }
 
   public @NotNull String text() { return text; }
+
+  /** Comments, processing instructions and the DOCTYPE, in document order. */
+  public @NotNull List<XMisc> misc() { return misc; }
+
+  /** The comments, PIs and DOCTYPE directly inside {@code parent} (null: top level), in document order. */
+  public @NotNull List<XMisc> miscOf(@Nullable XNode parent) {
+    if (misc.isEmpty()) return List.of();
+    Map<XNode, List<XMisc>> m = miscByParent;
+    if (m == null) {
+      m = new java.util.HashMap<>();
+      for (XMisc x : misc) m.computeIfAbsent(x.parent(), k -> new ArrayList<>()).add(x);
+      miscByParent = m;
+    }
+    return m.getOrDefault(parent, List.of());
+  }
 
   /** Resolves a path key like "0/2/1"; null when it doesn't exist. */
   public @Nullable XNode byPath(@Nullable String path) {

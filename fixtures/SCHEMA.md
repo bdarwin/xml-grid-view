@@ -145,6 +145,14 @@ expanded, with one row per element and per attribute:
   displaying a value, but the canonical value is never collapsed.
 - **path:** the element's path. For an attribute row, it's the owner element's
   path.
+- **Comments, processing instructions and the DOCTYPE** get rows too, with
+  `kind` `"comment"`, `"pi"` or `"doctype"`. They sit among their parent's
+  element children in document order (after the parent's attribute rows), at
+  the children's depth; top-level ones have depth 0 and path `""`, others the
+  parent's path. `name` is `"#comment"`, the PI target, or `"DOCTYPE"`. `value`
+  is the comment text, the PI data, or the declaration after `<!DOCTYPE`
+  (including any internal subset), trimmed of XML whitespace, with line ends
+  normalized to LF. The XML declaration `<?xml …?>` is not a PI and gets no row.
 
 ## `<name>.search.json`
 

@@ -1,4 +1,5 @@
 [
+  { "depth": 0, "kind": "doctype", "name": "DOCTYPE", "value": "doc [\n  <!ELEMENT doc ANY>\n  <!ATTLIST doc a CDATA \"x>y\">\n]", "path": "" },
   { "depth": 0, "kind": "element", "name": "doc", "value": "", "path": "0" },
   { "depth": 1, "kind": "attr", "name": "@a", "value": "one two three", "path": "0" },
   { "depth": 1, "kind": "attr", "name": "@b", "value": "ref\nline", "path": "0" },
@@ -6,7 +7,9 @@
   { "depth": 1, "kind": "element", "name": "p", "value": "first\n  second", "path": "0/0" },
   { "depth": 1, "kind": "element", "name": "q", "value": "lead", "path": "0/1" },
   { "depth": 1, "kind": "element", "name": "r", "value": "cdata\n  lines", "path": "0/2" },
+  { "depth": 1, "kind": "comment", "name": "#comment", "value": "a comment with <tags>", "path": "0" },
   { "depth": 1, "kind": "element", "name": "s", "value": "abAc", "path": "0/3" },
+  { "depth": 2, "kind": "pi", "name": "pi", "value": "x", "path": "0/3" },
   { "depth": 1, "kind": "element", "name": "t", "value": "x", "path": "0/4" },
   { "depth": 2, "kind": "attr", "name": "@xml:lang", "value": "en", "path": "0/4" }
 ]

@@ -1341,3 +1341,17 @@ button.icon {
   width: 100%;
   height: 18px;
 }
+
+/* Comments, processing instructions and the DOCTYPE in the tree and Flat view */
+.tree-row.misc,
+.flat-row.misc .flat-name,
+.flat-row.misc .flat-value {
+  color: var(--xgv-muted-fg);
+  font-style: italic;
+}
+.misc-text {
+  font-family: var(--xgv-mono-font-family);
+  font-size: var(--xgv-mono-font-size);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

@@ -1,4 +1,4 @@
-import type { Matcher, TreeSkeleton } from "@xmlgridview/core";
+import { miscByParent, miscDisplay, type Matcher, type TreeSkeleton } from "@xmlgridview/core";
 import { useEffect, useMemo } from "preact/hooks";
 import { Highlight, PreviewText } from "./Highlight";
 import { scrollRowIntoView, useViewport } from "./useViewport";
@@ -19,25 +19,42 @@ export interface TreeProps {
   onToggle(id: number, expand?: boolean): void;
   onSelect(id: number): void;
   onActivate(id: number): void;
+  /** Double-click on a comment, PI or DOCTYPE: go to its source. */
+  onActivateOffset?(offset: number, length: number): void;
   onInspect?(id: number): void;
   /** Right-click (or the context-menu key) on a row; the row is selected first. */
   onContextMenu?(id: number, x: number, y: number): void;
 }
 
-/** Visible rows in display order. */
+/** Row id of comment/PI/DOCTYPE `k`: -k-2 (-1 means "no element"). */
+export const miscRow = (k: number) => -k - 2;
+export const miscIndex = (row: number) => -row - 2;
+
+/**
+ * Visible rows in display order: element ids, and comments, PIs and the DOCTYPE (miscRow) among
+ * the children of elements that have element children (not when filtering).
+ */
 function flatten(sk: TreeSkeleton, expanded: Set<number>, filter: Set<number> | null): Int32Array {
   const out: number[] = [];
   const stack: number[] = [];
-  const pushSiblings = (first: number) => {
+  const misc = filter || !sk.misc.length ? null : miscByParent(sk);
+  const pushSiblings = (parent: number, first: number) => {
     const sibs: number[] = [];
-    for (let c = first; c >= 0; c = sk.nextSibling[c]) if (!filter || filter.has(c)) sibs.push(c);
-    for (let i = sibs.length - 1; i >= 0; i--) stack.push(sibs[i]);
+    const ms = misc?.get(parent) ?? [];
+    let j = 0;
+    let i = 0;
+    for (let c = first; c >= 0; c = sk.nextSibling[c], i++) {
+      while (j < ms.length && sk.misc[ms[j]].before <= i) sibs.push(miscRow(ms[j++]));
+      if (!filter || filter.has(c)) sibs.push(c);
+    }
+    while (j < ms.length) sibs.push(miscRow(ms[j++]));
+    for (let k = sibs.length - 1; k >= 0; k--) stack.push(sibs[k]);
   };
-  pushSiblings(sk.firstRoot);
+  pushSiblings(-1, sk.firstRoot);
   while (stack.length) {
     const id = stack.pop()!;
     out.push(id);
-    if (sk.firstChild[id] >= 0 && (filter ? true : expanded.has(id))) pushSiblings(sk.firstChild[id]);
+    if (id >= 0 && sk.firstChild[id] >= 0 && (filter ? true : expanded.has(id))) pushSiblings(id, sk.firstChild[id]);
   }
   return Int32Array.from(out);
 }
@@ -59,9 +76,16 @@ export function Tree(p: TreeProps) {
   const onKeyDown = (e: KeyboardEvent) => {
     const i = selIndex;
     const id = p.selected;
+    // Moves to the element row nearest `to` in the direction of travel (comment rows are skipped).
     const move = (to: number) => {
-      const t = Math.max(0, Math.min(rows.length - 1, to));
-      if (rows.length) p.onSelect(rows[t]);
+      let t = Math.max(0, Math.min(rows.length - 1, to));
+      const step = to >= i ? 1 : -1;
+      while (t >= 0 && t < rows.length && rows[t] < 0) t += step;
+      if (t < 0 || t >= rows.length) {
+        t = Math.max(0, Math.min(rows.length - 1, to));
+        while (t >= 0 && t < rows.length && rows[t] < 0) t -= step;
+      }
+      if (t >= 0 && t < rows.length) p.onSelect(rows[t]);
     };
     switch (e.key) {
       case "ArrowDown":
@@ -110,6 +134,25 @@ export function Tree(p: TreeProps) {
   const items = [];
   for (let i = first; i < last; i++) {
     const id = rows[i];
+    if (id < 0) {
+      const m = sk.misc[miscIndex(id)];
+      const depth = m.parent < 0 ? 0 : sk.depth[m.parent] + 1;
+      items.push(
+        <div
+          key={id}
+          class={`tree-row misc misc-${m.kind}`}
+          role="treeitem"
+          aria-level={depth + 1}
+          title={m.value.length > 1000 ? m.value.slice(0, 1000) + "…" : m.value}
+          style={{ top: i * TREE_ROW_HEIGHT, paddingLeft: `calc(${depth} * var(--xgv-tree-indent) + 4px)` }}
+          onDblClick={() => p.onActivateOffset?.(m.start, m.end - m.start)}
+        >
+          <span class="twisty" />
+          <span class="misc-text">{miscDisplay(m)}</span>
+        </div>,
+      );
+      continue;
+    }
     const hasKids = sk.firstChild[id] >= 0;
     const open = hasKids && (p.filter ? true : p.expanded.has(id));
     const cls = "tree-row" + (id === p.selected ? " selected" : "") + (p.hits?.has(id) ? " hit" : "");

@@ -26,6 +26,7 @@ import com.intellij.ui.treeStructure.Tree;
 import com.intellij.util.ui.tree.TreeUtil;
 import dev.xmlgridview.intellij.model.InspectTarget;
 import dev.xmlgridview.intellij.model.XAttr;
+import dev.xmlgridview.intellij.model.XMisc;
 import dev.xmlgridview.intellij.model.XNode;
 import dev.xmlgridview.intellij.model.XmlDocumentModel;
 import org.jetbrains.annotations.NotNull;
@@ -76,6 +77,13 @@ final class XmlTreeView extends JPanel {
   /** Told the nodes kept by the filter box (with ancestors), or null when it is empty. */
   private @Nullable Consumer<@Nullable Set<XNode>> boxFilterListener;
 
+  private @Nullable java.util.function.IntConsumer offsetNavigator;
+
+  /** Where Enter on a comment, PI or DOCTYPE goes (its source offset). */
+  void setOffsetNavigator(@NotNull java.util.function.IntConsumer navigator) {
+    offsetNavigator = navigator;
+  }
+
   XmlTreeView(@NotNull Disposable parent, @NotNull Supplier<FindState> findState,
               @NotNull Consumer<XNode> onSelect, @NotNull Consumer<XNode> onNavigate) {
     super(new BorderLayout());
@@ -101,6 +109,7 @@ final class XmlTreeView extends JPanel {
       public void actionPerformed(@NotNull AnActionEvent e) {
         XNode n = selected();
         if (n != null) onNavigate.accept(n);
+        else if (miscOf(tree.getSelectionPath()) instanceof XMisc x && offsetNavigator != null) offsetNavigator.accept(x.start());
       }
     };
     navigate.registerCustomShortcutSet(new CustomShortcutSet(new com.intellij.openapi.actionSystem.KeyboardShortcut(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), null),
@@ -298,6 +307,14 @@ final class XmlTreeView extends JPanel {
     };
   }
 
+  /** The comment, PI or DOCTYPE a tree path ends at, or null. */
+  static @Nullable XMisc miscOf(@Nullable TreePath path) {
+    if (path == null) return null;
+    Object last = TreeUtil.getLastUserObject(path);
+    Object element = last instanceof NodeDescriptor<?> d ? d.getElement() : last;
+    return element instanceof XMisc x ? x : null;
+  }
+
   static @Nullable XNode nodeOf(@Nullable TreePath path) {
     if (path == null) return null;
     Object last = TreeUtil.getLastUserObject(path);
@@ -326,6 +343,12 @@ final class XmlTreeView extends JPanel {
     @Override
     public void customizeCellRenderer(@NotNull JTree tree, Object value, boolean selected, boolean expanded,
                                       boolean leaf, int row, boolean hasFocus) {
+      if (miscOf(new TreePath(value)) instanceof XMisc x) {
+        append(x.display(), selected && tree.hasFocus() ? new SimpleTextAttributes(SimpleTextAttributes.STYLE_ITALIC, null)
+                                                         : SimpleTextAttributes.GRAY_ITALIC_ATTRIBUTES);
+        setToolTipText(x.value().length() > 1000 ? x.value().substring(0, 1000) + "…" : x.value());
+        return;
+      }
       XNode n = nodeOf(new TreePath(value));
       if (n == null) return;
       FindState fs = findState.get();
@@ -372,17 +395,34 @@ final class XmlTreeView extends JPanel {
       XmlDocumentModel m = model;
       if (m == null) return new Object[0];
       List<XNode> kids;
-      if (element == ROOT) kids = m.root() == null ? List.of() : List.of(m.root());
-      else if (element instanceof XNode n) kids = n.children();
+      XNode parent;
+      if (element == ROOT) {
+        kids = m.root() == null ? List.of() : List.of(m.root());
+        parent = null;
+      }
+      else if (element instanceof XNode n) {
+        kids = n.children();
+        parent = n;
+      }
       else return new Object[0];
       Set<XNode> v = visible;
-      if (v == null) return kids.toArray();
-      return kids.stream().filter(v::contains).toArray();
+      if (v != null) return kids.stream().filter(v::contains).toArray();
+      // Comments, PIs and DOCTYPE among the elements (not in a filtered tree).
+      List<XMisc> misc = m.miscOf(parent);
+      if (misc.isEmpty() || (parent == null && m.root() == null)) return kids.toArray();
+      List<Object> out = new ArrayList<>(kids.size() + misc.size());
+      int j = 0;
+      for (int i = 0; i <= kids.size(); i++) {
+        while (j < misc.size() && misc.get(j).before() <= i) out.add(misc.get(j++));
+        if (i < kids.size()) out.add(kids.get(i));
+      }
+      return out.toArray();
     }
 
     @Override
     public @Nullable Object getParentElement(@NotNull Object element) {
       if (element instanceof XNode n) return n.parent() == null ? ROOT : n.parent();
+      if (element instanceof XMisc x) return x.parent() == null ? ROOT : x.parent();
       return null;
     }
 
@@ -393,7 +433,8 @@ final class XmlTreeView extends JPanel {
 
     @Override
     public boolean isAlwaysLeaf(@NotNull Object element) {
-      return element instanceof XNode n && n.children().isEmpty();
+      // Leaf elements stay leaves; their comments show in the Flat view.
+      return element instanceof XMisc || element instanceof XNode n && n.children().isEmpty();
     }
 
     @Override

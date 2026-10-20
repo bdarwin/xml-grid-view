@@ -42,6 +42,21 @@ export interface XElement extends Span {
 
 export type XChild = XElement | XText;
 
+/**
+ * A comment, processing instruction or DOCTYPE. Shown in the tree and Flat view among the
+ * elements, read-only. `before` is the number of element siblings that precede it (in its parent,
+ * or among top-level elements when `parent` is null).
+ */
+export interface XMisc extends Span {
+  kind: "comment" | "pi" | "doctype";
+  /** `#comment`, the PI target, or `DOCTYPE`. */
+  name: string;
+  /** The comment text, PI data or DOCTYPE declaration, trimmed. */
+  value: string;
+  parent: XElement | null;
+  before: number;
+}
+
 export interface ParseError {
   message: string;
   offset: number;
@@ -55,5 +70,7 @@ export interface XDocument {
   /** All elements in document order; `elements[e.id] === e`. */
   elements: XElement[];
   errors: ParseError[];
+  /** Comments, processing instructions and the DOCTYPE, in document order. */
+  misc: XMisc[];
   textLength: number;
 }

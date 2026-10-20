@@ -173,6 +173,7 @@ public final class ValueEdits {
 
   /** The edit target behind a Flat row's value, or null: attribute rows and elements without element children. */
   public static @Nullable Target flatTarget(@NotNull FlatRow r) {
+    if (r.kind() == FlatRow.Kind.MISC) return null;
     if (r.kind() == FlatRow.Kind.ATTR) return Target.attr(r.node().path(), r.attr().name());
     return isTextEditable(r.node()) ? Target.text(r.node().path()) : null;
   }

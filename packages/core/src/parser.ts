@@ -1,5 +1,5 @@
 import { SaxesParser, type SaxesTagNS, type SaxesAttributeNS } from "saxes";
-import type { ParseError, XAttr, XDocument, XElement, XText } from "./types.js";
+import type { ParseError, XAttr, XDocument, XElement, XMisc, XText } from "./types.js";
 
 /** Characters fed to saxes per step of the incremental parser. */
 const DEFAULT_CHUNK = 1 << 20;
@@ -24,7 +24,7 @@ export function offsetToLineCol(text: string, offset: number): { line: number; c
 
 /**
  * Incremental XML parser that records source offsets for every element,
- * attribute and text node. Comments and processing instructions are skipped.
+ * attribute and text node, plus comments, processing instructions and the DOCTYPE.
  * Malformed input never throws: parsing continues past errors where saxes can,
  * and whatever was built is returned together with the errors.
  */
@@ -43,7 +43,7 @@ export class XmlParser {
     private readonly text: string,
     private readonly chunkSize = DEFAULT_CHUNK,
   ) {
-    this.doc = { roots: [], elements: [], errors: [], textLength: text.length };
+    this.doc = { roots: [], elements: [], errors: [], misc: [], textLength: text.length };
     this.sax = new SaxesParser({ xmlns: true, position: true });
     this.wire();
   }
@@ -242,11 +242,24 @@ export class XmlParser {
     const skip = () => {
       this.cursor = sax.position;
     };
-    sax.on("comment", skip);
-    sax.on("processinginstruction", skip);
-    sax.on("doctype", skip);
+    const misc = (kind: XMisc["kind"], opener: string, name: string, value: string) => {
+      const end = sax.position;
+      const start = text.lastIndexOf(opener, end - 1);
+      const parent = this.stack.length ? this.stack[this.stack.length - 1] : null;
+      const before = parent ? parent.elements.length : this.doc.roots.length;
+      this.doc.misc.push({ kind, name, value: trimXml(value), start: start < 0 ? this.cursor : start, end, parent, before });
+      this.cursor = end;
+    };
+    sax.on("comment", (t) => misc("comment", "<!--", "#comment", t));
+    sax.on("processinginstruction", (pi) => misc("pi", "<?", pi.target, pi.body));
+    sax.on("doctype", (t) => misc("doctype", "<!DOCTYPE", "DOCTYPE", t));
     sax.on("xmldecl", skip);
   }
+}
+
+/** Trims XML whitespace (space, tab, CR, LF). */
+function trimXml(s: string): string {
+  return s.replace(/^[ \t\r\n]+|[ \t\r\n]+$/g, "");
 }
 
 /** Parses the whole text synchronously. */

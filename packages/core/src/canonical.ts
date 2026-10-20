@@ -7,7 +7,7 @@ import { createMatcher, searchDocument, searchGrid, ALL_TARGETS, type SearchOpti
 import { SELF_GROUP, defaultGroup, elementText, type XmlModel } from "./model.js";
 import { pathKey, pathOfElement } from "./paths.js";
 import { evaluateXPath, type XPathBackend } from "./xpath.js";
-import type { XElement } from "./types.js";
+import type { XElement, XMisc } from "./types.js";
 import { detectJson, forEachJsonContainer, jsonPointer, jsonTable } from "./json.js";
 
 export interface CanonicalAttr {
@@ -85,10 +85,10 @@ export interface SearchFile {
 /** One row of the Flat view: an element, or one of its attributes (listed right after it). */
 export interface FlatRow {
   depth: number;
-  kind: "element" | "attr";
+  kind: "element" | "attr" | "comment" | "pi" | "doctype";
   name: string;
   value: string;
-  /** Path of the element (the owner element for attributes). */
+  /** Path of the element (the owner element for attributes, the parent for comments, PIs and DOCTYPE; "" at top level). */
   path: string;
 }
 
@@ -210,14 +210,36 @@ function elementByPath(model: XmlModel, key: string): XElement | null {
  */
 export function canonicalFlat(model: XmlModel): FlatRow[] {
   const rows: FlatRow[] = [];
+  const misc = miscByParent(model);
+  const emitMisc = (parent: XElement | null, before: number, depth: number, path: string) => {
+    for (const m of misc.get(parent) ?? []) if (m.before === before) rows.push({ depth, kind: m.kind, name: m.name, value: m.value, path });
+  };
   const visit = (el: XElement, depth: number) => {
     const path = pathKey(pathOfElement(el));
     rows.push({ depth, kind: "element", name: el.name, value: elementText(el), path });
     for (const a of el.attrs) rows.push({ depth: depth + 1, kind: "attr", name: "@" + a.name, value: a.value, path });
-    for (const c of el.elements) visit(c, depth + 1);
+    el.elements.forEach((c, i) => {
+      emitMisc(el, i, depth + 1, path);
+      visit(c, depth + 1);
+    });
+    emitMisc(el, el.elements.length, depth + 1, path);
   };
-  for (const r of model.doc.roots) visit(r, 0);
+  model.doc.roots.forEach((r, i) => {
+    emitMisc(null, i, 0, "");
+    visit(r, 0);
+  });
+  emitMisc(null, model.doc.roots.length, 0, "");
   return rows;
+}
+
+function miscByParent(model: XmlModel): Map<XElement | null, XMisc[]> {
+  const out = new Map<XElement | null, XMisc[]>();
+  for (const m of model.doc.misc) {
+    const list = out.get(m.parent) ?? [];
+    list.push(m);
+    out.set(m.parent, list);
+  }
+  return out;
 }
 
 export function canonicalErrors(model: XmlModel): ErrorsFile | null {

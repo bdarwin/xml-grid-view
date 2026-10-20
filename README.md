@@ -163,7 +163,11 @@ limitations.
   banner with the error location. Click it to jump there.
 - **Large files:** a 50 MB file opens in about 1–2 seconds in either editor.
   In VS Code, files over 50 MB need an explicit **Load anyway** (the
-  `xmlGridView.largeFileThresholdMB` setting). IntelliJ asks only when the
+  `xmlGridView.largeFileThresholdMB` setting). VS Code doesn't give
+  extensions files over 50 MB as text documents, so *Open With XML Grid View*
+  opens those in a read-only view that reads the file from disk. Files over
+  150 MB (`xmlGridView.maxFileSizeMB`) show a notice instead, because the
+  view's memory can't hold them; use IntelliJ for those. IntelliJ asks only when the
   file may not fit in the IDE's free memory; a 500 MB file loads in about
   9 seconds and uses about 2.5 GB. Slow loads show a progress banner in
   IntelliJ.

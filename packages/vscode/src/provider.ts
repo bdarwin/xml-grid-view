@@ -11,13 +11,15 @@ import { themeVars } from "./theme";
 export const VIEW_TYPE = "xmlGridView.editor";
 const UPDATE_DEBOUNCE_MS = 300;
 
-interface ViewEntry {
-  document: vscode.TextDocument;
+export interface ViewEntry {
+  uri: vscode.Uri;
   panel: vscode.WebviewPanel;
   /** True once the view's script has started and sent `ready`. */
   readonly ready: boolean;
   post(msg: HostToView): void;
   handle(msg: ViewToHost): Promise<void>;
+  /** Opens the XML source in a text editor beside the view. */
+  showSource(): Promise<void>;
 }
 
 /**
@@ -39,13 +41,13 @@ export class XmlGridEditorProvider implements vscode.CustomTextEditorProvider {
   }
 
   viewsFor(uri: vscode.Uri): ViewEntry[] {
-    return [...this.views].filter((v) => v.document.uri.toString() === uri.toString());
+    return [...this.views].filter((v) => v.uri.toString() === uri.toString());
   }
 
   async resolveCustomTextEditor(document: vscode.TextDocument, panel: vscode.WebviewPanel): Promise<void> {
     const webviewRoot = vscode.Uri.joinPath(this.context.extensionUri, "dist", "webview");
     panel.webview.options = { enableScripts: true, localResourceRoots: [webviewRoot] };
-    panel.webview.html = this.html(panel.webview, webviewRoot);
+    panel.webview.html = viewHtml(panel.webview, webviewRoot);
 
     const disposables: vscode.Disposable[] = [];
     let ready = false;
@@ -67,12 +69,15 @@ export class XmlGridEditorProvider implements vscode.CustomTextEditorProvider {
       });
 
     const entry: ViewEntry = {
-      document,
+      uri: document.uri,
       panel,
       get ready() {
         return ready;
       },
       post,
+      showSource: async () => {
+        await vscode.window.showTextDocument(document, { viewColumn: vscode.ViewColumn.Beside });
+      },
       handle: async (msg) => {
         switch (msg.type) {
           case "ready":
@@ -137,19 +142,22 @@ export class XmlGridEditorProvider implements vscode.CustomTextEditorProvider {
     });
   }
 
-  private html(webview: vscode.Webview, root: vscode.Uri): string {
-    const nonce = makeNonce();
-    const script = webview.asWebviewUri(vscode.Uri.joinPath(root, "webview.js"));
-    const style = webview.asWebviewUri(vscode.Uri.joinPath(root, "webview.css"));
-    const csp = [
-      "default-src 'none'",
-      `style-src ${webview.cspSource}`,
-      `script-src 'nonce-${nonce}'`,
-      "worker-src blob:",
-      `img-src ${webview.cspSource} data:`,
-      `font-src ${webview.cspSource}`,
-    ].join("; ");
-    return `<!DOCTYPE html>
+}
+
+/** The view's HTML page (the bundled webview app). */
+export function viewHtml(webview: vscode.Webview, root: vscode.Uri): string {
+  const nonce = makeNonce();
+  const script = webview.asWebviewUri(vscode.Uri.joinPath(root, "webview.js"));
+  const style = webview.asWebviewUri(vscode.Uri.joinPath(root, "webview.css"));
+  const csp = [
+    "default-src 'none'",
+    `style-src ${webview.cspSource}`,
+    `script-src 'nonce-${nonce}'`,
+    "worker-src blob:",
+    `img-src ${webview.cspSource} data:`,
+    `font-src ${webview.cspSource}`,
+  ].join("; ");
+  return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -163,10 +171,9 @@ export class XmlGridEditorProvider implements vscode.CustomTextEditorProvider {
 <script nonce="${nonce}" src="${script}"></script>
 </body>
 </html>`;
-  }
 }
 
-function readSettings(): ViewSettings {
+export function readSettings(): ViewSettings {
   const cfg = vscode.workspace.getConfiguration("xmlGridView");
   return {
     copyWithHeader: cfg.get<boolean>("copyWithHeader", false),

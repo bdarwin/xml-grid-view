@@ -29,6 +29,15 @@ Large files load much faster in IntelliJ.
   in the IDE's free memory, instead of above a fixed 50 MB. If memory still
   runs out, the error banner says how to raise it.
 
+### VS Code
+
+- **Files over 50 MB:** these used to fail with "The editor could not be
+  opened", because VS Code doesn't give extensions such large files as text
+  documents. *Open With XML Grid View* now opens them in a read-only view that
+  reads the file from disk and reloads it when the file changes.
+- **Size limit:** files over 150 MB (`xmlGridView.maxFileSizeMB`) show a
+  notice instead of crashing the view.
+
 ## 0.3.0
 
 - **Fields grid:** selecting an element whose children don't repeat, such as

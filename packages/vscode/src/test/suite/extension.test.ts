@@ -1,8 +1,24 @@
 import * as assert from "node:assert";
+import * as fs from "node:fs";
+import * as os from "node:os";
 import * as path from "node:path";
 import * as vscode from "vscode";
 
 const VIEW_TYPE = "xmlGridView.editor";
+const LARGE_VIEW_TYPE = "xmlGridView.largeEditor";
+
+/** Writes a well-formed XML file of at least `mb` MB to the temp directory. */
+function bigFile(name: string, mb: number): vscode.Uri {
+  const file = path.join(os.tmpdir(), name);
+  const item = "  <event><ts>2025-02-04T09:25:42.093Z</ts><level>info</level><message>request completed</message></event>\n";
+  const chunk = item.repeat(10_000);
+  const fd = fs.openSync(file, "w");
+  fs.writeSync(fd, "<events>\n");
+  for (let n = 0; n < mb * 1024 * 1024; n += chunk.length) fs.writeSync(fd, chunk);
+  fs.writeSync(fd, "</events>\n");
+  fs.closeSync(fd);
+  return vscode.Uri.file(file);
+}
 
 interface Api {
   viewCount(uri: vscode.Uri): number;
@@ -25,10 +41,10 @@ async function waitFor<T>(fn: () => T | undefined | false, what: string, ms = 20
   }
 }
 
-function customTab(uri: vscode.Uri) {
+function customTab(uri: vscode.Uri, viewType = VIEW_TYPE) {
   return vscode.window.tabGroups.all
     .flatMap((g) => g.tabs)
-    .find((t) => t.input instanceof vscode.TabInputCustom && t.input.viewType === VIEW_TYPE && t.input.uri.toString() === uri.toString());
+    .find((t) => t.input instanceof vscode.TabInputCustom && t.input.viewType === viewType && t.input.uri.toString() === uri.toString());
 }
 
 suite("XML Grid View", () => {
@@ -98,6 +114,39 @@ suite("XML Grid View", () => {
       const editor = await vscode.window.showTextDocument(doc);
       await editor.edit((b) => b.replace(new vscode.Range(doc.positionAt(0), doc.positionAt(doc.getText().length)), original));
       await doc.save();
+    }
+  });
+
+  test("files over 50 MB open in the read-only view, read from disk", async function () {
+    this.timeout(120_000);
+    const uri = bigFile("xgv-large-test.xml", 60);
+    try {
+      await vscode.commands.executeCommand("xmlGridView.openWith", uri);
+      await waitFor(() => customTab(uri, LARGE_VIEW_TYPE), "large-file editor tab", 60_000);
+      await waitFor(() => api.readyCount(uri) > 0, "web view ready message", 60_000);
+      assert.strictEqual(customTab(uri), undefined, "not the text-document editor, which VS Code can't feed");
+      // Edits are refused rather than written behind VS Code's back.
+      await api.simulateViewMessage(uri, { type: "edit", docVersion: 1, edits: [{ offset: 0, length: 0, text: "x" }], label: "Edit" });
+      assert.strictEqual(fs.readFileSync(uri.fsPath, "utf8").startsWith("<events>"), true);
+    } finally {
+      await vscode.commands.executeCommand("workbench.action.closeAllEditors");
+      fs.rmSync(uri.fsPath, { force: true });
+    }
+  });
+
+  test("files over maxFileSizeMB show a notice instead of the view", async function () {
+    this.timeout(60_000);
+    const cfg = vscode.workspace.getConfiguration("xmlGridView");
+    await cfg.update("maxFileSizeMB", 1, vscode.ConfigurationTarget.Global);
+    const uri = bigFile("xgv-too-large-test.xml", 2);
+    try {
+      await vscode.commands.executeCommand("vscode.openWith", uri, LARGE_VIEW_TYPE);
+      await waitFor(() => customTab(uri, LARGE_VIEW_TYPE), "large-file editor tab");
+      await new Promise((r) => setTimeout(r, 1000));
+      assert.strictEqual(api.viewCount(uri), 0, "no view is loaded");
+    } finally {
+      await cfg.update("maxFileSizeMB", undefined, vscode.ConfigurationTarget.Global);
+      fs.rmSync(uri.fsPath, { force: true });
     }
   });
 

@@ -48,6 +48,16 @@
           }
         ],
         "priority": "option"
+      },
+      {
+        "viewType": "xmlGridView.largeEditor",
+        "displayName": "XML Grid View (large files, read-only)",
+        "selector": [
+          {
+            "filenamePattern": "*.xml"
+          }
+        ],
+        "priority": "option"
       }
     ],
     "commands": [
@@ -78,7 +88,7 @@
         },
         {
           "command": "xmlGridView.showSource",
-          "when": "activeCustomEditorId == xmlGridView.editor",
+          "when": "activeCustomEditorId =~ /^xmlGridView\\./",
           "group": "navigation"
         }
       ],
@@ -96,11 +106,11 @@
         },
         {
           "command": "xmlGridView.showSource",
-          "when": "activeCustomEditorId == xmlGridView.editor"
+          "when": "activeCustomEditorId =~ /^xmlGridView\\./"
         },
         {
           "command": "xmlGridView.find",
-          "when": "activeCustomEditorId == xmlGridView.editor"
+          "when": "activeCustomEditorId =~ /^xmlGridView\\./"
         }
       ]
     },
@@ -109,7 +119,7 @@
         "command": "xmlGridView.find",
         "key": "ctrl+f",
         "mac": "cmd+f",
-        "when": "activeCustomEditorId == xmlGridView.editor"
+        "when": "activeCustomEditorId =~ /^xmlGridView\\./"
       }
     ],
     "configuration": {
@@ -125,6 +135,12 @@
           "default": 50,
           "minimum": 1,
           "description": "Files larger than this (in MB) show a notice and are only parsed after clicking \"Load anyway\"."
+        },
+        "xmlGridView.maxFileSizeMB": {
+          "type": "number",
+          "default": 150,
+          "minimum": 1,
+          "description": "Files over 50 MB open read-only, and files larger than this (in MB) are not opened: the view holds the whole document in memory and would crash."
         },
         "xmlGridView.readOnly": {
           "type": "boolean",

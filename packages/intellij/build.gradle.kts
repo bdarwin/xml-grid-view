@@ -49,7 +49,13 @@ intellijPlatform {
                 .substringBefore("\n## ")
             val items = section.trim().split(Regex("\n(?=- )"))
                 .filter { it.startsWith("- ") }
-                .joinToString("") { "<li>" + it.removePrefix("- ").replace(Regex("\\s+"), " ").trim() + "</li>" }
+                .joinToString("") {
+                    val text = it.removePrefix("- ").replace(Regex("\\s+"), " ").trim()
+                        .replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                        .replace(Regex("\\*\\*(.+?)\\*\\*"), "<b>$1</b>")
+                        .replace(Regex("`([^`]+)`"), "<code>$1</code>")
+                    "<li>$text</li>"
+                }
             if (items.isEmpty()) "" else "<ul>$items</ul>"
         }
         ideaVersion {

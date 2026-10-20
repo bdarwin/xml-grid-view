@@ -37,12 +37,17 @@ import java.util.function.IntConsumer;
  * rebuilds lazily (only while {@code owner} is showing), debounced after edits,
  * on a pooled thread, sharing each build with the file's other tab (see
  * {@link SharedModels}). Slow builds show a progress banner. Malformed documents
- * keep the last good model and show a warning banner; very large files wait for
- * "Load anyway". Files too large for IntelliJ to load into a document (its
+ * keep the last good model and show a warning banner; files that may not fit in the
+ * free heap wait for "Load anyway". Files too large for IntelliJ to load into a document (its
  * content-loading limit, 20 MB by default) are read from disk and shown read-only.
  */
 final class ModelLoader implements Disposable {
-  static final long LARGE_FILE_CHARS = 50L * 1024 * 1024;
+  /**
+   * Rough heap needed per character of XML: the text (one byte per char when Latin-1), about
+   * 2.7 bytes of model, plus the views and slack. Files whose estimate exceeds the free heap
+   * wait for "Load anyway".
+   */
+  static final int BYTES_PER_CHAR = 5;
   static final int DEBOUNCE_MS = 300;
   /** Builds finishing faster than this never show the progress banner. */
   static final int PROGRESS_DELAY_MS = 400;
@@ -160,8 +165,8 @@ final class ModelLoader implements Disposable {
   /** Rebuilds the model on a pooled thread (shared with the file's other tab); newer requests supersede older ones. */
   void refresh() {
     long size = largeFile != null ? largeFile.getLength() : document.getTextLength();
-    if (size > LARGE_FILE_CHARS && !largeFileAccepted) {
-      showLargeFileBanner();
+    if (!largeFileAccepted && size * BYTES_PER_CHAR > freeHeap()) {
+      showLargeFileBanner(size);
       return;
     }
     dirty = false;
@@ -186,12 +191,23 @@ final class ModelLoader implements Disposable {
 
   private static CharSequence loadWholeFile(VirtualFile f) {
     // contentsToByteArray() refuses files over the limit; streaming reads them from disk.
+    byte[] bytes;
     try (java.io.InputStream in = f.getInputStream()) {
-      return LoadTextUtil.getTextByBinaryPresentation(in.readAllBytes(), f);
+      bytes = in.readAllBytes();
     }
     catch (java.io.IOException e) {
       throw new java.io.UncheckedIOException(e);
     }
+    // Decoded straight to a String (one byte per char for Latin-1 text) rather than through
+    // LoadTextUtil's char[]: a 500 MB file would otherwise briefly need 2 GB more.
+    java.nio.charset.Charset cs = f.getCharset();
+    byte[] bom = f.getBOM();
+    int skip = bom != null && bom.length <= bytes.length
+               && java.util.Arrays.equals(bom, 0, bom.length, bytes, 0, bom.length) ? bom.length : 0;
+    String text = new String(bytes, skip, bytes.length - skip, cs);
+    bytes = null;
+    // Match the preview document, whose offsets we navigate to: IntelliJ normalizes line ends.
+    return text.indexOf('\r') < 0 ? text : StringUtil.convertLineSeparators(text);
   }
 
   private void startProgress(SharedModels.Build b, int gen) {
@@ -231,7 +247,12 @@ final class ModelLoader implements Disposable {
     hideErrorBanner();
     EditorNotificationPanel p = new EditorNotificationPanel(EditorNotificationPanel.Status.Error);
     Throwable cause = err.getCause() != null ? err.getCause() : err;
-    p.setText("Could not load the XML view: " + StringUtil.trimLog(String.valueOf(cause.getMessage()), 200));
+    if (cause instanceof OutOfMemoryError) {
+      p.setText("Not enough memory to load this file. Raise the IDE's memory in Help | Change Memory Settings, then retry.");
+    }
+    else {
+      p.setText("Could not load the XML view: " + StringUtil.trimLog(String.valueOf(cause.getMessage()), 200));
+    }
     p.createActionLabel("Retry", this::refresh);
     errorBanner = p;
     banners.add(p);
@@ -280,11 +301,18 @@ final class ModelLoader implements Disposable {
     }
   }
 
-  private void showLargeFileBanner() {
+  private static long freeHeap() {
+    Runtime r = Runtime.getRuntime();
+    return r.maxMemory() - (r.totalMemory() - r.freeMemory());
+  }
+
+  private void showLargeFileBanner(long size) {
     if (largeBanner != null) return;
-    EditorNotificationPanel p = new EditorNotificationPanel(EditorNotificationPanel.Status.Info);
-    p.setText("This file is " + StringUtil.formatFileSize(largeFile != null ? largeFile.getLength() : document.getTextLength())
-              + ". Building the view may take a while and use a lot of memory.");
+    EditorNotificationPanel p = new EditorNotificationPanel(EditorNotificationPanel.Status.Warning);
+    p.setText("This file is " + StringUtil.formatFileSize(size) + ". The view needs about "
+              + StringUtil.formatFileSize(size * BYTES_PER_CHAR) + " of memory and the IDE has about "
+              + StringUtil.formatFileSize(Math.max(0, freeHeap())) + " free, so it may run out."
+              + " You can raise the IDE's memory in Help | Change Memory Settings.");
     p.createActionLabel("Load anyway", () -> {
       largeFileAccepted = true;
       banners.remove(p);
@@ -295,6 +323,11 @@ final class ModelLoader implements Disposable {
     largeBanner = p;
     banners.add(p);
     banners.revalidate();
+  }
+
+  @TestOnly
+  void acceptLargeFile() {
+    largeFileAccepted = true;
   }
 
   boolean isShowingLargeFileNotice() {

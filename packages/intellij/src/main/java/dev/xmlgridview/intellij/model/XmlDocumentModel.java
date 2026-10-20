@@ -19,7 +19,8 @@ public final class XmlDocumentModel {
 
   XmlDocumentModel(@Nullable XNode root, List<XNode> elements, List<ParseError> errors, String text) {
     this.root = root;
-    this.elements = List.copyOf(elements);
+    // Not copied: millions of entries in large documents. The parser hands over its own list.
+    this.elements = java.util.Collections.unmodifiableList(elements);
     this.errors = List.copyOf(errors);
     this.text = text;
   }

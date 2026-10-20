@@ -84,6 +84,37 @@ public class ModelTest extends BasePlatformTestCase {
     assertEquals(XmlDocumentModel.SELF_GROUP, order.table(order.root(), XmlDocumentModel.SELF_GROUP).group());
   }
 
+  public void testTextReadFromSourceOrDecoded() {
+    // Verbatim text and values are read from the source on demand; anything normalized is stored.
+    XmlDocumentModel m = build("<r k='v' e='a&amp;b'>\n  <a>  plain text  </a>\n  <b>x &lt; y</b>\n"
+                               + "  <c>one<i/>two</c>\n  <d><![CDATA[<raw>]]></d>\n  <e>   </e>\n</r>");
+    XNode r = m.root();
+    assertEquals("v", r.attr("k").value());
+    assertEquals("a&b", r.attr("e").value());
+    assertEquals("plain text", r.child(0).text());
+    assertEquals(m.text().indexOf("plain"), r.child(0).textStart());
+    assertEquals("x < y", r.child(1).text());
+    assertEquals("onetwo", r.child(2).text());
+    assertEquals("<raw>", r.child(3).text());
+    assertEquals("", r.child(4).text());
+    assertFalse(r.child(4).hasText());
+    assertEquals(-1, r.child(4).textStart());
+    assertEquals("0/2/0", r.child(2).child(0).path());
+    assertEquals(2, r.child(2).child(0).depth());
+    // Grid cells point at the nodes they show.
+    assertEquals("plain text", m.table(r, ".").cell(0, m.table(r, ".").columnIndex("a")));
+  }
+
+  public void testFlatRowsAreFoundByNode() {
+    XmlDocumentModel m = build("<r><a x='1' y='2'/><b/></r>");
+    var rows = dev.xmlgridview.intellij.model.FlatRow.build(m);
+    XNode a = m.root().child(0);
+    assertEquals(4, dev.xmlgridview.intellij.model.FlatRow.indexOf(rows, m.root().child(1), -1));
+    assertEquals(3, dev.xmlgridview.intellij.model.FlatRow.indexOf(rows, a, 1));
+    assertEquals("@y", rows.get(3).name());
+    assertEquals(2, rows.get(3).depth());
+  }
+
   public void testFilterCombinationIsAnd() {
     XmlDocumentModel m = build("<r><i a='x' b='1'/><i a='x' b='2'/><i a='y' b='1'/><i a='xy' b='3'/></r>");
     GridTable t = m.table(m.root(), "i");

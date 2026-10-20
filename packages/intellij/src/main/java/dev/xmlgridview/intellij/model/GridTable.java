@@ -8,6 +8,8 @@ import java.util.List;
 /**
  * Child elements of {@code element} sharing the tag {@code group}, as rows.
  * Cells are {@code null} (absent), a String (value) or an Integer (complex cell count).
+ * Values are stored as the attribute or element they come from and read on demand, so
+ * a grid of a large document doesn't copy its text.
  */
 public final class GridTable {
   private final XNode element;
@@ -42,11 +44,17 @@ public final class GridTable {
 
   public int columnCount() { return columns.size(); }
 
-  public @Nullable Object cell(int row, int col) { return cells[row][col]; }
+  public @Nullable Object cell(int row, int col) { return value(cells[row][col]); }
+
+  private static @Nullable Object value(@Nullable Object raw) {
+    if (raw instanceof XNode n) return n.text();
+    if (raw instanceof XAttr a) return a.value();
+    return raw;
+  }
 
   /** Display text: values as-is, complex cells as "{tag ×n}", absent as "". */
   public @NotNull String cellText(int row, int col) {
-    Object v = cells[row][col];
+    Object v = cell(row, col);
     if (v == null) return "";
     if (v instanceof Integer n) return complexLabel(columns.get(col).label(), n);
     return (String) v;
@@ -54,7 +62,7 @@ public final class GridTable {
 
   /** The string search matches against: the value, or the column tag for complex cells. */
   public @Nullable String searchText(int row, int col) {
-    Object v = cells[row][col];
+    Object v = cell(row, col);
     if (v == null) return null;
     return v instanceof Integer ? columns.get(col).label() : (String) v;
   }

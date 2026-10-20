@@ -162,9 +162,11 @@ limitations.
 - **Malformed XML:** the view keeps the last valid model and shows a warning
   banner with the error location. Click it to jump there.
 - **Large files:** a 50 MB file opens in about 1–2 seconds in either editor.
-  Files over 50 MB need an explicit **Load anyway**; in VS Code the limit is
-  the `xmlGridView.largeFileThresholdMB` setting. Slow loads show a progress
-  banner in IntelliJ.
+  In VS Code, files over 50 MB need an explicit **Load anyway** (the
+  `xmlGridView.largeFileThresholdMB` setting). IntelliJ asks only when the
+  file may not fit in the IDE's free memory; a 500 MB file loads in about
+  9 seconds and uses about 2.5 GB. Slow loads show a progress banner in
+  IntelliJ.
   - **Over IntelliJ's 20 MB limit:** IntelliJ only loads a preview of such
     files. Grid and Flat read the whole file from disk instead and show it
     read-only (no value editing), refreshing when the file changes on disk.
@@ -223,9 +225,9 @@ CI never accepts regenerated output on its own.
   DTD entities aren't expanded.
 - **Line endings:** IntelliJ normalizes line endings to LF, so a CRLF file
   reports different offsets in each host. Navigation is correct in both.
-- **Large files:** both editors hold the whole model in memory, roughly 8–10×
-  the file size in IntelliJ. Files of a few hundred MB may run out of memory
-  even after **Load anyway**.
+- **Large files:** both editors hold the whole model in memory, about 4–5×
+  the file size in IntelliJ. If a file doesn't fit, raise the IDE's memory in
+  **Help | Change Memory Settings**.
 - **IntelliJ differences:**
   - The column filter opens from the header's right-click or context menu,
     not from a header button.

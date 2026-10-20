@@ -73,7 +73,6 @@ import java.util.function.IntConsumer;
  * (debounced) and swapped in on the EDT, preserving view state by path.
  */
 public final class XmlGridPanel extends JPanel implements Disposable {
-  public static final long LARGE_FILE_CHARS = ModelLoader.LARGE_FILE_CHARS;
   static final int DEBOUNCE_MS = ModelLoader.DEBOUNCE_MS;
 
   private final IntConsumer navigator;
@@ -330,6 +329,11 @@ public final class XmlGridPanel extends JPanel implements Disposable {
     }
     return new ViewState(tree.expandedPaths(), sel == null ? null : sel.path(), gridNode == null ? null : gridNode.path(),
                          gridGroup, grid.sortKeys(), grid.filters(), selectedRow);
+  }
+
+  @TestOnly
+  public void acceptLargeFileForTest() {
+    loader.acceptLargeFile();
   }
 
   @TestOnly

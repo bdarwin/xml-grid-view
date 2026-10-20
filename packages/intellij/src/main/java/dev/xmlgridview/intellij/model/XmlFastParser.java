@@ -5,6 +5,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -31,9 +32,11 @@ final class XmlFastParser {
   private final @Nullable DoubleConsumer progress;
   private int pos;
   private int nextCheck = CHUNK;
-  private final List<XNode> elements = new ArrayList<>();
+  private final ArrayList<XNode> elements = new ArrayList<>();
   private final ArrayList<Frame> stack = new ArrayList<>();
   private @Nullable XNode root;
+  /** Tag and attribute names, shared: documents repeat a few names millions of times. */
+  private final Map<String, String> names = new HashMap<>();
 
   private static final class Frame {
     final XNode node;
@@ -42,7 +45,7 @@ final class XmlFastParser {
     /** Direct text so far; null until the first non-blank character (leading blanks are trimmed anyway). */
     @Nullable StringBuilder text;
     int textStart = -1;
-    int children;
+    @Nullable ArrayList<XNode> children;
 
     Frame(XNode node, @Nullable Map<String, String> ns) {
       this.node = node;
@@ -63,6 +66,7 @@ final class XmlFastParser {
   static @NotNull Result parse(@NotNull String text, @Nullable DoubleConsumer progress) {
     XmlFastParser p = new XmlFastParser(text, progress);
     p.run();
+    p.elements.trimToSize();
     return new Result(p.root, p.elements);
   }
 
@@ -139,7 +143,13 @@ final class XmlFastParser {
   private String readName() {
     int a = pos;
     while (pos < n && !isNameEnd(s.charAt(pos))) pos++;
-    return s.substring(a, pos);
+    return name(a, pos);
+  }
+
+  private String name(int a, int b) {
+    String n = s.substring(a, b);
+    String shared = names.putIfAbsent(n, n);
+    return shared != null ? shared : n;
   }
 
   private void skipWs() {
@@ -184,24 +194,28 @@ final class XmlFastParser {
       skipWs();
       if (pos >= n) break;
       char q = s.charAt(pos);
-      String value;
+      int vStart;
+      int vEnd;
       if (q == '"' || q == '\'') {
-        int vEnd = s.indexOf(q, pos + 1);
+        vStart = pos + 1;
+        vEnd = s.indexOf(q, pos + 1);
         if (vEnd < 0) vEnd = n;
-        value = attributeValue(pos + 1, vEnd);
         pos = Math.min(n, vEnd + 1);
       }
       else {
-        int vStart = pos;
+        vStart = pos;
         while (pos < n && !isNameEnd(s.charAt(pos))) pos++;
-        value = attributeValue(vStart, pos);
+        vEnd = pos;
       }
       if (aName.equals("xmlns") || aName.startsWith("xmlns:")) {
         if (nsDecls == null) nsDecls = new LinkedHashMap<>();
-        nsDecls.put(aName.equals("xmlns") ? "" : aName.substring(6), value);
+        nsDecls.put(aName.equals("xmlns") ? "" : aName.substring(6), attributeValue(vStart, vEnd));
+      }
+      else if (isPlain(vStart, vEnd)) {
+        attrs.add(XAttr.verbatim(aName, s, vStart, vEnd, aStart, pos));
       }
       else {
-        attrs.add(new XAttr(aName, value, aStart, pos));
+        attrs.add(new XAttr(aName, attributeValue(vStart, vEnd), aStart, pos));
       }
     }
 
@@ -212,19 +226,22 @@ final class XmlFastParser {
       return;
     }
     XNode parent = parentFrame == null ? null : parentFrame.node;
-    int index = parentFrame == null ? 0 : parentFrame.children++;
+    int index = 0;
+    if (parentFrame != null) {
+      if (parentFrame.children == null) parentFrame.children = new ArrayList<>(4);
+      index = parentFrame.children.size();
+    }
     String ns = resolve(name, nsDecls);
-    XNode node = new XNode(elements.size(), name, ns, start, -1, attrs,
-                           nsDecls == null ? Map.of() : nsDecls, "", -1, parent, index);
+    XNode node = new XNode(elements.size(), name, ns, start, attrs,
+                           nsDecls == null ? Map.of() : nsDecls, s, parent, index);
     elements.add(node);
-    if (parent != null) parent.addChild(node);
+    if (parentFrame != null) parentFrame.children.add(node);
     else root = node;
-    Frame f = new Frame(node, nsDecls);
     if (selfClosing) {
-      node.finish(pos, "", -1);
+      node.finish(pos, null, -1, 0, null);
     }
     else {
-      stack.add(f);
+      stack.add(new Frame(node, nsDecls));
     }
   }
 
@@ -268,8 +285,19 @@ final class XmlFastParser {
 
   private void close(int frameIndex, int end) {
     Frame f = stack.remove(frameIndex);
-    String text = f.text == null ? "" : TextUtil.xmlTrim(f.text.toString());
-    f.node.finish(end, text, text.isEmpty() ? -1 : f.textStart);
+    XNode[] children = f.children == null ? null : f.children.toArray(new XNode[0]);
+    StringBuilder sb = f.text;
+    int len = sb == null ? 0 : sb.length();
+    while (len > 0 && TextUtil.isXmlWhitespace(sb.charAt(len - 1))) len--;
+    if (len == 0) {
+      f.node.finish(end, null, -1, 0, children);
+      return;
+    }
+    // Text that appears verbatim in the source is not copied (see XNode#text()).
+    int a = f.textStart;
+    boolean verbatim = a + len <= n;
+    for (int i = 0; verbatim && i < len; i++) verbatim = s.charAt(a + i) == sb.charAt(i);
+    f.node.finish(end, verbatim ? null : sb.substring(0, len), a, a + len, children);
   }
 
   private String resolve(String qname, @Nullable Map<String, String> own) {
@@ -355,6 +383,14 @@ final class XmlFastParser {
         out.append(c);
       }
     }
+  }
+
+  private boolean isPlain(int a, int b) {
+    for (int i = a; i < b; i++) {
+      char c = s.charAt(i);
+      if (c == '&' || c == '\t' || c == '\n' || c == '\r') return false;
+    }
+    return true;
   }
 
   /** Attribute-value normalization: line ends, then tab/LF to spaces; then references decoded. */

@@ -33,7 +33,7 @@ final class GridBuilder {
         if (simple && (!c.isLeaf() || !seen.add(c.tag()))) simple = Boolean.FALSE;
         childSimple.put(c.tag(), simple);
       }
-      if (!row.text().isEmpty()) hasText = true;
+      if (row.hasText()) hasText = true;
     }
 
     List<GridColumn> columns = new ArrayList<>();
@@ -49,13 +49,13 @@ final class GridBuilder {
     for (int r = 0; r < rows.size(); r++) {
       XNode row = rows.get(r);
       Object[] line = cells[r];
-      for (XAttr a : row.attrs()) line[colIndex.get("@" + a.name())] = a.value();
+      for (XAttr a : row.attrs()) line[colIndex.get("@" + a.name())] = a;
       for (XNode c : row.children()) {
         int ci = colIndex.get(c.tag());
-        if (columns.get(ci).kind() == GridColumn.Kind.LEAF) line[ci] = c.text();
+        if (columns.get(ci).kind() == GridColumn.Kind.LEAF) line[ci] = c;
         else line[ci] = line[ci] == null ? 1 : (Integer) line[ci] + 1;
       }
-      if (hasText && !row.text().isEmpty()) line[columns.size() - 1] = row.text();
+      if (hasText && row.hasText()) line[columns.size() - 1] = row;
     }
     return new GridTable(element, group, groups, columns, rows, cells);
   }

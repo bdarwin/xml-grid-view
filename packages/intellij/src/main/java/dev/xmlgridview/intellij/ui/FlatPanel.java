@@ -101,8 +101,13 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
   private int sectionLevel = 1;
   private boolean syncingTree;
   private final JBTable table = new JBTable(rowsModel);
-  /** Paths of collapsed elements; kept across refreshes. */
-  private final Set<String> collapsed = new HashSet<>();
+  /**
+   * Collapse state, kept across refreshes: every element is collapsed when {@code collapsedByDefault}
+   * (after Collapse All) except the paths in {@code toggled}, and the other way round otherwise.
+   * Collapse All doesn't record millions of paths in large documents.
+   */
+  private boolean collapsedByDefault;
+  private final Set<String> toggled = new HashSet<>();
 
   private @Nullable XmlDocumentModel model;
   private FindState findState = FindState.NONE;
@@ -348,7 +353,7 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
       });
     }, com.intellij.openapi.application.ModalityState.any()));
     // Collapsed paths that no longer exist are dropped; the rest carry over.
-    collapsed.removeIf(p -> built.byPath(p) == null);
+    toggled.removeIf(p -> built.byPath(p) == null);
     rebuildRows(selected);
     fitNameColumn();
     if (findBar.isVisible()) scheduleSearch(0);
@@ -375,7 +380,7 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
       rows = FlatRow.build(m, n -> false, box::contains);
     }
     else {
-      rows = FlatRow.build(m, n -> collapsed.contains(n.path()), null);
+      rows = FlatRow.build(m, collapsedByDefault || !toggled.isEmpty() ? n -> isCollapsed(n.path()) : n -> false, null);
     }
     rowsModel.setRows(rows);
     fitNameColumn();
@@ -438,20 +443,27 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
   }
 
   private boolean selectKey(String key) {
-    List<FlatRow> rows = rowsModel.rows;
-    for (int i = 0; i < rows.size(); i++) {
-      if (rows.get(i).key().equals(key)) {
-        selectRow(i);
-        return true;
-      }
+    // Resolved to a node first: comparing keys would build a path string for every row.
+    XmlDocumentModel m = model;
+    if (m == null) return false;
+    int at = key.indexOf('@');
+    XNode node = m.byPath(at < 0 ? key : key.substring(0, at));
+    if (node == null) return false;
+    int attrIndex = -1;
+    if (at >= 0) {
+      attrIndex = node.attrs().indexOf(node.attr(key.substring(at + 1)));
+      if (attrIndex < 0) return false;
     }
-    return false;
+    int i = FlatRow.indexOf(rowsModel.rows, node, attrIndex);
+    if (i < 0) return false;
+    selectRow(i);
+    return true;
   }
 
   /** Tree selection: expands the element's ancestors in the sheet, then selects and scrolls to its row. */
   private void showInFlat(@NotNull XNode node) {
     boolean changed = false;
-    for (XNode a = node.parent(); a != null; a = a.parent()) changed |= collapsed.remove(a.path());
+    for (XNode a = node.parent(); a != null; a = a.parent()) changed |= setCollapsed(a.path(), false);
     syncingTree = true;
     try {
       if (changed) rebuildRows(null);
@@ -474,7 +486,16 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
   }
 
   private boolean isExpanded(FlatRow r) {
-    return r.expandable() && !collapsed.contains(r.node().path());
+    return r.expandable() && !isCollapsed(r.node().path());
+  }
+
+  private boolean isCollapsed(String path) {
+    return collapsedByDefault != toggled.contains(path);
+  }
+
+  /** Returns whether the state changed. */
+  private boolean setCollapsed(String path, boolean collapse) {
+    return collapse == collapsedByDefault ? toggled.remove(path) : toggled.add(path);
   }
 
   private boolean inTwisty(int row, int x) {
@@ -489,7 +510,7 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
     FlatRow r = rowsModel.rows.get(row);
     if (!r.expandable()) return;
     String path = r.node().path();
-    if (!collapsed.remove(path)) collapsed.add(path);
+    setCollapsed(path, !isCollapsed(path));
     rebuildRows(r.key());
   }
 
@@ -615,7 +636,8 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
     g.add(new DumbAwareAction("Expand All", null, AllIcons.Actions.Expandall) {
       @Override
       public void actionPerformed(@NotNull AnActionEvent e) {
-        collapsed.clear();
+        collapsedByDefault = false;
+        toggled.clear();
         rebuildRows(selectedKey());
       }
     });
@@ -624,8 +646,9 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
       public void actionPerformed(@NotNull AnActionEvent e) {
         XmlDocumentModel m = model;
         if (m == null) return;
-        for (XNode n : m.elements()) if (!n.children().isEmpty() || !n.attrs().isEmpty()) collapsed.add(n.path());
-        if (m.root() != null) collapsed.remove(m.root().path());
+        collapsedByDefault = true;
+        toggled.clear();
+        if (m.root() != null) toggled.add(m.root().path());
         rebuildRows(null);
       }
     });
@@ -799,7 +822,7 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
     XNode node = m.byPath(at < 0 ? key : key.substring(0, at));
     if (node != null) {
       // Reveal: expand the ancestors, and the element itself for an attribute hit.
-      for (XNode a = at < 0 ? node.parent() : node; a != null; a = a.parent()) collapsed.remove(a.path());
+      for (XNode a = at < 0 ? node.parent() : node; a != null; a = a.parent()) setCollapsed(a.path(), false);
       findState = findState.withCurrent(node, null);
       rebuildRows(null);
       selectKey(key);
@@ -965,6 +988,11 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
   public void selectCellsForTest(int fromRow, int toRow, int fromCol, int toCol) {
     table.getSelectionModel().setSelectionInterval(fromRow, toRow);
     table.getColumnModel().getSelectionModel().setSelectionInterval(fromCol, toCol);
+  }
+
+  @TestOnly
+  public void acceptLargeFileForTest() {
+    loader.acceptLargeFile();
   }
 
   @TestOnly

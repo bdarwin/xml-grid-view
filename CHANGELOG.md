@@ -19,6 +19,15 @@ Large files load much faster in IntelliJ.
   shown read-only, instead of a truncated preview with a "not well-formed"
   error. The view refreshes when the file changes on disk.
 - **Load failures:** a failed load now shows an error banner with Retry.
+- **500 MB files:** the IntelliJ model is about a quarter of its old size
+  (94 instead of 346 bytes per element). Text and attribute values are read
+  from the file on demand, not copied, and Flat rows are packed into arrays.
+  A 500 MB file now loads in about 9 s and uses about 2.5 GB, where it used
+  to run out of memory. Selecting a node in a huge file no longer scans
+  every row.
+- **Memory check:** IntelliJ asks before loading only when a file may not fit
+  in the IDE's free memory, instead of above a fixed 50 MB. If memory still
+  runs out, the error banner says how to raise it.
 
 ## 0.3.0
 

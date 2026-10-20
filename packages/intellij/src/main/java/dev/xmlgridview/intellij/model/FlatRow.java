@@ -3,7 +3,10 @@ package dev.xmlgridview.intellij.model;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
+import java.util.AbstractList;
+import java.util.ArrayDeque;
+import java.util.Arrays;
+import java.util.RandomAccess;
 import java.util.List;
 import java.util.function.Predicate;
 
@@ -70,12 +73,21 @@ public record FlatRow(int depth, @NotNull Kind kind, @NotNull XNode node, int at
 
   /** Colour band of a node: 0 above the section level, else 1 or 2 alternating by section. */
   public static int band(@NotNull XNode node, int sectionLevel) {
-    int depth = 0;
-    for (XNode a = node.parent(); a != null; a = a.parent()) depth++;
+    int depth = node.depth();
     if (depth < sectionLevel) return 0;
     XNode s = node;
     for (int d = depth; d > sectionLevel; d--) s = s.parent();
     return s.index() % 2 + 1;
+  }
+
+  /** Index of the row for {@code node} (attrIndex -1) or one of its attributes, or -1. */
+  public static int indexOf(@NotNull List<FlatRow> rows, @NotNull XNode node, int attrIndex) {
+    if (rows instanceof Rows packed) return packed.indexOf(node.id(), attrIndex);
+    for (int i = 0; i < rows.size(); i++) {
+      FlatRow r = rows.get(i);
+      if (r.node == node && r.attrIndex == attrIndex) return i;
+    }
+    return -1;
   }
 
   /** All rows, fully expanded, in document order. */
@@ -91,17 +103,62 @@ public record FlatRow(int depth, @NotNull Kind kind, @NotNull XNode node, int at
    */
   public static @NotNull List<FlatRow> build(@NotNull XmlDocumentModel model, @NotNull Predicate<XNode> collapsed,
                                              @Nullable Predicate<XNode> only) {
-    List<FlatRow> out = new ArrayList<>();
+    Rows out = new Rows(model);
     XNode root = model.root();
-    if (root != null) visit(root, 0, collapsed, only, out);
+    if (root == null) return out;
+    // Iterative pre-order walk: documents can nest deeply.
+    ArrayDeque<XNode> todo = new ArrayDeque<>();
+    todo.push(root);
+    while (!todo.isEmpty()) {
+      XNode n = todo.pop();
+      if (only != null && !only.test(n)) continue;
+      out.add(n.id(), -1);
+      if (only == null && collapsed.test(n)) continue;
+      for (int i = 0; i < n.attrs().size(); i++) out.add(n.id(), i);
+      for (int i = n.childCount() - 1; i >= 0; i--) todo.push(n.child(i));
+    }
+    out.trim();
     return out;
   }
 
-  private static void visit(XNode n, int depth, Predicate<XNode> collapsed, @Nullable Predicate<XNode> only, List<FlatRow> out) {
-    if (only != null && !only.test(n)) return;
-    out.add(new FlatRow(depth, Kind.ELEMENT, n, -1));
-    if (only == null && collapsed.test(n)) return;
-    for (int i = 0; i < n.attrs().size(); i++) out.add(new FlatRow(depth + 1, Kind.ATTR, n, i));
-    for (XNode c : n.children()) visit(c, depth + 1, collapsed, only, out);
+  /**
+   * Rows packed as (element id, attribute index) pairs, 8 bytes each; the row records are
+   * created on access. Large documents have tens of millions of rows.
+   */
+  private static final class Rows extends AbstractList<FlatRow> implements RandomAccess {
+    private final List<XNode> elements;
+    private long[] packed = new long[16];
+    private int size;
+
+    Rows(XmlDocumentModel model) {
+      this.elements = model.elements();
+    }
+
+    void add(int id, int attrIndex) {
+      if (size == packed.length) packed = Arrays.copyOf(packed, size + (size >> 1));
+      packed[size++] = ((long)id << 32) | (attrIndex & 0xFFFFFFFFL);
+    }
+
+    void trim() {
+      if (packed.length - size > 1024) packed = Arrays.copyOf(packed, size);
+    }
+
+    @Override
+    public FlatRow get(int i) {
+      if (i < 0 || i >= size) throw new IndexOutOfBoundsException(i);
+      long p = packed[i];
+      XNode n = elements.get((int)(p >>> 32));
+      int attr = (int)p;
+      return attr < 0 ? new FlatRow(n.depth(), Kind.ELEMENT, n, -1) : new FlatRow(n.depth() + 1, Kind.ATTR, n, attr);
+    }
+
+    int indexOf(int id, int attrIndex) {
+      long want = ((long)id << 32) | (attrIndex & 0xFFFFFFFFL);
+      for (int i = 0; i < size; i++) if (packed[i] == want) return i;
+      return -1;
+    }
+
+    @Override
+    public int size() { return size; }
   }
 }

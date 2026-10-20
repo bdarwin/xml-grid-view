@@ -98,6 +98,11 @@ public final class XmlGridPanel extends JPanel implements Disposable {
   private int modelVersion;
   /** Element to select after the next rebuild (one just inserted, renamed or duplicated). */
   private @Nullable String pendingSelect;
+  /** Grid row (path) and model column to select after the next rebuild, staying on the same grid. */
+  private @Nullable String pendingGridRow;
+  private int pendingGridCol;
+  private final com.intellij.openapi.actionSystem.DefaultActionGroup gridEditActions;
+  private final Project project;
   private final com.intellij.openapi.actionSystem.DefaultActionGroup treeStructureActions;
   private final com.intellij.openapi.actionSystem.DefaultActionGroup gridStructureActions;
   private final com.intellij.openapi.actionSystem.DefaultActionGroup summaryStructureActions;
@@ -106,6 +111,7 @@ public final class XmlGridPanel extends JPanel implements Disposable {
                       @NotNull Disposable parent) {
     super(new BorderLayout());
     this.navigator = navigator;
+    this.project = project;
     Disposer.register(parent, this);
     loader = new ModelLoader(project, document, this, navigator, (previous, built) -> modelChanged(built), this);
 
@@ -160,6 +166,24 @@ public final class XmlGridPanel extends JPanel implements Disposable {
       return n == null || m == null ? null : new StructureActions.Target(m, n, null);
     }, applier);
     tree.addMenuActions(treeStructureActions);
+    gridEditActions = GridEditActions.create(this, grid, () -> model, new GridEditActions.Applier() {
+      @Override
+      public boolean canEdit() {
+        return loader.canEdit();
+      }
+
+      @Override
+      public @Nullable String apply(@NotNull java.util.List<dev.xmlgridview.intellij.model.ValueEdits.TextEdit> edits, @NotNull String label,
+                                    @Nullable String rowPath, int col) {
+        String error = loader.applyEdits(edits, label);
+        if (error == null) {
+          pendingGridRow = rowPath;
+          pendingGridCol = col;
+        }
+        return error;
+      }
+    }, this);
+    grid.addMenuActions(gridEditActions);
     gridStructureActions = StructureActions.create(this, () -> model == null ? null : grid.structureTarget(model), applier);
     grid.addMenuActions(gridStructureActions);
     summary = new SummaryPanel(new SummaryPanel.Listener() {
@@ -237,6 +261,10 @@ public final class XmlGridPanel extends JPanel implements Disposable {
     gridHeader.add(crumbs, BorderLayout.CENTER);
     JPanel headerRight = new JPanel(new FlowLayout(FlowLayout.RIGHT, JBUI.scale(8), 0));
     headerRight.add(clearFilters);
+    LinkLabel<Void> export = new LinkLabel<>("Export", null);
+    export.setToolTipText("Export the visible rows as CSV or JSON");
+    export.setListener((l, d) -> showExportMenu(l), null);
+    headerRight.add(export);
     headerRight.add(rowsLabel);
     gridHeader.add(headerRight, BorderLayout.EAST);
 
@@ -348,7 +376,13 @@ public final class XmlGridPanel extends JPanel implements Disposable {
     if (target != null) {
       showGrid(target, state == null ? null : state.group,
                state == null ? Map.of() : state.sort, state == null ? Map.of() : state.filters);
-      if (state != null && state.selectedRow != null) {
+      XNode gridRow = pendingGridRow == null ? null : built.byPath(pendingGridRow);
+      pendingGridRow = null;
+      if (gridRow != null) {
+        grid.selectRowCell(gridRow, pendingGridCol);
+        com.intellij.openapi.wm.IdeFocusManager.getInstance(project).requestFocus(grid.table(), true);
+      }
+      else if (state != null && state.selectedRow != null) {
         XNode row = built.byPath(state.selectedRow);
         if (row != null) grid.selectRow(row);
       }
@@ -438,6 +472,56 @@ public final class XmlGridPanel extends JPanel implements Disposable {
     crumbs.setCrumbs(list);
     updateRowsLabel();
     if (findBar.isVisible() && findBar.scope() == FindBar.Scope.GRID) scheduleSearch(0);
+  }
+
+  private void showExportMenu(JComponent anchor) {
+    com.intellij.openapi.actionSystem.DefaultActionGroup g = new com.intellij.openapi.actionSystem.DefaultActionGroup();
+    g.add(new DumbAwareAction("Export as CSV…") {
+      @Override
+      public void actionPerformed(@NotNull AnActionEvent e) {
+        export("csv");
+      }
+    });
+    g.add(new DumbAwareAction("Export as JSON…") {
+      @Override
+      public void actionPerformed(@NotNull AnActionEvent e) {
+        export("json");
+      }
+    });
+    com.intellij.openapi.ui.popup.JBPopupFactory.getInstance()
+      .createActionGroupPopup(null, g, com.intellij.openapi.actionSystem.DataContext.EMPTY_CONTEXT,
+                              com.intellij.openapi.ui.popup.JBPopupFactory.ActionSelectionAid.SPEEDSEARCH, true)
+      .showUnderneathOf(anchor);
+  }
+
+  /** The visible rows of the grid as CSV or JSON. */
+  @Nullable String exportText(@NotNull String kind) {
+    GridTable t = grid.gridTable();
+    if (t == null) return null;
+    int[] rows = grid.viewModelRows();
+    return kind.equals("csv") ? dev.xmlgridview.intellij.model.GridText.toCsv(t, rows) : dev.xmlgridview.intellij.model.GridText.toJson(t, rows);
+  }
+
+  private void export(String kind) {
+    GridTable t = grid.gridTable();
+    String text = exportText(kind);
+    if (t == null || text == null) return;
+    com.intellij.openapi.vfs.VirtualFile file = com.intellij.openapi.fileEditor.FileDocumentManager.getInstance().getFile(loader.document());
+    String base = (file == null ? "export" : file.getNameWithoutExtension()) + "-"
+                  + (t.group() != null && !XmlDocumentModel.SELF_GROUP.equals(t.group()) ? t.group() : t.element().tag());
+    base = base.replaceAll("[^\\w.-]+", "_");
+    var descriptor = new com.intellij.openapi.fileChooser.FileSaverDescriptor("Export " + kind.toUpperCase(), "Save the visible rows", kind);
+    var wrapper = com.intellij.openapi.fileChooser.FileChooserFactory.getInstance().createSaveFileDialog(descriptor, project)
+      .save(file == null ? null : file.getParent(), base + "." + kind);
+    if (wrapper == null) return;
+    try {
+      java.nio.file.Files.writeString(wrapper.getFile().toPath(), text, java.nio.charset.StandardCharsets.UTF_8);
+      com.intellij.openapi.vfs.VirtualFile vf = wrapper.getVirtualFile(true);
+      if (vf != null) com.intellij.openapi.fileEditor.FileEditorManager.getInstance(project).openFile(vf, true);
+    }
+    catch (java.io.IOException ex) {
+      com.intellij.openapi.ui.Messages.showErrorDialog(this, ex.getMessage(), "Export Failed");
+    }
   }
 
   private void updateRowsLabel() {
@@ -765,6 +849,16 @@ public final class XmlGridPanel extends JPanel implements Disposable {
   @TestOnly
   public void doubleClickGridForTest(int viewRow, int viewCol) {
     grid.onDoubleClick(viewRow, viewCol);
+  }
+
+  @TestOnly
+  com.intellij.openapi.actionSystem.AnAction gridEditActionForTest(String text) {
+    return StructureActions.find(gridEditActions, text);
+  }
+
+  @TestOnly
+  GridView gridForTest() {
+    return grid;
   }
 
   @TestOnly

@@ -77,6 +77,10 @@ final class ModelLoader implements Disposable {
   private int generation;
   private boolean disposed;
 
+  @NotNull Document document() {
+    return document;
+  }
+
   ModelLoader(@NotNull Project project, @NotNull Document document, @NotNull JComponent owner,
               @NotNull IntConsumer navigator, @NotNull Client client, @NotNull Disposable parent) {
     this.project = project;

@@ -337,6 +337,48 @@ final class GridView extends JPanel implements UiDataProvider {
     return table.getRowCount();
   }
 
+  /** Model rows in view (sorted, filtered) order. */
+  int[] viewModelRows() {
+    int[] out = new int[table.getRowCount()];
+    for (int i = 0; i < out.length; i++) out[i] = table.convertRowIndexToModel(i);
+    return out;
+  }
+
+  /** The lead cell in view coordinates, or null when nothing is selected. */
+  @Nullable java.awt.Point leadCell() {
+    int row = table.getSelectionModel().getLeadSelectionIndex();
+    int col = table.getColumnModel().getSelectionModel().getLeadSelectionIndex();
+    if (row < 0 || row >= table.getRowCount()) return null;
+    return new java.awt.Point(Math.max(0, Math.min(col, table.getColumnCount() - 1)), row);
+  }
+
+  /** Selected model rows (any selected cell), in view order. */
+  int[] selectedModelRows() {
+    int[] rows = table.getSelectedRows();
+    for (int i = 0; i < rows.length; i++) rows[i] = table.convertRowIndexToModel(rows[i]);
+    return rows;
+  }
+
+  /** Selected cells as {model row, model column} pairs, in view order. */
+  List<int[]> selectedCells() {
+    List<int[]> out = new ArrayList<>();
+    for (int r : table.getSelectedRows()) {
+      for (int c : table.getSelectedColumns()) {
+        if (table.isCellSelected(r, c)) out.add(new int[]{table.convertRowIndexToModel(r), table.convertColumnIndexToModel(c)});
+      }
+    }
+    return out;
+  }
+
+  /** Selects the cell of {@code node}'s row in model column {@code col}, if visible. */
+  void selectRowCell(@NotNull XNode node, int col) {
+    GridTable t = model.table();
+    if (t == null) return;
+    int modelRow = t.rows().indexOf(node);
+    if (modelRow < 0 || t.columnCount() == 0) return;
+    selectCell(new GridMatch(modelRow, Math.max(0, Math.min(col, t.columnCount() - 1))));
+  }
+
   /** Selects the row showing {@code node}, if visible. */
   void selectRow(@NotNull XNode node) {
     GridTable t = model.table();

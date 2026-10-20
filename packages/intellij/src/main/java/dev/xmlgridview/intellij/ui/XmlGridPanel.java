@@ -375,6 +375,7 @@ public final class XmlGridPanel extends JPanel implements Disposable {
   private void modelChanged(@NotNull XmlDocumentModel built) {
     ViewState state = model == null ? null : captureState();
     model = built;
+    findBar.setXPathAvailable(!built.isJson());
     modelVersion++;
     int version = modelVersion;
     tree.setModel(built).whenComplete((x, err) -> ApplicationManager.getApplication().invokeLater(() -> {
@@ -608,6 +609,7 @@ public final class XmlGridPanel extends JPanel implements Disposable {
     public String getText() {
       XNode p = node.parent();
       if (p == null) return node.tag();
+      if (node.jsonType() != null) return node.displayName();
       int same = 0;
       int pos = 0;
       for (XNode s : p.children()) {
@@ -919,6 +921,11 @@ public final class XmlGridPanel extends JPanel implements Disposable {
   @TestOnly
   com.intellij.openapi.actionSystem.AnAction gridEditActionForTest(String text) {
     return StructureActions.find(gridEditActions, text);
+  }
+
+  @TestOnly
+  void selectTreePathForTest(String path) {
+    tree.select(path, true);
   }
 
   @TestOnly

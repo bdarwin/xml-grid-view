@@ -1,7 +1,7 @@
 {
   "name": "xml-grid-view-plus",
   "displayName": "XML Grid View Plus",
-  "description": "View and edit XML as a tree, grid or flat sheet, with search, XPath and a JSON-aware value inspector.",
+  "description": "View and edit XML and JSON as a tree, a spreadsheet-like grid or a flat sheet: edit cells, paste from Excel, export CSV, search, XPath and validation markers.",
   "version": "0.4.0",
   "publisher": "bdarwin",
   "author": {
@@ -31,10 +31,20 @@
   ],
   "keywords": [
     "xml",
+    "json",
+    "jsonc",
     "grid",
     "table",
+    "spreadsheet",
+    "csv",
+    "excel",
+    "tree",
+    "editor",
+    "viewer",
     "xpath",
-    "viewer"
+    "xsd",
+    "data",
+    "records"
   ],
   "main": "./dist/extension.js",
   "contributes": {
@@ -45,6 +55,15 @@
         "selector": [
           {
             "filenamePattern": "*.xml"
+          },
+          {
+            "filenamePattern": "*.json"
+          },
+          {
+            "filenamePattern": "*.jsonc"
+          },
+          {
+            "filenamePattern": "*.geojson"
           }
         ],
         "priority": "option"
@@ -55,6 +74,15 @@
         "selector": [
           {
             "filenamePattern": "*.xml"
+          },
+          {
+            "filenamePattern": "*.json"
+          },
+          {
+            "filenamePattern": "*.jsonc"
+          },
+          {
+            "filenamePattern": "*.geojson"
           }
         ],
         "priority": "option"
@@ -83,7 +111,7 @@
       "editor/title": [
         {
           "command": "xmlGridView.openWith",
-          "when": "resourceExtname == .xml && activeEditor == workbench.editors.files.textFileEditor",
+          "when": "resourceExtname =~ /^\\.(xml|json|jsonc|geojson)$/ && activeEditor == workbench.editors.files.textFileEditor",
           "group": "navigation"
         },
         {
@@ -95,14 +123,14 @@
       "explorer/context": [
         {
           "command": "xmlGridView.openWith",
-          "when": "resourceExtname == .xml",
+          "when": "resourceExtname =~ /^\\.(xml|json|jsonc|geojson)$/",
           "group": "navigation@20"
         }
       ],
       "commandPalette": [
         {
           "command": "xmlGridView.openWith",
-          "when": "resourceExtname == .xml"
+          "when": "resourceExtname =~ /^\\.(xml|json|jsonc|geojson)$/"
         },
         {
           "command": "xmlGridView.showSource",

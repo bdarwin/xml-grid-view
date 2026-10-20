@@ -464,3 +464,53 @@ produce the same `edits`, or `{ "error": true }` when the operation is refused.
 - `deleteAttr` with an attribute that doesn't exist.
 - `insertElement` as a child of an element that has text and no element
   children, which would create mixed content.
+
+## JSON documents: `jsondoc/<name>.json`
+
+JSON files use the same outputs as XML cases (`<name>.tree.json`,
+`<name>.grids.json`, `<name>.flat.json`, or `<name>.errors.json` for
+`malformed-*` cases), from the JSON element model:
+
+- The root value is an element named `root`. An object member is a child
+  element named by its key (any string, including `""` and names that aren't
+  XML names). An array's items are children named `item`.
+- A string's decoded value, or a number, `true`, `false` or `null` as
+  written, is the element's text. Text is **not** trimmed. Objects and arrays
+  have no text.
+- Tree nodes get `"type"`: `object`, `array`, `string`, `number`, `boolean`
+  or `null` (XML nodes have no `type`).
+- `start` is the member's key (its opening quote), or the value itself for
+  items and the root; `end` is just after the value.
+- `//` and `/* */` comments and trailing commas are accepted (JSONC) and
+  ignored. Errors stop the parse; elements left open end at the end of the
+  text. Error lines and columns are compared exactly (both parsers are ours).
+
+## JSON edits: `jsonedit/<name>.json` + `<name>.ops.json` / `<name>.edits.json`
+
+The structural operations and value edits above, on JSON documents, with the
+same file formats. JSON specifics:
+
+- **Values:** a string stays a string. A number, boolean or null is replaced
+  by the new value as written when it reads as a number, `true`, `false` or
+  `null`, else by a JSON string. Containers and attributes are refused.
+- **Separators** keep the document's style: a new entry goes after the last
+  one with `,` and the last entry's indentation (or `, ` when entries share a
+  line). An empty container on several lines gets the new entry on its own
+  line, indented one level (the indent unit, as for XML); `{}` / `[]` on one
+  line stay on one line (`{ "k": "" }`). The key/value separator is taken
+  from the first member in the document (default `": "`).
+- **Deleting** a run of consecutive entries removes from its first entry up
+  to the next kept entry; a run at the end removes from the previous entry's
+  end; deleting every entry leaves `{}` / `[]` (inner whitespace removed).
+- **insertElement** adds `"name": ""` to an object or `""` to an array (the
+  name is ignored for arrays). **renameElement** changes a member's key;
+  items have no name. **duplicateElement** and **newRow** apply to array
+  items; **newRow** writes the item with every value emptied: `""`, `0`,
+  `false`, `null`, `[]`, objects recursively.
+- **Grid operations** work on arrays (`group` is `item`): **addColumn** adds
+  `"name": ""` to each object row without it; **deleteColumn** removes the
+  member from each; **setCells** sets existing members (as value edits) or
+  adds missing ones; **insertRows** appends objects laid out like the last
+  row. New values are written typed when another row of the array has that
+  key as a number, boolean or null; `#text` is the value of a scalar item.
+- `deleteAttr` and `addAttr` are refused.

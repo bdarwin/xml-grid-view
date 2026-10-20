@@ -31,10 +31,17 @@ public class GoldenFixturesTest extends BasePlatformTestCase {
     return Path.of(dir, "cases");
   }
 
+  /** XML cases (fixtures/cases/*.xml) and JSON documents (fixtures/jsondoc/*.json). */
   static List<Path> cases() throws IOException {
+    List<Path> out = new ArrayList<>();
     try (Stream<Path> s = Files.list(casesDir())) {
-      return s.filter(p -> p.toString().endsWith(".xml")).sorted().toList();
+      out.addAll(s.filter(p -> p.toString().endsWith(".xml")).sorted().toList());
     }
+    try (Stream<Path> s = Files.list(casesDir().resolveSibling("jsondoc"))) {
+      out.addAll(s.filter(p -> p.toString().endsWith(".json") && !p.getFileName().toString().matches(".*\\.(tree|grids|flat|errors|search)\\.json"))
+                   .sorted().toList());
+    }
+    return out;
   }
 
   private XmlDocumentModel model(String text) {
@@ -44,12 +51,14 @@ public class GoldenFixturesTest extends BasePlatformTestCase {
   public void testAllFixtures() throws IOException {
     List<Path> cases = cases();
     assertFalse("no fixture cases found", cases.isEmpty());
+    assertTrue("JSON document cases found", cases.stream().anyMatch(p -> p.toString().endsWith(".json")));
     List<String> failures = new ArrayList<>();
     int checks = 0;
     for (Path xml : cases) {
-      String name = xml.getFileName().toString().replaceFirst("\\.xml$", "");
+      boolean json = xml.toString().endsWith(".json");
+      String name = xml.getFileName().toString().replaceFirst(json ? "\\.json$" : "\\.xml$", "");
       String text = Files.readString(xml, StandardCharsets.UTF_8);
-      XmlDocumentModel model = model(text);
+      XmlDocumentModel model = json ? dev.xmlgridview.intellij.model.JsonModelBuilder.build(text, null) : model(text);
       Path base = xml.getParent();
 
       if (name.startsWith("malformed-")) {

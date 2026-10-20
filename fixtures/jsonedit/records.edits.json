@@ -1,0 +1,93 @@
+{
+  "cases": [
+    {
+      "target": {
+        "kind": "text",
+        "path": [0, 0]
+      },
+      "value": "My \"Library\"\nline",
+      "expected": {
+        "edit": { "offset": 12, "length": 9, "text": "\"My \\\"Library\\\"\\nline\"" },
+        "readBack": "My \"Library\"\nline",
+        "wellFormed": true
+      }
+    },
+    {
+      "target": {
+        "kind": "text",
+        "path": [0, 1, 0, 0]
+      },
+      "value": "42",
+      "expected": {
+        "edit": { "offset": 54, "length": 1, "text": "42" },
+        "readBack": "42",
+        "wellFormed": true
+      }
+    },
+    {
+      "target": {
+        "kind": "text",
+        "path": [0, 1, 0, 0]
+      },
+      "value": "forty",
+      "expected": {
+        "edit": { "offset": 54, "length": 1, "text": "\"forty\"" },
+        "readBack": "forty",
+        "wellFormed": true
+      }
+    },
+    {
+      "target": {
+        "kind": "text",
+        "path": [0, 1, 0, 4]
+      },
+      "value": "true",
+      "expected": {
+        "edit": { "offset": 140, "length": 5, "text": "true" },
+        "readBack": "true",
+        "wellFormed": true
+      }
+    },
+    {
+      "target": {
+        "kind": "text",
+        "path": [0, 1, 1, 2]
+      },
+      "value": "Ann",
+      "expected": {
+        "edit": { "offset": 212, "length": 4, "text": "\"Ann\"" },
+        "readBack": "Ann",
+        "wellFormed": true
+      }
+    },
+    {
+      "target": {
+        "kind": "text",
+        "path": [0, 1, 0, 1]
+      },
+      "value": "123",
+      "expected": {
+        "edit": { "offset": 72, "length": 5, "text": "\"123\"" },
+        "readBack": "123",
+        "wellFormed": true
+      }
+    },
+    {
+      "target": {
+        "kind": "text",
+        "path": [0, 1, 0]
+      },
+      "value": "x",
+      "expected": { "error": true }
+    },
+    {
+      "target": {
+        "kind": "attr",
+        "path": [0, 0],
+        "name": "x"
+      },
+      "value": "x",
+      "expected": { "error": true }
+    }
+  ]
+}

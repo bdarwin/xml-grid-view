@@ -89,11 +89,11 @@ public final class StructureEdits {
 
   /** The edits, or a human-readable reason the operation was refused. */
   public record Result(@Nullable List<ValueEdits.TextEdit> edits, @Nullable String error) {
-    static Result ok(ValueEdits.TextEdit... e) {
+    public static Result ok(ValueEdits.TextEdit... e) {
       return new Result(List.of(e), null);
     }
 
-    static Result fail(String message) {
+    public static Result fail(String message) {
       return new Result(null, message);
     }
 
@@ -176,6 +176,7 @@ public final class StructureEdits {
   }
 
   public static @NotNull Result compute(@NotNull XmlDocumentModel model, @NotNull Op op) {
+    if (model.isJson()) return JsonEdits.compute(model, op);
     String s = model.text();
     if (model.hasErrors()) return Result.fail("The document is not well-formed; fix it before editing.");
     if (op.kind() == Kind.DELETE_ELEMENTS) return deleteElements(model, op.paths());

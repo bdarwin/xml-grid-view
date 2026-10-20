@@ -69,6 +69,8 @@ export interface InitMessage {
   type: "init";
   version: number;
   fileName: string;
+  /** How to parse the text; when absent, decided by the file name's extension. */
+  format?: "xml" | "json";
   text: string;
   /** Host document version of `text`; edits must name the version they were computed against. */
   docVersion?: number;

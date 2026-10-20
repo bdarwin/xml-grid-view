@@ -1,0 +1,355 @@
+{
+  "0": {
+    "default": ".",
+    "groups": [
+      { "tag": "@context", "count": 1 },
+      { "tag": "first name", "count": 1 },
+      { "tag": "", "count": 1 },
+      { "tag": "a.b", "count": 1 },
+      { "tag": "matrix", "count": 1 },
+      { "tag": "empty", "count": 1 },
+      { "tag": "list", "count": 1 },
+      { "tag": "mixed", "count": 1 },
+      { "tag": "orders", "count": 1 }
+    ],
+    "grids": {
+      ".": {
+        "columns": [
+          { "key": "@context", "kind": "leaf" },
+          { "key": "first name", "kind": "leaf" },
+          { "key": "", "kind": "leaf" },
+          { "key": "a.b", "kind": "complex" },
+          { "key": "matrix", "kind": "complex" },
+          { "key": "empty", "kind": "leaf" },
+          { "key": "list", "kind": "leaf" },
+          { "key": "mixed", "kind": "complex" },
+          { "key": "orders", "kind": "complex" }
+        ],
+        "rows": [
+          ["https://schema.org", "Lin", "empty key", { "drill": "a.b", "count": 1 }, { "drill": "matrix", "count": 1 }, "", "", { "drill": "mixed", "count": 1 }, { "drill": "orders", "count": 1 }]
+        ]
+      },
+      "@context": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [["https://schema.org"]]
+      },
+      "first name": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [["Lin"]]
+      },
+      "": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [["empty key"]]
+      },
+      "a.b": {
+        "columns": [{ "key": "c", "kind": "complex" }],
+        "rows": [
+          [{ "drill": "c", "count": 1 }]
+        ]
+      },
+      "matrix": {
+        "columns": [{ "key": "item", "kind": "complex" }],
+        "rows": [
+          [{ "drill": "item", "count": 3 }]
+        ]
+      },
+      "empty": {
+        "columns": [],
+        "rows": [[]]
+      },
+      "list": {
+        "columns": [],
+        "rows": [[]]
+      },
+      "mixed": {
+        "columns": [{ "key": "item", "kind": "complex" }],
+        "rows": [
+          [{ "drill": "item", "count": 6 }]
+        ]
+      },
+      "orders": {
+        "columns": [{ "key": "item", "kind": "complex" }],
+        "rows": [
+          [{ "drill": "item", "count": 2 }]
+        ]
+      }
+    }
+  },
+  "0/3": {
+    "default": ".",
+    "groups": [{ "tag": "c", "count": 1 }],
+    "grids": {
+      ".": {
+        "columns": [{ "key": "c", "kind": "complex" }],
+        "rows": [
+          [{ "drill": "c", "count": 1 }]
+        ]
+      },
+      "c": {
+        "columns": [{ "key": "d", "kind": "complex" }],
+        "rows": [
+          [{ "drill": "d", "count": 1 }]
+        ]
+      }
+    }
+  },
+  "0/3/0": {
+    "default": ".",
+    "groups": [{ "tag": "d", "count": 1 }],
+    "grids": {
+      ".": {
+        "columns": [{ "key": "d", "kind": "complex" }],
+        "rows": [
+          [{ "drill": "d", "count": 1 }]
+        ]
+      },
+      "d": {
+        "columns": [{ "key": "item", "kind": "complex" }],
+        "rows": [
+          [{ "drill": "item", "count": 3 }]
+        ]
+      }
+    }
+  },
+  "0/3/0/0": {
+    "default": "item",
+    "groups": [{ "tag": "item", "count": 3 }],
+    "grids": {
+      ".": {
+        "columns": [{ "key": "item", "kind": "complex" }],
+        "rows": [
+          [{ "drill": "item", "count": 3 }]
+        ]
+      },
+      "item": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [["1"], ["2"], ["3"]]
+      }
+    }
+  },
+  "0/4": {
+    "default": "item",
+    "groups": [{ "tag": "item", "count": 3 }],
+    "grids": {
+      ".": {
+        "columns": [{ "key": "item", "kind": "complex" }],
+        "rows": [
+          [{ "drill": "item", "count": 3 }]
+        ]
+      },
+      "item": {
+        "columns": [{ "key": "item", "kind": "complex" }],
+        "rows": [
+          [{ "drill": "item", "count": 2 }],
+          [{ "drill": "item", "count": 2 }],
+          [null]
+        ]
+      }
+    }
+  },
+  "0/4/0": {
+    "default": "item",
+    "groups": [{ "tag": "item", "count": 2 }],
+    "grids": {
+      ".": {
+        "columns": [{ "key": "item", "kind": "complex" }],
+        "rows": [
+          [{ "drill": "item", "count": 2 }]
+        ]
+      },
+      "item": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [["1"], ["2"]]
+      }
+    }
+  },
+  "0/4/1": {
+    "default": "item",
+    "groups": [{ "tag": "item", "count": 2 }],
+    "grids": {
+      ".": {
+        "columns": [{ "key": "item", "kind": "complex" }],
+        "rows": [
+          [{ "drill": "item", "count": 2 }]
+        ]
+      },
+      "item": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [["3"], ["4"]]
+      }
+    }
+  },
+  "0/7": {
+    "default": "item",
+    "groups": [{ "tag": "item", "count": 6 }],
+    "grids": {
+      ".": {
+        "columns": [{ "key": "item", "kind": "complex" }],
+        "rows": [
+          [{ "drill": "item", "count": 6 }]
+        ]
+      },
+      "item": {
+        "columns": [
+          { "key": "three", "kind": "leaf" },
+          { "key": "item", "kind": "leaf" },
+          { "key": "#text", "kind": "text" }
+        ],
+        "rows": [[null, null, "1"], [null, null, "two"], ["3", null, null], [null, "4", null], [null, null, "null"], [null, null, "true"]]
+      }
+    }
+  },
+  "0/7/2": {
+    "default": ".",
+    "groups": [{ "tag": "three", "count": 1 }],
+    "grids": {
+      ".": {
+        "columns": [{ "key": "three", "kind": "leaf" }],
+        "rows": [["3"]]
+      },
+      "three": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [["3"]]
+      }
+    }
+  },
+  "0/7/3": {
+    "default": ".",
+    "groups": [{ "tag": "item", "count": 1 }],
+    "grids": {
+      ".": {
+        "columns": [{ "key": "item", "kind": "leaf" }],
+        "rows": [["4"]]
+      },
+      "item": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [["4"]]
+      }
+    }
+  },
+  "0/8": {
+    "default": "item",
+    "groups": [{ "tag": "item", "count": 2 }],
+    "grids": {
+      ".": {
+        "columns": [{ "key": "item", "kind": "complex" }],
+        "rows": [
+          [{ "drill": "item", "count": 2 }]
+        ]
+      },
+      "item": {
+        "columns": [
+          { "key": "sku", "kind": "leaf" },
+          { "key": "qty", "kind": "leaf" },
+          { "key": "lines", "kind": "complex" }
+        ],
+        "rows": [
+          ["A1", "2", { "drill": "lines", "count": 1 }],
+          ["B2", "1", null]
+        ]
+      }
+    }
+  },
+  "0/8/0": {
+    "default": ".",
+    "groups": [
+      { "tag": "sku", "count": 1 },
+      { "tag": "qty", "count": 1 },
+      { "tag": "lines", "count": 1 }
+    ],
+    "grids": {
+      ".": {
+        "columns": [
+          { "key": "sku", "kind": "leaf" },
+          { "key": "qty", "kind": "leaf" },
+          { "key": "lines", "kind": "complex" }
+        ],
+        "rows": [
+          ["A1", "2", { "drill": "lines", "count": 1 }]
+        ]
+      },
+      "sku": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [["A1"]]
+      },
+      "qty": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [["2"]]
+      },
+      "lines": {
+        "columns": [{ "key": "item", "kind": "complex" }],
+        "rows": [
+          [{ "drill": "item", "count": 2 }]
+        ]
+      }
+    }
+  },
+  "0/8/0/2": {
+    "default": "item",
+    "groups": [{ "tag": "item", "count": 2 }],
+    "grids": {
+      ".": {
+        "columns": [{ "key": "item", "kind": "complex" }],
+        "rows": [
+          [{ "drill": "item", "count": 2 }]
+        ]
+      },
+      "item": {
+        "columns": [{ "key": "n", "kind": "leaf" }],
+        "rows": [["1"], ["2"]]
+      }
+    }
+  },
+  "0/8/0/2/0": {
+    "default": ".",
+    "groups": [{ "tag": "n", "count": 1 }],
+    "grids": {
+      ".": {
+        "columns": [{ "key": "n", "kind": "leaf" }],
+        "rows": [["1"]]
+      },
+      "n": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [["1"]]
+      }
+    }
+  },
+  "0/8/0/2/1": {
+    "default": ".",
+    "groups": [{ "tag": "n", "count": 1 }],
+    "grids": {
+      ".": {
+        "columns": [{ "key": "n", "kind": "leaf" }],
+        "rows": [["2"]]
+      },
+      "n": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [["2"]]
+      }
+    }
+  },
+  "0/8/1": {
+    "default": ".",
+    "groups": [
+      { "tag": "sku", "count": 1 },
+      { "tag": "qty", "count": 1 }
+    ],
+    "grids": {
+      ".": {
+        "columns": [
+          { "key": "sku", "kind": "leaf" },
+          { "key": "qty", "kind": "leaf" }
+        ],
+        "rows": [["B2", "1"]]
+      },
+      "sku": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [["B2"]]
+      },
+      "qty": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [["1"]]
+      }
+    }
+  }
+}

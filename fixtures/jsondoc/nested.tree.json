@@ -1,0 +1,467 @@
+{
+  "tag": "root",
+  "ns": "",
+  "path": "0",
+  "start": 0,
+  "end": 352,
+  "attrs": [],
+  "text": "",
+  "children": [
+    {
+      "tag": "@context",
+      "ns": "",
+      "path": "0/0",
+      "start": 4,
+      "end": 36,
+      "attrs": [],
+      "text": "https://schema.org",
+      "children": [],
+      "type": "string"
+    },
+    {
+      "tag": "first name",
+      "ns": "",
+      "path": "0/1",
+      "start": 40,
+      "end": 59,
+      "attrs": [],
+      "text": "Lin",
+      "children": [],
+      "type": "string"
+    },
+    {
+      "tag": "",
+      "ns": "",
+      "path": "0/2",
+      "start": 63,
+      "end": 78,
+      "attrs": [],
+      "text": "empty key",
+      "children": [],
+      "type": "string"
+    },
+    {
+      "tag": "a.b",
+      "ns": "",
+      "path": "0/3",
+      "start": 82,
+      "end": 116,
+      "attrs": [],
+      "text": "",
+      "children": [
+        {
+          "tag": "c",
+          "ns": "",
+          "path": "0/3/0",
+          "start": 91,
+          "end": 114,
+          "attrs": [],
+          "text": "",
+          "children": [
+            {
+              "tag": "d",
+              "ns": "",
+              "path": "0/3/0/0",
+              "start": 98,
+              "end": 112,
+              "attrs": [],
+              "text": "",
+              "children": [
+                {
+                  "tag": "item",
+                  "ns": "",
+                  "path": "0/3/0/0/0",
+                  "start": 104,
+                  "end": 105,
+                  "attrs": [],
+                  "text": "1",
+                  "children": [],
+                  "type": "number"
+                },
+                {
+                  "tag": "item",
+                  "ns": "",
+                  "path": "0/3/0/0/1",
+                  "start": 107,
+                  "end": 108,
+                  "attrs": [],
+                  "text": "2",
+                  "children": [],
+                  "type": "number"
+                },
+                {
+                  "tag": "item",
+                  "ns": "",
+                  "path": "0/3/0/0/2",
+                  "start": 110,
+                  "end": 111,
+                  "attrs": [],
+                  "text": "3",
+                  "children": [],
+                  "type": "number"
+                }
+              ],
+              "type": "array"
+            }
+          ],
+          "type": "object"
+        }
+      ],
+      "type": "object"
+    },
+    {
+      "tag": "matrix",
+      "ns": "",
+      "path": "0/4",
+      "start": 120,
+      "end": 150,
+      "attrs": [],
+      "text": "",
+      "children": [
+        {
+          "tag": "item",
+          "ns": "",
+          "path": "0/4/0",
+          "start": 131,
+          "end": 137,
+          "attrs": [],
+          "text": "",
+          "children": [
+            {
+              "tag": "item",
+              "ns": "",
+              "path": "0/4/0/0",
+              "start": 132,
+              "end": 133,
+              "attrs": [],
+              "text": "1",
+              "children": [],
+              "type": "number"
+            },
+            {
+              "tag": "item",
+              "ns": "",
+              "path": "0/4/0/1",
+              "start": 135,
+              "end": 136,
+              "attrs": [],
+              "text": "2",
+              "children": [],
+              "type": "number"
+            }
+          ],
+          "type": "array"
+        },
+        {
+          "tag": "item",
+          "ns": "",
+          "path": "0/4/1",
+          "start": 139,
+          "end": 145,
+          "attrs": [],
+          "text": "",
+          "children": [
+            {
+              "tag": "item",
+              "ns": "",
+              "path": "0/4/1/0",
+              "start": 140,
+              "end": 141,
+              "attrs": [],
+              "text": "3",
+              "children": [],
+              "type": "number"
+            },
+            {
+              "tag": "item",
+              "ns": "",
+              "path": "0/4/1/1",
+              "start": 143,
+              "end": 144,
+              "attrs": [],
+              "text": "4",
+              "children": [],
+              "type": "number"
+            }
+          ],
+          "type": "array"
+        },
+        {
+          "tag": "item",
+          "ns": "",
+          "path": "0/4/2",
+          "start": 147,
+          "end": 149,
+          "attrs": [],
+          "text": "",
+          "children": [],
+          "type": "array"
+        }
+      ],
+      "type": "array"
+    },
+    {
+      "tag": "empty",
+      "ns": "",
+      "path": "0/5",
+      "start": 154,
+      "end": 165,
+      "attrs": [],
+      "text": "",
+      "children": [],
+      "type": "object"
+    },
+    {
+      "tag": "list",
+      "ns": "",
+      "path": "0/6",
+      "start": 169,
+      "end": 179,
+      "attrs": [],
+      "text": "",
+      "children": [],
+      "type": "array"
+    },
+    {
+      "tag": "mixed",
+      "ns": "",
+      "path": "0/7",
+      "start": 183,
+      "end": 235,
+      "attrs": [],
+      "text": "",
+      "children": [
+        {
+          "tag": "item",
+          "ns": "",
+          "path": "0/7/0",
+          "start": 193,
+          "end": 194,
+          "attrs": [],
+          "text": "1",
+          "children": [],
+          "type": "number"
+        },
+        {
+          "tag": "item",
+          "ns": "",
+          "path": "0/7/1",
+          "start": 196,
+          "end": 201,
+          "attrs": [],
+          "text": "two",
+          "children": [],
+          "type": "string"
+        },
+        {
+          "tag": "item",
+          "ns": "",
+          "path": "0/7/2",
+          "start": 203,
+          "end": 217,
+          "attrs": [],
+          "text": "",
+          "children": [
+            {
+              "tag": "three",
+              "ns": "",
+              "path": "0/7/2/0",
+              "start": 205,
+              "end": 215,
+              "attrs": [],
+              "text": "3",
+              "children": [],
+              "type": "number"
+            }
+          ],
+          "type": "object"
+        },
+        {
+          "tag": "item",
+          "ns": "",
+          "path": "0/7/3",
+          "start": 219,
+          "end": 222,
+          "attrs": [],
+          "text": "",
+          "children": [
+            {
+              "tag": "item",
+              "ns": "",
+              "path": "0/7/3/0",
+              "start": 220,
+              "end": 221,
+              "attrs": [],
+              "text": "4",
+              "children": [],
+              "type": "number"
+            }
+          ],
+          "type": "array"
+        },
+        {
+          "tag": "item",
+          "ns": "",
+          "path": "0/7/4",
+          "start": 224,
+          "end": 228,
+          "attrs": [],
+          "text": "null",
+          "children": [],
+          "type": "null"
+        },
+        {
+          "tag": "item",
+          "ns": "",
+          "path": "0/7/5",
+          "start": 230,
+          "end": 234,
+          "attrs": [],
+          "text": "true",
+          "children": [],
+          "type": "boolean"
+        }
+      ],
+      "type": "array"
+    },
+    {
+      "tag": "orders",
+      "ns": "",
+      "path": "0/8",
+      "start": 239,
+      "end": 350,
+      "attrs": [],
+      "text": "",
+      "children": [
+        {
+          "tag": "item",
+          "ns": "",
+          "path": "0/8/0",
+          "start": 255,
+          "end": 315,
+          "attrs": [],
+          "text": "",
+          "children": [
+            {
+              "tag": "sku",
+              "ns": "",
+              "path": "0/8/0/0",
+              "start": 257,
+              "end": 268,
+              "attrs": [],
+              "text": "A1",
+              "children": [],
+              "type": "string"
+            },
+            {
+              "tag": "qty",
+              "ns": "",
+              "path": "0/8/0/1",
+              "start": 270,
+              "end": 278,
+              "attrs": [],
+              "text": "2",
+              "children": [],
+              "type": "number"
+            },
+            {
+              "tag": "lines",
+              "ns": "",
+              "path": "0/8/0/2",
+              "start": 280,
+              "end": 313,
+              "attrs": [],
+              "text": "",
+              "children": [
+                {
+                  "tag": "item",
+                  "ns": "",
+                  "path": "0/8/0/2/0",
+                  "start": 290,
+                  "end": 300,
+                  "attrs": [],
+                  "text": "",
+                  "children": [
+                    {
+                      "tag": "n",
+                      "ns": "",
+                      "path": "0/8/0/2/0/0",
+                      "start": 292,
+                      "end": 298,
+                      "attrs": [],
+                      "text": "1",
+                      "children": [],
+                      "type": "number"
+                    }
+                  ],
+                  "type": "object"
+                },
+                {
+                  "tag": "item",
+                  "ns": "",
+                  "path": "0/8/0/2/1",
+                  "start": 302,
+                  "end": 312,
+                  "attrs": [],
+                  "text": "",
+                  "children": [
+                    {
+                      "tag": "n",
+                      "ns": "",
+                      "path": "0/8/0/2/1/0",
+                      "start": 304,
+                      "end": 310,
+                      "attrs": [],
+                      "text": "2",
+                      "children": [],
+                      "type": "number"
+                    }
+                  ],
+                  "type": "object"
+                }
+              ],
+              "type": "array"
+            }
+          ],
+          "type": "object"
+        },
+        {
+          "tag": "item",
+          "ns": "",
+          "path": "0/8/1",
+          "start": 321,
+          "end": 346,
+          "attrs": [],
+          "text": "",
+          "children": [
+            {
+              "tag": "sku",
+              "ns": "",
+              "path": "0/8/1/0",
+              "start": 323,
+              "end": 334,
+              "attrs": [],
+              "text": "B2",
+              "children": [],
+              "type": "string"
+            },
+            {
+              "tag": "qty",
+              "ns": "",
+              "path": "0/8/1/1",
+              "start": 336,
+              "end": 344,
+              "attrs": [],
+              "text": "1",
+              "children": [],
+              "type": "number"
+            }
+          ],
+          "type": "object"
+        }
+      ],
+      "type": "array"
+    }
+  ],
+  "type": "object"
+}

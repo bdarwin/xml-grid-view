@@ -6,6 +6,7 @@
 import type { XmlModel } from "./model.js";
 import type { XElement } from "./types.js";
 import { elementAtPath, type ElementPath } from "./paths.js";
+import { computeJsonValueEdit } from "./jsonEdits.js";
 
 export type EditTarget =
   | { kind: "attr"; path: ElementPath; name: string }
@@ -74,6 +75,7 @@ export function isTextEditable(el: XElement): boolean {
  * need a structural change.
  */
 export function computeValueEdit(source: string, model: XmlModel, target: EditTarget, value: string): EditResult {
+  if (model.doc.format === "json") return computeJsonValueEdit(source, model, target, value);
   const el = elementAtPath(model.doc, target.path);
   if (!el) return { error: "The element no longer exists." };
   if (model.errors.length) return { error: "The document is not well-formed; fix it before editing values." };

@@ -25,6 +25,8 @@ export interface CanonicalNode {
   end: number;
   attrs: CanonicalAttr[];
   text: string;
+  /** JSON documents only: the value's type (object, array, string, number, boolean, null). */
+  type?: string;
   children: CanonicalNode[];
 }
 
@@ -98,7 +100,7 @@ export interface ErrorsFile {
 }
 
 function nodeOf(el: XElement): CanonicalNode {
-  return {
+  const node: CanonicalNode = {
     tag: el.name,
     ns: el.uri,
     path: pathKey(pathOfElement(el)),
@@ -106,8 +108,11 @@ function nodeOf(el: XElement): CanonicalNode {
     end: el.end,
     attrs: el.attrs.map((a) => ({ name: a.name, value: a.value, start: a.start, end: a.end })),
     text: elementText(el),
-    children: el.elements.map(nodeOf),
+    children: [],
   };
+  if (el.json) node.type = el.json;
+  node.children = el.elements.map(nodeOf);
+  return node;
 }
 
 /** Canonical tree of the (single) root element. */

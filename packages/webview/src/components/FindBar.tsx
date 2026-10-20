@@ -27,6 +27,8 @@ export interface FindBarProps {
   inputRef: Ref<HTMLInputElement>;
   /** Hide the scope choice and always search the whole document (Flat view). */
   documentOnly?: boolean;
+  /** Offer the XPath mode (XML documents only). */
+  xpath?: boolean;
   onNext(): void;
   onPrev(): void;
   onClose(): void;
@@ -90,7 +92,7 @@ export function FindBar(p: FindBarProps) {
           onChange={(e) => p.onChange({ mode: (e.target as HTMLSelectElement).value as FindState["mode"] })}
         >
           <option value="text">Find</option>
-          <option value="xpath">XPath</option>
+          {p.xpath !== false && <option value="xpath">XPath</option>}
         </select>
         <div class={"find-input" + (p.error ? " invalid" : "")}>
           <input

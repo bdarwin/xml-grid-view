@@ -1,0 +1,293 @@
+{
+  "tag": "root",
+  "ns": "",
+  "path": "0",
+  "start": 0,
+  "end": 436,
+  "attrs": [],
+  "text": "",
+  "children": [
+    {
+      "tag": "item",
+      "ns": "",
+      "path": "0/0",
+      "start": 4,
+      "end": 202,
+      "attrs": [],
+      "text": "",
+      "children": [
+        {
+          "tag": "id",
+          "ns": "",
+          "path": "0/0/0",
+          "start": 10,
+          "end": 17,
+          "attrs": [],
+          "text": "1",
+          "children": [],
+          "type": "number"
+        },
+        {
+          "tag": "name",
+          "ns": "",
+          "path": "0/0/1",
+          "start": 23,
+          "end": 45,
+          "attrs": [],
+          "text": "Ada Lovelace",
+          "children": [],
+          "type": "string"
+        },
+        {
+          "tag": "email",
+          "ns": "",
+          "path": "0/0/2",
+          "start": 51,
+          "end": 77,
+          "attrs": [],
+          "text": "ada@example.com",
+          "children": [],
+          "type": "string"
+        },
+        {
+          "tag": "active",
+          "ns": "",
+          "path": "0/0/3",
+          "start": 83,
+          "end": 97,
+          "attrs": [],
+          "text": "true",
+          "children": [],
+          "type": "boolean"
+        },
+        {
+          "tag": "score",
+          "ns": "",
+          "path": "0/0/4",
+          "start": 103,
+          "end": 116,
+          "attrs": [],
+          "text": "98.5",
+          "children": [],
+          "type": "number"
+        },
+        {
+          "tag": "tags",
+          "ns": "",
+          "path": "0/0/5",
+          "start": 122,
+          "end": 148,
+          "attrs": [],
+          "text": "",
+          "children": [
+            {
+              "tag": "item",
+              "ns": "",
+              "path": "0/0/5/0",
+              "start": 131,
+              "end": 137,
+              "attrs": [],
+              "text": "math",
+              "children": [],
+              "type": "string"
+            },
+            {
+              "tag": "item",
+              "ns": "",
+              "path": "0/0/5/1",
+              "start": 139,
+              "end": 147,
+              "attrs": [],
+              "text": "poetry",
+              "children": [],
+              "type": "string"
+            }
+          ],
+          "type": "array"
+        },
+        {
+          "tag": "address",
+          "ns": "",
+          "path": "0/0/6",
+          "start": 154,
+          "end": 198,
+          "attrs": [],
+          "text": "",
+          "children": [
+            {
+              "tag": "city",
+              "ns": "",
+              "path": "0/0/6/0",
+              "start": 167,
+              "end": 183,
+              "attrs": [],
+              "text": "London",
+              "children": [],
+              "type": "string"
+            },
+            {
+              "tag": "zip",
+              "ns": "",
+              "path": "0/0/6/1",
+              "start": 185,
+              "end": 196,
+              "attrs": [],
+              "text": "null",
+              "children": [],
+              "type": "null"
+            }
+          ],
+          "type": "object"
+        }
+      ],
+      "type": "object"
+    },
+    {
+      "tag": "item",
+      "ns": "",
+      "path": "0/1",
+      "start": 206,
+      "end": 342,
+      "attrs": [],
+      "text": "",
+      "children": [
+        {
+          "tag": "id",
+          "ns": "",
+          "path": "0/1/0",
+          "start": 212,
+          "end": 219,
+          "attrs": [],
+          "text": "2",
+          "children": [],
+          "type": "number"
+        },
+        {
+          "tag": "name",
+          "ns": "",
+          "path": "0/1/1",
+          "start": 225,
+          "end": 259,
+          "attrs": [],
+          "text": "Grace \"Amazing\" Hopper",
+          "children": [],
+          "type": "string"
+        },
+        {
+          "tag": "active",
+          "ns": "",
+          "path": "0/1/2",
+          "start": 265,
+          "end": 280,
+          "attrs": [],
+          "text": "false",
+          "children": [],
+          "type": "boolean"
+        },
+        {
+          "tag": "score",
+          "ns": "",
+          "path": "0/1/3",
+          "start": 286,
+          "end": 301,
+          "attrs": [],
+          "text": "-1.5e3",
+          "children": [],
+          "type": "number"
+        },
+        {
+          "tag": "tags",
+          "ns": "",
+          "path": "0/1/4",
+          "start": 307,
+          "end": 317,
+          "attrs": [],
+          "text": "",
+          "children": [],
+          "type": "array"
+        },
+        {
+          "tag": "manager",
+          "ns": "",
+          "path": "0/1/5",
+          "start": 323,
+          "end": 338,
+          "attrs": [],
+          "text": "null",
+          "children": [],
+          "type": "null"
+        }
+      ],
+      "type": "object"
+    },
+    {
+      "tag": "item",
+      "ns": "",
+      "path": "0/2",
+      "start": 346,
+      "end": 434,
+      "attrs": [],
+      "text": "",
+      "children": [
+        {
+          "tag": "id",
+          "ns": "",
+          "path": "0/2/0",
+          "start": 352,
+          "end": 359,
+          "attrs": [],
+          "text": "3",
+          "children": [],
+          "type": "number"
+        },
+        {
+          "tag": "name",
+          "ns": "",
+          "path": "0/2/1",
+          "start": 365,
+          "end": 394,
+          "attrs": [],
+          "text": "Ünïcödé 😀 é\n\ttab",
+          "children": [],
+          "type": "string"
+        },
+        {
+          "tag": "email",
+          "ns": "",
+          "path": "0/2/2",
+          "start": 400,
+          "end": 411,
+          "attrs": [],
+          "text": "",
+          "children": [],
+          "type": "string"
+        },
+        {
+          "tag": "tags",
+          "ns": "",
+          "path": "0/2/3",
+          "start": 417,
+          "end": 430,
+          "attrs": [],
+          "text": "",
+          "children": [
+            {
+              "tag": "item",
+              "ns": "",
+              "path": "0/2/3/0",
+              "start": 426,
+              "end": 429,
+              "attrs": [],
+              "text": "x",
+              "children": [],
+              "type": "string"
+            }
+          ],
+          "type": "array"
+        }
+      ],
+      "type": "object"
+    }
+  ],
+  "type": "array"
+}

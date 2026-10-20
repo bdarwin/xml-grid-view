@@ -1,0 +1,535 @@
+{
+  "cases": [
+    {
+      "op": {
+        "kind": "deleteElement",
+        "path": [0, 1, 0, 2]
+      },
+      "expected": {
+        "edits": [{ "offset": 85, "length": 21, "text": "" }],
+        "result": "{\n  \"name\": \"Library\",\n  \"books\": [\n    {\n      \"id\": 1,\n      \"title\": \"One\",\n      \"tags\": [\"a\", \"b\"],\n      \"used\": false\n    },\n    {\n      \"id\": 2,\n      \"title\": \"Two\",\n      \"author\": null\n    },\n    {\n      \"id\": 3,\n      \"title\": \"Three\"\n    }\n  ],\n  \"empty\": {},\n  \"none\": [],\n  \"single\": [7],\n  \"codes\": [1, 2, 3]\n}\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "deleteElement",
+        "path": [0, 1, 0, 4]
+      },
+      "expected": {
+        "edits": [{ "offset": 124, "length": 21, "text": "" }],
+        "result": "{\n  \"name\": \"Library\",\n  \"books\": [\n    {\n      \"id\": 1,\n      \"title\": \"One\",\n      \"price\": 10.5,\n      \"tags\": [\"a\", \"b\"]\n    },\n    {\n      \"id\": 2,\n      \"title\": \"Two\",\n      \"author\": null\n    },\n    {\n      \"id\": 3,\n      \"title\": \"Three\"\n    }\n  ],\n  \"empty\": {},\n  \"none\": [],\n  \"single\": [7],\n  \"codes\": [1, 2, 3]\n}\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "deleteElement",
+        "path": [0, 1, 0]
+      },
+      "expected": {
+        "edits": [{ "offset": 40, "length": 117, "text": "" }],
+        "result": "{\n  \"name\": \"Library\",\n  \"books\": [\n    {\n      \"id\": 2,\n      \"title\": \"Two\",\n      \"author\": null\n    },\n    {\n      \"id\": 3,\n      \"title\": \"Three\"\n    }\n  ],\n  \"empty\": {},\n  \"none\": [],\n  \"single\": [7],\n  \"codes\": [1, 2, 3]\n}\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "deleteElement",
+        "path": [0, 1, 2]
+      },
+      "expected": {
+        "edits": [{ "offset": 222, "length": 51, "text": "" }],
+        "result": "{\n  \"name\": \"Library\",\n  \"books\": [\n    {\n      \"id\": 1,\n      \"title\": \"One\",\n      \"price\": 10.5,\n      \"tags\": [\"a\", \"b\"],\n      \"used\": false\n    },\n    {\n      \"id\": 2,\n      \"title\": \"Two\",\n      \"author\": null\n    }\n  ],\n  \"empty\": {},\n  \"none\": [],\n  \"single\": [7],\n  \"codes\": [1, 2, 3]\n}\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "deleteElement",
+        "path": [0, 4, 0]
+      },
+      "expected": {
+        "edits": [{ "offset": 321, "length": 1, "text": "" }],
+        "result": "{\n  \"name\": \"Library\",\n  \"books\": [\n    {\n      \"id\": 1,\n      \"title\": \"One\",\n      \"price\": 10.5,\n      \"tags\": [\"a\", \"b\"],\n      \"used\": false\n    },\n    {\n      \"id\": 2,\n      \"title\": \"Two\",\n      \"author\": null\n    },\n    {\n      \"id\": 3,\n      \"title\": \"Three\"\n    }\n  ],\n  \"empty\": {},\n  \"none\": [],\n  \"single\": [],\n  \"codes\": [1, 2, 3]\n}\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "deleteElement",
+        "path": [0]
+      },
+      "expected": { "error": true }
+    },
+    {
+      "op": {
+        "kind": "renameElement",
+        "path": [0, 0],
+        "name": "label"
+      },
+      "expected": {
+        "edits": [{ "offset": 4, "length": 6, "text": "\"label\"" }],
+        "result": "{\n  \"label\": \"Library\",\n  \"books\": [\n    {\n      \"id\": 1,\n      \"title\": \"One\",\n      \"price\": 10.5,\n      \"tags\": [\"a\", \"b\"],\n      \"used\": false\n    },\n    {\n      \"id\": 2,\n      \"title\": \"Two\",\n      \"author\": null\n    },\n    {\n      \"id\": 3,\n      \"title\": \"Three\"\n    }\n  ],\n  \"empty\": {},\n  \"none\": [],\n  \"single\": [7],\n  \"codes\": [1, 2, 3]\n}\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "renameElement",
+        "path": [0, 0],
+        "name": "with \"quote\""
+      },
+      "expected": {
+        "edits": [{ "offset": 4, "length": 6, "text": "\"with \\\"quote\\\"\"" }],
+        "result": "{\n  \"with \\\"quote\\\"\": \"Library\",\n  \"books\": [\n    {\n      \"id\": 1,\n      \"title\": \"One\",\n      \"price\": 10.5,\n      \"tags\": [\"a\", \"b\"],\n      \"used\": false\n    },\n    {\n      \"id\": 2,\n      \"title\": \"Two\",\n      \"author\": null\n    },\n    {\n      \"id\": 3,\n      \"title\": \"Three\"\n    }\n  ],\n  \"empty\": {},\n  \"none\": [],\n  \"single\": [7],\n  \"codes\": [1, 2, 3]\n}\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "renameElement",
+        "path": [0, 0],
+        "name": "books"
+      },
+      "expected": { "error": true }
+    },
+    {
+      "op": {
+        "kind": "renameElement",
+        "path": [0, 1, 0],
+        "name": "x"
+      },
+      "expected": { "error": true }
+    },
+    {
+      "op": {
+        "kind": "insertElement",
+        "path": [0, 1, 1],
+        "where": "child",
+        "name": "year"
+      },
+      "expected": {
+        "edits": [{ "offset": 216, "length": 0, "text": ",\n      \"year\": \"\"" }],
+        "result": "{\n  \"name\": \"Library\",\n  \"books\": [\n    {\n      \"id\": 1,\n      \"title\": \"One\",\n      \"price\": 10.5,\n      \"tags\": [\"a\", \"b\"],\n      \"used\": false\n    },\n    {\n      \"id\": 2,\n      \"title\": \"Two\",\n      \"author\": null,\n      \"year\": \"\"\n    },\n    {\n      \"id\": 3,\n      \"title\": \"Three\"\n    }\n  ],\n  \"empty\": {},\n  \"none\": [],\n  \"single\": [7],\n  \"codes\": [1, 2, 3]\n}\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "insertElement",
+        "path": [0, 1],
+        "where": "child",
+        "name": "ignored"
+      },
+      "expected": {
+        "edits": [{ "offset": 273, "length": 0, "text": ",\n    \"\"" }],
+        "result": "{\n  \"name\": \"Library\",\n  \"books\": [\n    {\n      \"id\": 1,\n      \"title\": \"One\",\n      \"price\": 10.5,\n      \"tags\": [\"a\", \"b\"],\n      \"used\": false\n    },\n    {\n      \"id\": 2,\n      \"title\": \"Two\",\n      \"author\": null\n    },\n    {\n      \"id\": 3,\n      \"title\": \"Three\"\n    },\n    \"\"\n  ],\n  \"empty\": {},\n  \"none\": [],\n  \"single\": [7],\n  \"codes\": [1, 2, 3]\n}\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "insertElement",
+        "path": [0, 2],
+        "where": "child",
+        "name": "k"
+      },
+      "expected": {
+        "edits": [{ "offset": 291, "length": 0, "text": " \"k\": \"\" " }],
+        "result": "{\n  \"name\": \"Library\",\n  \"books\": [\n    {\n      \"id\": 1,\n      \"title\": \"One\",\n      \"price\": 10.5,\n      \"tags\": [\"a\", \"b\"],\n      \"used\": false\n    },\n    {\n      \"id\": 2,\n      \"title\": \"Two\",\n      \"author\": null\n    },\n    {\n      \"id\": 3,\n      \"title\": \"Three\"\n    }\n  ],\n  \"empty\": { \"k\": \"\" },\n  \"none\": [],\n  \"single\": [7],\n  \"codes\": [1, 2, 3]\n}\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "insertElement",
+        "path": [0, 3],
+        "where": "child",
+        "name": "ignored"
+      },
+      "expected": {
+        "edits": [{ "offset": 305, "length": 0, "text": "\"\"" }],
+        "result": "{\n  \"name\": \"Library\",\n  \"books\": [\n    {\n      \"id\": 1,\n      \"title\": \"One\",\n      \"price\": 10.5,\n      \"tags\": [\"a\", \"b\"],\n      \"used\": false\n    },\n    {\n      \"id\": 2,\n      \"title\": \"Two\",\n      \"author\": null\n    },\n    {\n      \"id\": 3,\n      \"title\": \"Three\"\n    }\n  ],\n  \"empty\": {},\n  \"none\": [\"\"],\n  \"single\": [7],\n  \"codes\": [1, 2, 3]\n}\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "insertElement",
+        "path": [0, 0],
+        "where": "after",
+        "name": "subtitle"
+      },
+      "expected": {
+        "edits": [{ "offset": 21, "length": 0, "text": ",\n  \"subtitle\": \"\"" }],
+        "result": "{\n  \"name\": \"Library\",\n  \"subtitle\": \"\",\n  \"books\": [\n    {\n      \"id\": 1,\n      \"title\": \"One\",\n      \"price\": 10.5,\n      \"tags\": [\"a\", \"b\"],\n      \"used\": false\n    },\n    {\n      \"id\": 2,\n      \"title\": \"Two\",\n      \"author\": null\n    },\n    {\n      \"id\": 3,\n      \"title\": \"Three\"\n    }\n  ],\n  \"empty\": {},\n  \"none\": [],\n  \"single\": [7],\n  \"codes\": [1, 2, 3]\n}\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "insertElement",
+        "path": [0, 0],
+        "where": "before",
+        "name": "kind"
+      },
+      "expected": {
+        "edits": [{ "offset": 4, "length": 0, "text": "\"kind\": \"\",\n  " }],
+        "result": "{\n  \"kind\": \"\",\n  \"name\": \"Library\",\n  \"books\": [\n    {\n      \"id\": 1,\n      \"title\": \"One\",\n      \"price\": 10.5,\n      \"tags\": [\"a\", \"b\"],\n      \"used\": false\n    },\n    {\n      \"id\": 2,\n      \"title\": \"Two\",\n      \"author\": null\n    },\n    {\n      \"id\": 3,\n      \"title\": \"Three\"\n    }\n  ],\n  \"empty\": {},\n  \"none\": [],\n  \"single\": [7],\n  \"codes\": [1, 2, 3]\n}\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "insertElement",
+        "path": [0, 5, 1],
+        "where": "after",
+        "name": "ignored"
+      },
+      "expected": {
+        "edits": [{ "offset": 341, "length": 0, "text": ", \"\"" }],
+        "result": "{\n  \"name\": \"Library\",\n  \"books\": [\n    {\n      \"id\": 1,\n      \"title\": \"One\",\n      \"price\": 10.5,\n      \"tags\": [\"a\", \"b\"],\n      \"used\": false\n    },\n    {\n      \"id\": 2,\n      \"title\": \"Two\",\n      \"author\": null\n    },\n    {\n      \"id\": 3,\n      \"title\": \"Three\"\n    }\n  ],\n  \"empty\": {},\n  \"none\": [],\n  \"single\": [7],\n  \"codes\": [1, 2, \"\", 3]\n}\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "insertElement",
+        "path": [0, 0],
+        "where": "after",
+        "name": "books"
+      },
+      "expected": { "error": true }
+    },
+    {
+      "op": {
+        "kind": "insertElement",
+        "path": [0, 0],
+        "where": "child",
+        "name": "x"
+      },
+      "expected": { "error": true }
+    },
+    {
+      "op": {
+        "kind": "duplicateElement",
+        "path": [0, 1, 1]
+      },
+      "expected": {
+        "edits": [{ "offset": 222, "length": 0, "text": ",\n    {\n      \"id\": 2,\n      \"title\": \"Two\",\n      \"author\": null\n    }" }],
+        "result": "{\n  \"name\": \"Library\",\n  \"books\": [\n    {\n      \"id\": 1,\n      \"title\": \"One\",\n      \"price\": 10.5,\n      \"tags\": [\"a\", \"b\"],\n      \"used\": false\n    },\n    {\n      \"id\": 2,\n      \"title\": \"Two\",\n      \"author\": null\n    },\n    {\n      \"id\": 2,\n      \"title\": \"Two\",\n      \"author\": null\n    },\n    {\n      \"id\": 3,\n      \"title\": \"Three\"\n    }\n  ],\n  \"empty\": {},\n  \"none\": [],\n  \"single\": [7],\n  \"codes\": [1, 2, 3]\n}\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "duplicateElement",
+        "path": [0, 5, 0]
+      },
+      "expected": {
+        "edits": [{ "offset": 338, "length": 0, "text": ", 1" }],
+        "result": "{\n  \"name\": \"Library\",\n  \"books\": [\n    {\n      \"id\": 1,\n      \"title\": \"One\",\n      \"price\": 10.5,\n      \"tags\": [\"a\", \"b\"],\n      \"used\": false\n    },\n    {\n      \"id\": 2,\n      \"title\": \"Two\",\n      \"author\": null\n    },\n    {\n      \"id\": 3,\n      \"title\": \"Three\"\n    }\n  ],\n  \"empty\": {},\n  \"none\": [],\n  \"single\": [7],\n  \"codes\": [1, 1, 2, 3]\n}\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "duplicateElement",
+        "path": [0, 0]
+      },
+      "expected": { "error": true }
+    },
+    {
+      "op": {
+        "kind": "newRow",
+        "path": [0, 1, 0]
+      },
+      "expected": {
+        "edits": [{ "offset": 151, "length": 0, "text": ",\n    {\n      \"id\": 0,\n      \"title\": \"\",\n      \"price\": 0,\n      \"tags\": [],\n      \"used\": false\n    }" }],
+        "result": "{\n  \"name\": \"Library\",\n  \"books\": [\n    {\n      \"id\": 1,\n      \"title\": \"One\",\n      \"price\": 10.5,\n      \"tags\": [\"a\", \"b\"],\n      \"used\": false\n    },\n    {\n      \"id\": 0,\n      \"title\": \"\",\n      \"price\": 0,\n      \"tags\": [],\n      \"used\": false\n    },\n    {\n      \"id\": 2,\n      \"title\": \"Two\",\n      \"author\": null\n    },\n    {\n      \"id\": 3,\n      \"title\": \"Three\"\n    }\n  ],\n  \"empty\": {},\n  \"none\": [],\n  \"single\": [7],\n  \"codes\": [1, 2, 3]\n}\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "newRow",
+        "path": [0, 5, 2]
+      },
+      "expected": {
+        "edits": [{ "offset": 344, "length": 0, "text": ", 0" }],
+        "result": "{\n  \"name\": \"Library\",\n  \"books\": [\n    {\n      \"id\": 1,\n      \"title\": \"One\",\n      \"price\": 10.5,\n      \"tags\": [\"a\", \"b\"],\n      \"used\": false\n    },\n    {\n      \"id\": 2,\n      \"title\": \"Two\",\n      \"author\": null\n    },\n    {\n      \"id\": 3,\n      \"title\": \"Three\"\n    }\n  ],\n  \"empty\": {},\n  \"none\": [],\n  \"single\": [7],\n  \"codes\": [1, 2, 3, 0]\n}\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "moveElement",
+        "path": [0, 1, 1],
+        "direction": "up",
+        "sameName": true
+      },
+      "expected": {
+        "edits": [
+          { "offset": 157, "length": 65, "text": "{\n      \"id\": 1,\n      \"title\": \"One\",\n      \"price\": 10.5,\n      \"tags\": [\"a\", \"b\"],\n      \"used\": false\n    }" },
+          { "offset": 40, "length": 111, "text": "{\n      \"id\": 2,\n      \"title\": \"Two\",\n      \"author\": null\n    }" }
+        ],
+        "result": "{\n  \"name\": \"Library\",\n  \"books\": [\n    {\n      \"id\": 2,\n      \"title\": \"Two\",\n      \"author\": null\n    },\n    {\n      \"id\": 1,\n      \"title\": \"One\",\n      \"price\": 10.5,\n      \"tags\": [\"a\", \"b\"],\n      \"used\": false\n    },\n    {\n      \"id\": 3,\n      \"title\": \"Three\"\n    }\n  ],\n  \"empty\": {},\n  \"none\": [],\n  \"single\": [7],\n  \"codes\": [1, 2, 3]\n}\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "moveElement",
+        "path": [0, 1, 2],
+        "direction": "down",
+        "sameName": true
+      },
+      "expected": { "error": true }
+    },
+    {
+      "op": {
+        "kind": "moveElement",
+        "path": [0, 0],
+        "direction": "down",
+        "sameName": false
+      },
+      "expected": {
+        "edits": [
+          { "offset": 25, "length": 252, "text": "\"name\": \"Library\"" },
+          { "offset": 4, "length": 17, "text": "\"books\": [\n    {\n      \"id\": 1,\n      \"title\": \"One\",\n      \"price\": 10.5,\n      \"tags\": [\"a\", \"b\"],\n      \"used\": false\n    },\n    {\n      \"id\": 2,\n      \"title\": \"Two\",\n      \"author\": null\n    },\n    {\n      \"id\": 3,\n      \"title\": \"Three\"\n    }\n  ]" }
+        ],
+        "result": "{\n  \"books\": [\n    {\n      \"id\": 1,\n      \"title\": \"One\",\n      \"price\": 10.5,\n      \"tags\": [\"a\", \"b\"],\n      \"used\": false\n    },\n    {\n      \"id\": 2,\n      \"title\": \"Two\",\n      \"author\": null\n    },\n    {\n      \"id\": 3,\n      \"title\": \"Three\"\n    }\n  ],\n  \"name\": \"Library\",\n  \"empty\": {},\n  \"none\": [],\n  \"single\": [7],\n  \"codes\": [1, 2, 3]\n}\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "deleteElements",
+        "paths": [[0, 1, 0], [0, 1, 1]]
+      },
+      "expected": {
+        "edits": [{ "offset": 40, "length": 188, "text": "" }],
+        "result": "{\n  \"name\": \"Library\",\n  \"books\": [\n    {\n      \"id\": 3,\n      \"title\": \"Three\"\n    }\n  ],\n  \"empty\": {},\n  \"none\": [],\n  \"single\": [7],\n  \"codes\": [1, 2, 3]\n}\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "deleteElements",
+        "paths": [[0, 1, 1], [0, 1, 2]]
+      },
+      "expected": {
+        "edits": [{ "offset": 151, "length": 122, "text": "" }],
+        "result": "{\n  \"name\": \"Library\",\n  \"books\": [\n    {\n      \"id\": 1,\n      \"title\": \"One\",\n      \"price\": 10.5,\n      \"tags\": [\"a\", \"b\"],\n      \"used\": false\n    }\n  ],\n  \"empty\": {},\n  \"none\": [],\n  \"single\": [7],\n  \"codes\": [1, 2, 3]\n}\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "deleteElements",
+        "paths": [[0, 5, 0], [0, 5, 1], [0, 5, 2]]
+      },
+      "expected": {
+        "edits": [{ "offset": 337, "length": 7, "text": "" }],
+        "result": "{\n  \"name\": \"Library\",\n  \"books\": [\n    {\n      \"id\": 1,\n      \"title\": \"One\",\n      \"price\": 10.5,\n      \"tags\": [\"a\", \"b\"],\n      \"used\": false\n    },\n    {\n      \"id\": 2,\n      \"title\": \"Two\",\n      \"author\": null\n    },\n    {\n      \"id\": 3,\n      \"title\": \"Three\"\n    }\n  ],\n  \"empty\": {},\n  \"none\": [],\n  \"single\": [7],\n  \"codes\": []\n}\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "addColumn",
+        "path": [0, 1],
+        "group": "item",
+        "name": "isbn"
+      },
+      "expected": {
+        "edits": [
+          { "offset": 267, "length": 0, "text": ",\n      \"isbn\": \"\"" },
+          { "offset": 216, "length": 0, "text": ",\n      \"isbn\": \"\"" },
+          { "offset": 145, "length": 0, "text": ",\n      \"isbn\": \"\"" }
+        ],
+        "result": "{\n  \"name\": \"Library\",\n  \"books\": [\n    {\n      \"id\": 1,\n      \"title\": \"One\",\n      \"price\": 10.5,\n      \"tags\": [\"a\", \"b\"],\n      \"used\": false,\n      \"isbn\": \"\"\n    },\n    {\n      \"id\": 2,\n      \"title\": \"Two\",\n      \"author\": null,\n      \"isbn\": \"\"\n    },\n    {\n      \"id\": 3,\n      \"title\": \"Three\",\n      \"isbn\": \"\"\n    }\n  ],\n  \"empty\": {},\n  \"none\": [],\n  \"single\": [7],\n  \"codes\": [1, 2, 3]\n}\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "addColumn",
+        "path": [0, 1],
+        "group": "item",
+        "name": "title"
+      },
+      "expected": { "error": true }
+    },
+    {
+      "op": {
+        "kind": "deleteColumn",
+        "path": [0, 1],
+        "group": "item",
+        "key": "title"
+      },
+      "expected": {
+        "edits": [
+          { "offset": 243, "length": 24, "text": "" },
+          { "offset": 180, "length": 22, "text": "" },
+          { "offset": 63, "length": 22, "text": "" }
+        ],
+        "result": "{\n  \"name\": \"Library\",\n  \"books\": [\n    {\n      \"id\": 1,\n      \"price\": 10.5,\n      \"tags\": [\"a\", \"b\"],\n      \"used\": false\n    },\n    {\n      \"id\": 2,\n      \"author\": null\n    },\n    {\n      \"id\": 3\n    }\n  ],\n  \"empty\": {},\n  \"none\": [],\n  \"single\": [7],\n  \"codes\": [1, 2, 3]\n}\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "deleteColumn",
+        "path": [0, 1],
+        "group": "item",
+        "key": "price"
+      },
+      "expected": {
+        "edits": [{ "offset": 85, "length": 21, "text": "" }],
+        "result": "{\n  \"name\": \"Library\",\n  \"books\": [\n    {\n      \"id\": 1,\n      \"title\": \"One\",\n      \"tags\": [\"a\", \"b\"],\n      \"used\": false\n    },\n    {\n      \"id\": 2,\n      \"title\": \"Two\",\n      \"author\": null\n    },\n    {\n      \"id\": 3,\n      \"title\": \"Three\"\n    }\n  ],\n  \"empty\": {},\n  \"none\": [],\n  \"single\": [7],\n  \"codes\": [1, 2, 3]\n}\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "setCells",
+        "cells": [
+          {
+            "path": [0, 1, 0],
+            "key": "price",
+            "value": "12"
+          },
+          {
+            "path": [0, 1, 0],
+            "key": "title",
+            "value": "Uno \"1\""
+          },
+          {
+            "path": [0, 1, 0],
+            "key": "used",
+            "value": "yes"
+          },
+          {
+            "path": [0, 1, 1],
+            "key": "author",
+            "value": "Ann"
+          },
+          {
+            "path": [0, 1, 1],
+            "key": "isbn",
+            "value": "978"
+          },
+          {
+            "path": [0, 1, 1],
+            "key": "pages",
+            "value": "100"
+          }
+        ]
+      },
+      "expected": {
+        "edits": [
+          { "offset": 216, "length": 0, "text": ",\n      \"isbn\": \"978\",\n      \"pages\": \"100\"" },
+          { "offset": 212, "length": 4, "text": "\"Ann\"" },
+          { "offset": 140, "length": 5, "text": "\"yes\"" },
+          { "offset": 94, "length": 4, "text": "12" },
+          { "offset": 72, "length": 5, "text": "\"Uno \\\"1\\\"\"" }
+        ],
+        "result": "{\n  \"name\": \"Library\",\n  \"books\": [\n    {\n      \"id\": 1,\n      \"title\": \"Uno \\\"1\\\"\",\n      \"price\": 12,\n      \"tags\": [\"a\", \"b\"],\n      \"used\": \"yes\"\n    },\n    {\n      \"id\": 2,\n      \"title\": \"Two\",\n      \"author\": \"Ann\",\n      \"isbn\": \"978\",\n      \"pages\": \"100\"\n    },\n    {\n      \"id\": 3,\n      \"title\": \"Three\"\n    }\n  ],\n  \"empty\": {},\n  \"none\": [],\n  \"single\": [7],\n  \"codes\": [1, 2, 3]\n}\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "setCells",
+        "cells": [
+          {
+            "path": [0, 5, 1],
+            "key": "#text",
+            "value": "20"
+          },
+          {
+            "path": [0, 5, 2],
+            "key": "#text",
+            "value": "n/a"
+          }
+        ]
+      },
+      "expected": {
+        "edits": [
+          { "offset": 343, "length": 1, "text": "\"n/a\"" },
+          { "offset": 340, "length": 1, "text": "20" }
+        ],
+        "result": "{\n  \"name\": \"Library\",\n  \"books\": [\n    {\n      \"id\": 1,\n      \"title\": \"One\",\n      \"price\": 10.5,\n      \"tags\": [\"a\", \"b\"],\n      \"used\": false\n    },\n    {\n      \"id\": 2,\n      \"title\": \"Two\",\n      \"author\": null\n    },\n    {\n      \"id\": 3,\n      \"title\": \"Three\"\n    }\n  ],\n  \"empty\": {},\n  \"none\": [],\n  \"single\": [7],\n  \"codes\": [1, 20, \"n/a\"]\n}\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "setCells",
+        "cells": [
+          {
+            "path": [0, 1, 0],
+            "key": "tags",
+            "value": "x"
+          }
+        ]
+      },
+      "expected": { "error": true }
+    },
+    {
+      "op": {
+        "kind": "insertRows",
+        "path": [0, 1],
+        "group": "item",
+        "rows": [
+          { "id": "4", "title": "Four" },
+          { "id": "x5", "title": "", "extra": "true" }
+        ]
+      },
+      "expected": {
+        "edits": [{ "offset": 273, "length": 0, "text": ",\n    {\n      \"id\": 4,\n      \"title\": \"Four\"\n    },\n    {\n      \"id\": \"x5\",\n      \"title\": \"\",\n      \"extra\": \"true\"\n    }" }],
+        "result": "{\n  \"name\": \"Library\",\n  \"books\": [\n    {\n      \"id\": 1,\n      \"title\": \"One\",\n      \"price\": 10.5,\n      \"tags\": [\"a\", \"b\"],\n      \"used\": false\n    },\n    {\n      \"id\": 2,\n      \"title\": \"Two\",\n      \"author\": null\n    },\n    {\n      \"id\": 3,\n      \"title\": \"Three\"\n    },\n    {\n      \"id\": 4,\n      \"title\": \"Four\"\n    },\n    {\n      \"id\": \"x5\",\n      \"title\": \"\",\n      \"extra\": \"true\"\n    }\n  ],\n  \"empty\": {},\n  \"none\": [],\n  \"single\": [7],\n  \"codes\": [1, 2, 3]\n}\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "insertRows",
+        "path": [0, 3],
+        "group": "item",
+        "rows": [{ "a": "1" }]
+      },
+      "expected": {
+        "edits": [{ "offset": 305, "length": 0, "text": "{ \"a\": \"1\" }" }],
+        "result": "{\n  \"name\": \"Library\",\n  \"books\": [\n    {\n      \"id\": 1,\n      \"title\": \"One\",\n      \"price\": 10.5,\n      \"tags\": [\"a\", \"b\"],\n      \"used\": false\n    },\n    {\n      \"id\": 2,\n      \"title\": \"Two\",\n      \"author\": null\n    },\n    {\n      \"id\": 3,\n      \"title\": \"Three\"\n    }\n  ],\n  \"empty\": {},\n  \"none\": [{ \"a\": \"1\" }],\n  \"single\": [7],\n  \"codes\": [1, 2, 3]\n}\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "insertRows",
+        "path": [0, 5],
+        "group": "item",
+        "rows": [
+          { "#text": "4" },
+          { "#text": "five" }
+        ]
+      },
+      "expected": {
+        "edits": [{ "offset": 344, "length": 0, "text": ", 4, \"five\"" }],
+        "result": "{\n  \"name\": \"Library\",\n  \"books\": [\n    {\n      \"id\": 1,\n      \"title\": \"One\",\n      \"price\": 10.5,\n      \"tags\": [\"a\", \"b\"],\n      \"used\": false\n    },\n    {\n      \"id\": 2,\n      \"title\": \"Two\",\n      \"author\": null\n    },\n    {\n      \"id\": 3,\n      \"title\": \"Three\"\n    }\n  ],\n  \"empty\": {},\n  \"none\": [],\n  \"single\": [7],\n  \"codes\": [1, 2, 3, 4, \"five\"]\n}\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "deleteAttr",
+        "path": [0, 0],
+        "name": "x"
+      },
+      "expected": { "error": true }
+    }
+  ]
+}

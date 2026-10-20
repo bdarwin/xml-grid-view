@@ -6,6 +6,9 @@ import {
   createMatcher,
   idAtPath,
   elementAtOffset,
+  displayName,
+  isJsonFileName,
+  jsonTypeOf,
   isQName,
   miscDisplay,
   pathKey,
@@ -246,7 +249,7 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
     const snap = takeSnapshot();
     setPhase((p) => (p === "ready" ? p : "loading"));
     try {
-      const r = await worker.request<"load">({ type: "load", text });
+      const r = await worker.request<"load">({ type: "load", text, format: formatRef.current });
       setErrors(r.errors);
       if (r.skeleton) {
         setKeptOld(false);
@@ -292,12 +295,18 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
   };
 
   const largeConfirmed = useRef(false);
+  /** "json" when the document is JSON (members and items as elements); "xml" otherwise. */
+  const formatRef = useRef<"xml" | "json">("xml");
+  const [format, setFormat] = useState<"xml" | "json">("xml");
 
   useEffect(() => {
     host.onMessage((msg: HostToView) => {
       switch (msg.type) {
         case "init": {
           const s = { ...DEFAULT_SETTINGS, ...msg.settings };
+          formatRef.current = msg.format ?? (isJsonFileName(msg.fileName) ? "json" : "xml");
+          setFormat(formatRef.current);
+          if (formatRef.current === "json") setFind((f) => (f.mode === "xpath" ? { ...f, mode: "text" } : f));
           setSettings(s);
           settingsRef.current = s;
           setFileName(msg.fileName);
@@ -882,19 +891,22 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
         disabled: ro,
         onClick: () =>
           setPrompt({
-            title: `New column for <${group}>`,
+            title: skeleton.json ? "New column" : `New column for <${group}>`,
             fields: [
-              {
-                label: "Name (@name for an attribute)",
-                initial: "",
-                validate: (x) => (isQName(x.trim().replace(/^@/, "")) ? null : "Not a valid XML name."),
-              },
+              skeleton.json
+                ? { label: "Key", initial: "", validate: (x) => (x ? null : "Enter a key.") }
+                : {
+                    label: "Name (@name for an attribute)",
+                    initial: "",
+                    validate: (x) => (isQName(x.trim().replace(/^@/, "")) ? null : "Not a valid XML name."),
+                  },
             ],
             okLabel: "Add",
             onCancel: () => setPrompt(null),
             onSubmit: ([n]) => {
               setPrompt(null);
-              void requestOps([{ kind: "addColumn", path: parentPath, group, name: n.trim() }], `Add Column ${n.trim()}`);
+              const col = skeleton.json ? n : n.trim();
+              void requestOps([{ kind: "addColumn", path: parentPath, group, name: col }], `Add Column ${col}`);
             },
           }),
       },
@@ -959,6 +971,59 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
       ask(title, [nameField("Element name")], "Insert", ([n]) =>
         void requestStructure({ kind: "insertElement", path, where, name: n.trim() }, `Insert <${n.trim()}>`, [pathKey(selectPath), n.trim()]),
       );
+    const note = ro ? (settings.readOnly ? "This document is read-only." : `Fix the ${sk.json ? "JSON" : "XML"} errors to edit.`) : undefined;
+    if (sk.json) {
+      // JSON: members have keys, array items don't; no attributes.
+      const type = jsonTypeOf(sk, id);
+      const parentType = isRoot ? null : jsonTypeOf(sk, sk.parent[id]);
+      const label = `"${displayName(sk, id)}"`;
+      const keyField = (initial = ""): PromptField => ({ label: "Key", initial, validate: (v) => (v ? null : "Enter a key.") });
+      const add = (where: "before" | "after" | "child", container: string | null, selectPath: number[], title: string) => () => {
+        if (container === "array") return void requestStructure({ kind: "insertElement", path, where, name: "item" }, "Insert Item", [pathKey(selectPath), "item"]);
+        ask(title, [keyField()], "Insert", ([k]) => void requestStructure({ kind: "insertElement", path, where, name: k }, `Add "${k}"`, [pathKey(selectPath), k]));
+      };
+      const jsonItems: MenuItem[] = [
+        ...extra,
+        {
+          label: type === "array" ? "Add Item" : "Add Member…",
+          disabled: ro || (type !== "array" && type !== "object"),
+          onClick: add("child", type, [...path, sk.childCount[id]], `New member of ${label}`),
+        },
+        {
+          label: parentType === "array" ? "Insert Item Before" : "Insert Member Before…",
+          disabled: ro || isRoot,
+          onClick: add("before", parentType, path, `New member before ${label}`),
+        },
+        {
+          label: parentType === "array" ? "Insert Item After" : "Insert Member After…",
+          disabled: ro || isRoot,
+          onClick: add("after", parentType, next, `New member after ${label}`),
+        },
+        {
+          label: "Duplicate",
+          disabled: ro || parentType !== "array",
+          onClick: () => void requestStructure({ kind: "duplicateElement", path }, "Duplicate Item", [pathKey(next), name]),
+        },
+        "separator",
+        {
+          label: "Rename Key…",
+          disabled: ro || parentType !== "object",
+          onClick: () =>
+            ask(`Rename ${label}`, [keyField(name)], "Rename", ([k]) =>
+              void requestStructure({ kind: "renameElement", path, name: k }, `Rename "${name}" to "${k}"`, [pathKey(path), k]),
+            ),
+        },
+        "separator",
+        {
+          label: `Delete ${label}`,
+          danger: true,
+          disabled: ro || isRoot,
+          onClick: () =>
+            void requestStructure({ kind: "deleteElement", path }, `Delete ${label}`, isRoot ? undefined : [pathKey(parentPath), sk.names[sk.nameIdx[sk.parent[id]]]]),
+        },
+      ];
+      return setMenu({ x, y, items: jsonItems, note });
+    }
     const items: MenuItem[] = [
       ...extra,
       { label: "Insert Child Element…", disabled: ro, onClick: insert("child", `New child of ${tag}`, [...path, sk.childCount[id]]) },
@@ -1002,7 +1067,7 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
       onClick: () =>
         void requestStructure({ kind: "deleteElement", path }, `Delete ${tag}`, isRoot ? undefined : [pathKey(parentPath), sk.names[sk.nameIdx[sk.parent[id]]]]),
     });
-    setMenu({ x, y, items, note: ro ? (settings.readOnly ? "This document is read-only." : "Fix the XML errors to edit.") : undefined });
+    setMenu({ x, y, items, note });
   };
 
   /** Grid cell → the element it shows: a leaf cell's child element, else the row element (with its attribute for @ cells). */
@@ -1434,7 +1499,7 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
             ⚠
           </span>
           <span>
-            XML is not well-formed: {err.message} (line {err.line}, column {err.column}).{" "}
+            {format === "json" ? "JSON is not valid" : "XML is not well-formed"}: {err.message} (line {err.line}, column {err.column}).{" "}
             {keptOld ? "Showing the last valid version." : "Showing a partial tree."}
             {errors.length > 1 ? ` ${errors.length - 1} more error${errors.length > 2 ? "s" : ""}.` : ""}
           </span>
@@ -1442,6 +1507,7 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
       )}
       {find.open && (
         <FindBar
+          xpath={format !== "json"}
           state={find}
           onChange={(patch) => setFind((f) => ({ ...f, ...patch }))}
           count={findCount}
@@ -1615,8 +1681,8 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
                       onClick={() => selectElement(id, i < crumbs.length - 1 ? { group: skeleton.names[skeleton.nameIdx[crumbs[i + 1]]] } : {})}
                       title={pathKey(pathOfId(skeleton, id))}
                     >
-                      {skeleton.names[skeleton.nameIdx[id]]}
-                      {skeleton.parent[id] >= 0 && sameNameSiblings(skeleton, id) > 1 ? `[${indexAmongSameName(skeleton, id) + 1}]` : ""}
+                      {skeleton.json ? displayName(skeleton, id) : skeleton.names[skeleton.nameIdx[id]]}
+                      {!skeleton.json && skeleton.parent[id] >= 0 && sameNameSiblings(skeleton, id) > 1 ? `[${indexAmongSameName(skeleton, id) + 1}]` : ""}
                     </button>
                   </span>
                 ))}

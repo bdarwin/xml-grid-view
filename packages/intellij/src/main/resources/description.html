@@ -1,6 +1,6 @@
-<p>View and edit XML as a <b>tree</b>, a <b>grid</b> of repeating elements, or a <b>Flat</b> outline sheet,
-right next to the text editor. Includes text, regex and XPath search, a value inspector with JSON support,
-in-place editing of values, and structural edits from the context menu.</p>
+<p>View and edit <b>XML and JSON</b> as a <b>tree</b>, a spreadsheet-like <b>grid</b> of repeating elements or
+array items, or a <b>Flat</b> outline sheet, right next to the text editor. Edit cells in place, paste rows
+from Excel or Google Sheets, export CSV, search with text, regex or XPath, and see validation errors in the grid.</p>
 <ul>
   <li><b>Grid</b> tab: a tree of elements (key attributes, child counts, speed search and a node filter)
       beside a grid of repeating children. Columns are attributes, text-only children and mixed text, and
@@ -21,8 +21,13 @@ in-place editing of values, and structural edits from the context menu.</p>
   <li><b>Find</b> (Ctrl/Cmd+F): match case, whole word and regex, over the current grid or the whole
       document, with a results list and "show only matches". XPath mode binds document prefixes
       automatically, with the default namespace as <code>d:</code>.</li>
+  <li><b>Spreadsheet-style grid editing</b>: insert, move and delete rows, add and delete columns, clear
+      cells, and paste blocks from a spreadsheet (extra rows become new elements). Export as CSV or JSON.</li>
+  <li><b>JSON</b> files (<code>.json</code>, <code>.jsonc</code>, <code>.geojson</code>): arrays of objects
+      become grids; members and items can be added, renamed, moved and deleted, and value types are kept.</li>
+  <li><b>Problems</b>: the IDE's XML Schema and DTD validation errors are marked in the tree and grid.</li>
   <li>Follows edits in the text editor and keeps expansion, selection, sort and filters.
       Malformed XML keeps the last valid view and shows a banner that links to the error.</li>
 </ul>
-<p>Open any <code>.xml</code> file and use the <b>Text | Grid | Flat</b> tabs at the bottom of the editor.
+<p>Open any <code>.xml</code> or <code>.json</code> file and use the <b>Text | Grid | Flat</b> tabs at the bottom of the editor.
 Enter/F4 jumps to the element in the text. In Remote Development, install the plugin on the host.</p>

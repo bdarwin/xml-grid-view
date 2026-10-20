@@ -19,7 +19,8 @@ public final class XmlGridEditorProvider implements FileEditorProvider, DumbAwar
 
   @Override
   public boolean accept(@NotNull Project project, @NotNull VirtualFile file) {
-    return !file.isDirectory() && FileTypeRegistry.getInstance().isFileOfType(file, XmlFileType.INSTANCE);
+    if (file.isDirectory()) return false;
+    return FileTypeRegistry.getInstance().isFileOfType(file, XmlFileType.INSTANCE) || dev.xmlgridview.intellij.model.JsonModelBuilder.isJsonFileName(file.getName());
   }
 
   @Override

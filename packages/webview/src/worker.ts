@@ -1,6 +1,8 @@
 /// <reference lib="webworker" />
 import {
   XmlModel,
+  parseJsonDocument,
+  type XDocument,
   XmlParser,
   computeValueEdit,
   computeStructureEdit,
@@ -25,17 +27,22 @@ export function createWorkerHandler(post: (r: WorkerResponse, transfer?: Transfe
 
   const yieldNow = () => new Promise<void>((r) => setTimeout(r, 0));
 
-  async function load(id: number, text: string) {
+  async function load(id: number, text: string, format: "xml" | "json" = "xml") {
     latestLoad = id;
-    const parser = new XmlParser(text);
-    while (!parser.step()) {
-      await yieldNow();
-      if (latestLoad !== id) {
-        post({ id, ok: false, error: "cancelled", cancelled: true });
-        return;
+    let doc: XDocument;
+    if (format === "json") {
+      doc = parseJsonDocument(text);
+    } else {
+      const parser = new XmlParser(text);
+      while (!parser.step()) {
+        await yieldNow();
+        if (latestLoad !== id) {
+          post({ id, ok: false, error: "cancelled", cancelled: true });
+          return;
+        }
       }
+      doc = parser.result;
     }
-    const doc = parser.result;
     let result: LoadResult;
     if (doc.errors.length && modelGood) {
       // Keep the last good model; report the errors only.
@@ -53,7 +60,7 @@ export function createWorkerHandler(post: (r: WorkerResponse, transfer?: Transfe
     }
     const sk = result.skeleton;
     const transfer = sk
-      ? [sk.parent, sk.firstChild, sk.nextSibling, sk.childCount, sk.attrCount, sk.index, sk.depth, sk.nameIdx, sk.start, sk.openEnd, sk.end].map(
+      ? [sk.parent, sk.firstChild, sk.nextSibling, sk.childCount, sk.attrCount, sk.index, sk.depth, sk.nameIdx, sk.start, sk.openEnd, sk.end, ...(sk.json ? [sk.json] : [])].map(
           (a) => a.buffer as ArrayBuffer,
         )
       : [];
@@ -63,7 +70,7 @@ export function createWorkerHandler(post: (r: WorkerResponse, transfer?: Transfe
   return function handle(req: WorkerRequest) {
     try {
       if (req.type === "load") {
-        void load(req.id, req.text).catch((e) => post({ id: req.id, ok: false, error: String((e as Error)?.message ?? e) }));
+        void load(req.id, req.text, req.format).catch((e) => post({ id: req.id, ok: false, error: String((e as Error)?.message ?? e) }));
         return;
       }
       if (!model || req.gen !== gen) {

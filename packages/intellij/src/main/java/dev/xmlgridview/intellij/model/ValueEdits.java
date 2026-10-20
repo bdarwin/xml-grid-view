@@ -36,11 +36,11 @@ public final class ValueEdits {
 
   /** Either an edit or a human-readable reason it was refused. */
   public record Result(@Nullable TextEdit edit, @Nullable String error) {
-    static Result ok(TextEdit e) {
+    public static Result ok(TextEdit e) {
       return new Result(e, null);
     }
 
-    static Result fail(String message) {
+    public static Result fail(String message) {
       return new Result(null, message);
     }
 
@@ -106,6 +106,7 @@ public final class ValueEdits {
    * built from. Refuses anything that would need a structural change.
    */
   public static @NotNull Result compute(@NotNull XmlDocumentModel model, @NotNull Target target, @NotNull String value) {
+    if (model.isJson()) return JsonEdits.valueEdit(model, target, value);
     String source = model.text();
     XNode el = model.byPath(target.path());
     if (el == null) return Result.fail("The element no longer exists.");

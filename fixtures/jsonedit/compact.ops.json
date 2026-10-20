@@ -1,0 +1,96 @@
+{
+  "cases": [
+    {
+      "op": {
+        "kind": "deleteElement",
+        "path": [0, 0, 0]
+      },
+      "expected": {
+        "edits": [{ "offset": 10, "length": 20, "text": "" }],
+        "result": "{\"rows\": [{\"a\": 2}], \"flag\": true}\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "deleteElement",
+        "path": [0, 0, 1, 0]
+      },
+      "expected": {
+        "edits": [{ "offset": 31, "length": 6, "text": "" }],
+        "result": "{\"rows\": [{\"a\": 1, \"b\": \"x\"}, {}], \"flag\": true}\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "insertElement",
+        "path": [0, 0, 1],
+        "where": "child",
+        "name": "c"
+      },
+      "expected": {
+        "edits": [{ "offset": 37, "length": 0, "text": ", \"c\": \"\"" }],
+        "result": "{\"rows\": [{\"a\": 1, \"b\": \"x\"}, {\"a\": 2, \"c\": \"\"}], \"flag\": true}\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "newRow",
+        "path": [0, 0, 0]
+      },
+      "expected": {
+        "edits": [{ "offset": 28, "length": 0, "text": ", {\"a\": 0, \"b\": \"\"}" }],
+        "result": "{\"rows\": [{\"a\": 1, \"b\": \"x\"}, {\"a\": 0, \"b\": \"\"}, {\"a\": 2}], \"flag\": true}\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "addColumn",
+        "path": [0, 0],
+        "group": "item",
+        "name": "c"
+      },
+      "expected": {
+        "edits": [
+          { "offset": 37, "length": 0, "text": ", \"c\": \"\"" },
+          { "offset": 27, "length": 0, "text": ", \"c\": \"\"" }
+        ],
+        "result": "{\"rows\": [{\"a\": 1, \"b\": \"x\", \"c\": \"\"}, {\"a\": 2, \"c\": \"\"}], \"flag\": true}\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "insertRows",
+        "path": [0, 0],
+        "group": "item",
+        "rows": [{ "a": "3", "b": "z" }]
+      },
+      "expected": {
+        "edits": [{ "offset": 38, "length": 0, "text": ", {\"a\": 3, \"b\": \"z\"}" }],
+        "result": "{\"rows\": [{\"a\": 1, \"b\": \"x\"}, {\"a\": 2}, {\"a\": 3, \"b\": \"z\"}], \"flag\": true}\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "setCells",
+        "cells": [
+          {
+            "path": [0, 0, 1],
+            "key": "b",
+            "value": "y"
+          }
+        ]
+      },
+      "expected": {
+        "edits": [{ "offset": 37, "length": 0, "text": ", \"b\": \"y\"" }],
+        "result": "{\"rows\": [{\"a\": 1, \"b\": \"x\"}, {\"a\": 2, \"b\": \"y\"}], \"flag\": true}\n",
+        "wellFormed": true
+      }
+    }
+  ]
+}

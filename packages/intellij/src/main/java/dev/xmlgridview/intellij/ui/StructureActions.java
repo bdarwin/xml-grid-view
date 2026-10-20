@@ -47,45 +47,73 @@ final class StructureActions {
   static @NotNull DefaultActionGroup create(@NotNull JComponent owner, @NotNull Supplier<@Nullable Target> target, @NotNull Applier applier) {
     DefaultActionGroup g = new DefaultActionGroup();
     g.add(Separator.getInstance());
-    g.add(new EditAction("Insert Child Element…", AllIcons.General.Add, t -> true, owner, target, applier) {
+    g.add(new EditAction("Insert Child Element…", AllIcons.General.Add, t -> !json(t) || isContainer(t.node()), owner, target, applier) {
+      @Override
+      String text(Target t) {
+        if (!json(t)) return null;
+        return isArray(t.node()) ? "Add Item" : "Add Member…";
+      }
+
       @Override
       @Nullable Planned plan(Target t) {
-        String n = askName(owner, "New child of <" + t.node().tag() + ">", "Element name", "");
-        return n == null ? null : new Planned(Op.insert(t.node().path(), Where.CHILD, n), childPath(t.node(), t.node().childCount()));
+        String path = childPath(t.node(), t.node().childCount());
+        if (json(t) && isArray(t.node())) return new Planned(Op.insert(t.node().path(), Where.CHILD, JSON_ITEM), path);
+        String n = askName(owner, json(t) ? "New member of " + label(t.node()) : "New child of <" + t.node().tag() + ">", json(t) ? "Key" : "Element name", "", json(t));
+        return n == null ? null : new Planned(Op.insert(t.node().path(), Where.CHILD, n), path);
       }
     });
     g.add(new EditAction("Insert Element Before…", null, StructureActions::notRoot, owner, target, applier) {
       @Override
+      String text(Target t) {
+        return !json(t) ? null : inArray(t.node()) ? "Insert Item Before" : "Insert Member Before…";
+      }
+
+      @Override
       @Nullable Planned plan(Target t) {
-        String n = askName(owner, "New element before <" + t.node().tag() + ">", "Element name", "");
+        String n = sibling(owner, t, "before");
         return n == null ? null : new Planned(Op.insert(t.node().path(), Where.BEFORE, n), t.node().path());
       }
     });
     g.add(new EditAction("Insert Element After…", null, StructureActions::notRoot, owner, target, applier) {
       @Override
+      String text(Target t) {
+        return !json(t) ? null : inArray(t.node()) ? "Insert Item After" : "Insert Member After…";
+      }
+
+      @Override
       @Nullable Planned plan(Target t) {
-        String n = askName(owner, "New element after <" + t.node().tag() + ">", "Element name", "");
+        String n = sibling(owner, t, "after");
         return n == null ? null : new Planned(Op.insert(t.node().path(), Where.AFTER, n), nextSiblingPath(t.node()));
       }
     });
-    g.add(new EditAction("Duplicate", AllIcons.Actions.Copy, StructureActions::notRoot, owner, target, applier) {
+    g.add(new EditAction("Duplicate", AllIcons.Actions.Copy, t -> notRoot(t) && (!json(t) || inArray(t.node())), owner, target, applier) {
       @Override
       Planned plan(Target t) {
         return new Planned(Op.duplicate(t.node().path()), nextSiblingPath(t.node()));
       }
     });
     g.add(Separator.getInstance());
-    g.add(new EditAction("Rename…", null, t -> true, owner, target, applier) {
+    g.add(new EditAction("Rename…", null, t -> !json(t) || (notRoot(t) && !inArray(t.node())), owner, target, applier) {
+      @Override
+      String text(Target t) {
+        return json(t) ? "Rename Key…" : null;
+      }
+
       @Override
       @Nullable Planned plan(Target t) {
-        String n = askName(owner, "Rename <" + t.node().tag() + ">", "New name", t.node().tag());
+        String n = askName(owner, json(t) ? "Rename " + label(t.node()) : "Rename <" + t.node().tag() + ">", json(t) ? "New key" : "New name", t.node().tag(), json(t));
         return n == null ? null : new Planned(Op.rename(t.node().path(), n), t.node().path());
       }
     });
     g.add(new EditAction("Add Attribute…", null, t -> true, owner, target, applier) {
       @Override
+      boolean visible(Target t) {
+        return !json(t);
+      }
+
+      @Override
       @Nullable Planned plan(Target t) {
-        String n = askName(owner, "New attribute on <" + t.node().tag() + ">", "Attribute name", "");
+        String n = askName(owner, "New attribute on <" + t.node().tag() + ">", "Attribute name", "", false);
         if (n == null) return null;
         String v = Messages.showInputDialog(owner, "Value of @" + n, "New Attribute on <" + t.node().tag() + ">", null);
         return v == null ? null : new Planned(Op.addAttr(t.node().path(), n, v), null);
@@ -93,11 +121,13 @@ final class StructureActions {
     });
     g.add(new EditAction("Delete Attribute", AllIcons.General.Remove, t -> t.attr() != null, owner, target, applier) {
       @Override
-      public void update(@NotNull AnActionEvent e) {
-        super.update(e);
-        Target t = target.get();
-        e.getPresentation().setVisible(t != null && t.attr() != null);
-        if (t != null && t.attr() != null) e.getPresentation().setText("Delete Attribute @" + t.attr());
+      boolean visible(Target t) {
+        return t.attr() != null && !json(t);
+      }
+
+      @Override
+      String text(Target t) {
+        return t.attr() == null ? null : "Delete Attribute @" + t.attr();
       }
 
       @Override
@@ -108,10 +138,8 @@ final class StructureActions {
     g.add(Separator.getInstance());
     g.add(new EditAction("Delete Element", AllIcons.General.Remove, StructureActions::notRoot, owner, target, applier) {
       @Override
-      public void update(@NotNull AnActionEvent e) {
-        super.update(e);
-        Target t = target.get();
-        if (t != null) e.getPresentation().setText("Delete <" + t.node().tag() + ">");
+      String text(Target t) {
+        return "Delete " + label(t.node());
       }
 
       @Override
@@ -121,6 +149,36 @@ final class StructureActions {
       }
     });
     return g;
+  }
+
+  private static final String JSON_ITEM = dev.xmlgridview.intellij.model.JsonModelBuilder.ITEM;
+
+  private static boolean json(Target t) {
+    return t.model().isJson();
+  }
+
+  private static boolean isArray(XNode n) {
+    return "array".equals(n.jsonType());
+  }
+
+  private static boolean isContainer(XNode n) {
+    return isArray(n) || "object".equals(n.jsonType());
+  }
+
+  private static boolean inArray(XNode n) {
+    return n.parent() != null && isArray(n.parent());
+  }
+
+  /** {@code <tag>} for XML, the key (or {@code [i]}) for JSON. */
+  private static String label(XNode n) {
+    return n.jsonType() != null ? "\"" + n.displayName() + "\"" : "<" + n.tag() + ">";
+  }
+
+  /** Name for a new sibling: asked for members and XML elements; array items have none. */
+  private static @Nullable String sibling(JComponent owner, Target t, String where) {
+    if (json(t) && inArray(t.node())) return JSON_ITEM;
+    return askName(owner, json(t) ? "New member " + where + " " + label(t.node()) : "New element " + where + " <" + t.node().tag() + ">",
+                   json(t) ? "Key" : "Element name", "", json(t));
   }
 
   /** The action whose (template) text starts with {@code text}, for tests. */
@@ -145,14 +203,16 @@ final class StructureActions {
     return parent == null ? node.path() : childPath(parent, node.index() + 1);
   }
 
-  private static @Nullable String askName(JComponent owner, String title, String message, String initial) {
+  /** Asks for an XML name (validated) or a JSON key (any text, not empty). */
+  private static @Nullable String askName(JComponent owner, String title, String message, String initial, boolean jsonKey) {
     String n = Messages.showInputDialog(owner, message, title, null, initial, new InputValidatorEx() {
       @Override
       public @Nullable String getErrorText(@NotNull String input) {
+        if (jsonKey) return input.isEmpty() ? "Enter a key." : null;
         return StructureEdits.isQName(input.strip()) ? null : "Not a valid XML name.";
       }
     });
-    return n == null ? null : n.strip();
+    return n == null ? null : jsonKey ? n : n.strip();
   }
 
   /** An edit and the element to select afterwards. */
@@ -177,6 +237,15 @@ final class StructureActions {
     /** Asks for any input and returns the operation, or null when cancelled. */
     abstract @Nullable Planned plan(Target t);
 
+    /** The menu text for this target, or null for the template text. */
+    @Nullable String text(Target t) {
+      return null;
+    }
+
+    boolean visible(Target t) {
+      return true;
+    }
+
     @Override
     public @NotNull ActionUpdateThread getActionUpdateThread() {
       return ActionUpdateThread.EDT;
@@ -185,8 +254,10 @@ final class StructureActions {
     @Override
     public void update(@NotNull AnActionEvent e) {
       Target t = target.get();
-      e.getPresentation().setVisible(t != null);
+      e.getPresentation().setVisible(t != null && visible(t));
       e.getPresentation().setEnabled(t != null && applier.canEdit() && allowed.apply(t));
+      String text = t == null ? null : text(t);
+      e.getPresentation().setText(text != null ? text : getTemplateText());
     }
 
     @Override

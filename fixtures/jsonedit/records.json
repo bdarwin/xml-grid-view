@@ -1,0 +1,25 @@
+{
+  "name": "Library",
+  "books": [
+    {
+      "id": 1,
+      "title": "One",
+      "price": 10.5,
+      "tags": ["a", "b"],
+      "used": false
+    },
+    {
+      "id": 2,
+      "title": "Two",
+      "author": null
+    },
+    {
+      "id": 3,
+      "title": "Three"
+    }
+  ],
+  "empty": {},
+  "none": [],
+  "single": [7],
+  "codes": [1, 2, 3]
+}

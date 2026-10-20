@@ -367,6 +367,7 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
     String selected = selectedKey();
     boolean first = model == null;
     model = built;
+    findBar.setXPathAvailable(!built.isJson());
     problems.refresh(built);
     sectionLevel = FlatRow.sectionLevel(built);
     boxFilter = null; // the tree re-applies its filter box to the new model and reports back
@@ -931,7 +932,7 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
             Highlight.append(this, r.attr().name(), base, highlight ? m : null);
           }
           else {
-            Highlight.append(this, r.node().tag(), base, highlight ? m : null);
+            Highlight.append(this, r.node().displayName(), base, highlight ? m : null);
           }
           setToolTipText(ps.isEmpty() ? r.node().path() : DocumentProblems.tooltip(ps));
         }

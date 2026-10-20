@@ -1,0 +1,52 @@
+{
+  "cases": [
+    {
+      "op": {
+        "kind": "insertElement",
+        "path": [0, 1],
+        "where": "child",
+        "name": "ignored"
+      },
+      "expected": {
+        "edits": [{ "offset": 59, "length": 0, "text": ",\n    \"\"" }],
+        "result": "// settings\n{\n  \"a\": 1, // one\n  \"list\": [\n    \"x\",\n    \"y\",\n    \"\",\n  ],\n}\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "deleteElement",
+        "path": [0, 1, 1]
+      },
+      "expected": {
+        "edits": [{ "offset": 50, "length": 9, "text": "" }],
+        "result": "// settings\n{\n  \"a\": 1, // one\n  \"list\": [\n    \"x\",\n  ],\n}\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "deleteElement",
+        "path": [0, 0]
+      },
+      "expected": {
+        "edits": [{ "offset": 16, "length": 17, "text": "" }],
+        "result": "// settings\n{\n  \"list\": [\n    \"x\",\n    \"y\",\n  ],\n}\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "insertElement",
+        "path": [0],
+        "where": "child",
+        "name": "b"
+      },
+      "expected": {
+        "edits": [{ "offset": 64, "length": 0, "text": ",\n  \"b\": \"\"" }],
+        "result": "// settings\n{\n  \"a\": 1, // one\n  \"list\": [\n    \"x\",\n    \"y\",\n  ],\n  \"b\": \"\",\n}\n",
+        "wellFormed": true
+      }
+    }
+  ]
+}

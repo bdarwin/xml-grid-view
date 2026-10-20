@@ -1,4 +1,4 @@
-import { miscByParent, miscDisplay, type Diagnostic, type Matcher, type TreeSkeleton } from "@xmlgridview/core";
+import { displayName, miscByParent, miscDisplay, type Diagnostic, type Matcher, type TreeSkeleton } from "@xmlgridview/core";
 import { problemClass, problemTitle } from "../problems";
 import { useEffect, useMemo } from "preact/hooks";
 import { Highlight, PreviewText } from "./Highlight";
@@ -197,7 +197,7 @@ export function Tree(p: TreeProps) {
           }}
         />
         <span class="tag">
-          <Highlight text={sk.names[sk.nameIdx[id]]} matcher={p.highlightNames ? p.matcher : null} />
+          <Highlight text={displayName(sk, id)} matcher={p.highlightNames ? p.matcher : null} />
         </span>
         {sk.preview[id] && (
           <span class="preview">

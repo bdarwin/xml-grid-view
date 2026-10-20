@@ -2,6 +2,10 @@
 
 ## 0.5.0
 
+- **JSON support:** `.json`, `.jsonc` and `.geojson` files open in the same
+  tree, grid and Flat views. Arrays of objects are grids; values, members,
+  items, rows and columns can be edited, with types kept and formatting
+  (including comments and trailing commas) preserved.
 - **Grid editing like a spreadsheet:** insert, move and delete rows, add and
   delete columns, clear cells with Delete, and paste a block copied from
   Excel or Google Sheets (rows past the end become new elements). Each is

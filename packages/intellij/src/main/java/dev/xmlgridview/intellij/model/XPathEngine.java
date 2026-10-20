@@ -88,6 +88,7 @@ public final class XPathEngine {
   }
 
   public static @NotNull Result evaluate(@NotNull XmlDocumentModel model, @NotNull String expr) {
+    if (model.isJson()) return new Result(List.of(), null, "XPath works on XML documents; use Find for JSON.", Map.of());
     Map<String, String> ns = namespaceBindings(model);
     if (expr.isBlank()) return new Result(List.of(), null, null, ns);
 

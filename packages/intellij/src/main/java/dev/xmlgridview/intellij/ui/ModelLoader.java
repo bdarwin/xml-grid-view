@@ -81,6 +81,12 @@ final class ModelLoader implements Disposable {
     return document;
   }
 
+  /** Whether the file is JSON (by name), so it is parsed with {@link dev.xmlgridview.intellij.model.JsonModelBuilder}. */
+  boolean isJson() {
+    VirtualFile f = largeFile != null ? largeFile : com.intellij.openapi.fileEditor.FileDocumentManager.getInstance().getFile(document);
+    return f != null && dev.xmlgridview.intellij.model.JsonModelBuilder.isJsonFileName(f.getName());
+  }
+
   ModelLoader(@NotNull Project project, @NotNull Document document, @NotNull JComponent owner,
               @NotNull IntConsumer navigator, @NotNull Client client, @NotNull Disposable parent) {
     this.project = project;
@@ -194,11 +200,11 @@ final class ModelLoader implements Disposable {
     SharedModels.Build b;
     if (largeFile != null) {
       VirtualFile f = largeFile;
-      b = SharedModels.request(f, f.getModificationStamp(), () -> loadWholeFile(f));
+      b = SharedModels.request(f, f.getModificationStamp(), () -> loadWholeFile(f), isJson());
     }
     else {
       CharSequence text = document.getImmutableCharSequence();
-      b = SharedModels.request(document, document.getModificationStamp(), () -> text);
+      b = SharedModels.request(document, document.getModificationStamp(), () -> text, isJson());
     }
     int gen = ++generation;
     if (!b.future.isDone()) startProgress(b, gen);
@@ -305,7 +311,7 @@ final class ModelLoader implements Disposable {
   private void showErrorBanner(ParseError e, boolean keptLastGood) {
     hideErrorBanner();
     EditorNotificationPanel p = new EditorNotificationPanel(EditorNotificationPanel.Status.Warning);
-    p.setText("XML is not well-formed at line " + e.line() + ", column " + e.column() + ": "
+    p.setText((isJson() ? "JSON is not valid" : "XML is not well-formed") + " at line " + e.line() + ", column " + e.column() + ": "
               + StringUtil.trimLog(e.message(), 200) + (keptLastGood ? " Showing the last valid version." : ""));
     p.createActionLabel("Go to error", () -> navigator.accept(Math.min(e.offset(), document.getTextLength())));
     errorBanner = p;

@@ -17,6 +17,7 @@ public final class XmlDocumentModel {
   private final String text;
   private final Map<String, GridTable> tableCache = new ConcurrentHashMap<>();
   private final List<XMisc> misc;
+  private final boolean json;
   /** Comments, PIs and DOCTYPE by parent element (null key: top level), built on first use. */
   private volatile @Nullable Map<XNode, List<XMisc>> miscByParent;
 
@@ -25,6 +26,11 @@ public final class XmlDocumentModel {
   }
 
   XmlDocumentModel(@Nullable XNode root, List<XNode> elements, List<ParseError> errors, String text, List<XMisc> misc) {
+    this(root, elements, errors, text, misc, false);
+  }
+
+  XmlDocumentModel(@Nullable XNode root, List<XNode> elements, List<ParseError> errors, String text, List<XMisc> misc, boolean json) {
+    this.json = json;
     this.misc = java.util.Collections.unmodifiableList(misc);
     this.root = root;
     // Not copied: millions of entries in large documents. The parser hands over its own list.
@@ -43,6 +49,9 @@ public final class XmlDocumentModel {
   public boolean hasErrors() { return !errors.isEmpty(); }
 
   public @NotNull String text() { return text; }
+
+  /** True for a document parsed from JSON ({@link JsonModelBuilder}). */
+  public boolean isJson() { return json; }
 
   /** The innermost element whose span contains {@code offset} (start inclusive, end exclusive), or null. */
   public @Nullable XNode elementAt(int offset) {

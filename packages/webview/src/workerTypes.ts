@@ -15,7 +15,7 @@ import type {
 
 /** Requests from the UI thread to the worker. `gen` identifies the model generation. */
 export type WorkerRequest =
-  | { id: number; type: "load"; text: string }
+  | { id: number; type: "load"; text: string; format?: "xml" | "json" }
   | { id: number; type: "table"; gen: number; elementId: number; group: string | null }
   | { id: number; type: "searchDoc"; gen: number; query: SearchQuery }
   | { id: number; type: "searchGrid"; gen: number; elementId: number; group: string | null; query: SearchQuery }

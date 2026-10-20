@@ -151,16 +151,19 @@ final class GridEditActions {
     g.add(new GridAction(grid, "Add Column…", null, ctx, applier, true) {
       @Override
       void run(Context c, Point lead) {
-        String n = Messages.showInputDialog(owner, "Name (@name for an attribute)", "New Column for <" + c.table().group() + ">", null, "",
+        boolean json = c.model().isJson();
+        String n = Messages.showInputDialog(owner, json ? "Key" : "Name (@name for an attribute)",
+                                            json ? "New Column" : "New Column for <" + c.table().group() + ">", null, "",
                                             new InputValidatorEx() {
                                               @Override
                                               public @Nullable String getErrorText(@NotNull String input) {
+                                                if (json) return input.isEmpty() ? "Enter a key." : null;
                                                 String v = input.strip();
                                                 return StructureEdits.isQName(v.startsWith("@") ? v.substring(1) : v) ? null : "Not a valid XML name.";
                                               }
                                             });
         if (n == null) return;
-        n = n.strip();
+        if (!json) n = n.strip();
         apply(owner, c, applier, List.of(Op.addColumn(c.table().element().path(), c.table().group(), n)), "Add Column " + n, null, 0);
       }
     });

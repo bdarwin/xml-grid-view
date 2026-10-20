@@ -36,6 +36,24 @@ export interface TreeSkeleton {
   preview: string[];
   /** Comments, processing instructions and the DOCTYPE, in document order. */
   misc: SkeletonMisc[];
+  /** JSON documents: each element's value type as an index into JSON_TYPES plus one; absent for XML. */
+  json?: Uint8Array;
+}
+
+/** JSON value types, indexed by `TreeSkeleton.json` minus one. */
+export const JSON_TYPES = ["object", "array", "string", "number", "boolean", "null"] as const;
+
+/** The element's JSON type, or null in XML documents. */
+export function jsonTypeOf(sk: TreeSkeleton, id: number): (typeof JSON_TYPES)[number] | null {
+  const t = sk.json?.[id] ?? 0;
+  return t ? JSON_TYPES[t - 1] : null;
+}
+
+/** How an element is labelled: its name, or `[i]` for a JSON array item. */
+export function displayName(sk: TreeSkeleton, id: number): string {
+  const p = sk.parent[id];
+  if (sk.json && p >= 0 && sk.json[p] === 2) return `[${sk.index[id]}]`;
+  return sk.names[sk.nameIdx[id]];
 }
 
 /** A comment, PI or DOCTYPE for the tree and Flat view (see XMisc). */
@@ -153,9 +171,9 @@ export function xmlTrim(s: string): string {
   return a === 0 && b === s.length ? s : s.slice(a, b);
 }
 
-/** An element's text value: its direct text with XML whitespace trimmed. */
+/** An element's text value: its direct text with XML whitespace trimmed (JSON values are kept as they are). */
 export function elementText(el: XElement): string {
-  return xmlTrim(directText(el));
+  return el.json ? directText(el) : xmlTrim(directText(el));
 }
 
 function collapse(s: string, max = PREVIEW_MAX): string {
@@ -339,6 +357,7 @@ function buildSkeleton(doc: XDocument, texts: string[]): TreeSkeleton {
     end,
     preview,
     misc: doc.misc.map((m) => ({ kind: m.kind, name: m.name, value: m.value, start: m.start, end: m.end, parent: m.parent ? m.parent.id : -1, before: m.before })),
+    json: doc.format === "json" ? Uint8Array.from(doc.elements, (e) => (e.json ? JSON_TYPES.indexOf(e.json) + 1 : 0)) : undefined,
   };
 }
 

@@ -144,6 +144,7 @@ export function evaluateXPath(
   expr: string,
   backend: XPathBackend = defaultBackend(),
 ): XPathEvalResult {
+  if (model.doc.format === "json") return { items: [], namespaces: {}, error: "XPath works on XML documents; use Find for JSON." };
   const namespaces = namespaceBindings(model);
   if (!expr.trim()) return { items: [], namespaces };
 

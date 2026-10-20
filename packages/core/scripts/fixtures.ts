@@ -2,7 +2,7 @@
  * Computes the expected golden-fixture outputs for every case in fixtures/cases
  * using the TypeScript core (the reference implementation).
  */
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -21,6 +21,7 @@ import {
   canonicalGrids,
   canonicalTree,
   jsBackend,
+  parseJsonDocument,
   parseXml,
   runSearchCase,
   runXPathCase,
@@ -33,23 +34,41 @@ export const JSON_DIR = resolve(CASES_DIR, "../json");
 export const EDITS_DIR = resolve(CASES_DIR, "../edits");
 export const STRUCTURE_DIR = resolve(CASES_DIR, "../structure");
 
-/** Value-edit cases: fixtures/edits/<name>.xml with <name>.edits.json (inputs + expected). */
+export const JSONEDIT_DIR = resolve(CASES_DIR, "../jsonedit");
+
+/** Parses a fixture input by its extension (.json → JSON document, else XML). */
+function parseByName(path: string, text: string) {
+  return path.endsWith(".json") ? parseJsonDocument(text) : parseXml(text);
+}
+
+/** JSON edit inputs: fixtures/jsonedit/<name>.json (not the generated .ops.json / .edits.json). */
+function jsonEditInputs(): string[] {
+  return readdirSync(JSONEDIT_DIR)
+    .filter((f) => f.endsWith(".json") && !/\.(ops|edits)\.json$/.test(f))
+    .sort();
+}
+
+/** Value-edit cases: fixtures/edits/<name>.xml and fixtures/jsonedit/<name>.json, with <name>.edits.json (inputs + expected). */
 export function listEditCases(): { name: string; xml: string; edits: string }[] {
-  return readdirSync(EDITS_DIR)
+  const xml = readdirSync(EDITS_DIR)
     .filter((f) => f.endsWith(".xml"))
     .sort()
     .map((f) => ({ name: f.slice(0, -4), xml: join(EDITS_DIR, f), edits: join(EDITS_DIR, f.slice(0, -4) + ".edits.json") }));
+  const json = jsonEditInputs()
+    .filter((f) => existsSync(join(JSONEDIT_DIR, f.slice(0, -5) + ".edits.json")))
+    .map((f) => ({ name: "json/" + f.slice(0, -5), xml: join(JSONEDIT_DIR, f), edits: join(JSONEDIT_DIR, f.slice(0, -5) + ".edits.json") }));
+  return [...xml, ...json];
 }
 
 export function expectedEditsOutput(c: { xml: string; edits: string }): string {
   const text = readFileSync(c.xml, "utf8");
-  const model = new XmlModel(parseXml(text));
+  const model = new XmlModel(parseByName(c.xml, text));
   const input = JSON.parse(readFileSync(c.edits, "utf8")) as { cases: { target: EditTarget; value: string }[] };
   const cases = input.cases.map(({ target, value }) => {
     const r = computeValueEdit(text, model, target, value);
     if ("error" in r) return { target, value, expected: { error: true } };
     // Round trip: apply, re-parse, and read the value back.
-    const after = new XmlModel(parseXml(applyEdit(text, r.edit)));
+    const after = new XmlModel(parseByName(c.xml, applyEdit(text, r.edit)));
     const el = elementAtPath(after.doc, target.path);
     const readBack = !el ? null : target.kind === "attr" ? (el.attrs.find((a) => a.name === target.name)?.value ?? null) : elementText(el);
     return { target, value, expected: { edit: r.edit, readBack, wellFormed: after.errors.length === 0 } };
@@ -57,24 +76,28 @@ export function expectedEditsOutput(c: { xml: string; edits: string }): string {
   return stableJson({ cases });
 }
 
-/** Structural-edit cases: fixtures/structure/<name>.xml with <name>.ops.json (inputs + expected). */
+/** Structural-edit cases: fixtures/structure/<name>.xml and fixtures/jsonedit/<name>.json, with <name>.ops.json (inputs + expected). */
 export function listStructureCases(): { name: string; xml: string; ops: string }[] {
-  return readdirSync(STRUCTURE_DIR)
+  const xml = readdirSync(STRUCTURE_DIR)
     .filter((f) => f.endsWith(".xml"))
     .sort()
     .map((f) => ({ name: f.slice(0, -4), xml: join(STRUCTURE_DIR, f), ops: join(STRUCTURE_DIR, f.slice(0, -4) + ".ops.json") }));
+  const json = jsonEditInputs()
+    .filter((f) => existsSync(join(JSONEDIT_DIR, f.slice(0, -5) + ".ops.json")))
+    .map((f) => ({ name: "json/" + f.slice(0, -5), xml: join(JSONEDIT_DIR, f), ops: join(JSONEDIT_DIR, f.slice(0, -5) + ".ops.json") }));
+  return [...xml, ...json];
 }
 
 export function expectedStructureOutput(c: { xml: string; ops: string }): string {
   const text = readFileSync(c.xml, "utf8");
-  const model = new XmlModel(parseXml(text));
+  const model = new XmlModel(parseByName(c.xml, text));
   const input = JSON.parse(readFileSync(c.ops, "utf8")) as { cases: { op: StructureOp }[] };
   const cases = input.cases.map(({ op }) => {
     const r = computeStructureEdit(text, model, op);
     if ("error" in r) return { op, expected: { error: true } };
     // The whole document after the edit, for review, and a well-formedness self-check.
     const result = applyEdits(text, r.edits);
-    return { op, expected: { edits: r.edits, result, wellFormed: parseXml(result).errors.length === 0 } };
+    return { op, expected: { edits: r.edits, result, wellFormed: parseByName(c.xml, result).errors.length === 0 } };
   });
   return stableJson({ cases });
 }
@@ -93,18 +116,31 @@ export function expectedJsonOutput(c: { input: string }): string {
 
 export interface FixtureCase {
   name: string;
+  /** The input document (XML in fixtures/cases, JSON in fixtures/jsondoc). */
   xmlPath: string;
   malformed: boolean;
+  format: "xml" | "json";
 }
 
+export const JSONDOC_DIR = resolve(CASES_DIR, "../jsondoc");
+
+/** Document cases: fixtures/cases/<name>.xml and fixtures/jsondoc/<name>.json (outputs next to them). */
 export function listCases(): FixtureCase[] {
-  return readdirSync(CASES_DIR)
+  const xml = readdirSync(CASES_DIR)
     .filter((f) => f.endsWith(".xml"))
     .sort()
-    .map((f) => {
+    .map((f): FixtureCase => {
       const name = f.slice(0, -4);
-      return { name, xmlPath: join(CASES_DIR, f), malformed: name.startsWith("malformed-") };
+      return { name, xmlPath: join(CASES_DIR, f), malformed: name.startsWith("malformed-"), format: "xml" };
     });
+  const json = readdirSync(JSONDOC_DIR)
+    .filter((f) => f.endsWith(".json") && !/\.(tree|grids|flat|errors|search)\.json$/.test(f))
+    .sort()
+    .map((f): FixtureCase => {
+      const name = f.slice(0, -5);
+      return { name, xmlPath: join(JSONDOC_DIR, f), malformed: name.startsWith("malformed-"), format: "json" };
+    });
+  return [...xml, ...json];
 }
 
 function readJson<T>(path: string): T | null {
@@ -119,9 +155,9 @@ function readJson<T>(path: string): T | null {
 export function expectedOutputs(c: FixtureCase): Map<string, string> {
   const text = readFileSync(c.xmlPath, "utf8");
   if (text.includes("\r")) throw new Error(`${c.name}: fixtures must use LF line endings`);
-  const model = new XmlModel(parseXml(text));
+  const model = new XmlModel(c.format === "json" ? parseJsonDocument(text) : parseXml(text));
   const out = new Map<string, string>();
-  const base = join(CASES_DIR, c.name);
+  const base = join(c.format === "json" ? JSONDOC_DIR : CASES_DIR, c.name);
   if (c.malformed) {
     const errors = canonicalErrors(model);
     if (!errors) throw new Error(`${c.name}: expected parse errors but there were none`);

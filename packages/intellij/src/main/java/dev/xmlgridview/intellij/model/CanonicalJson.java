@@ -39,6 +39,7 @@ public final class CanonicalJson {
     }
     m.put("attrs", attrs);
     m.put("text", n.text());
+    if (n.jsonType() != null) m.put("type", n.jsonType());
     List<Object> children = new ArrayList<>();
     for (XNode c : n.children()) children.add(node(c));
     m.put("children", children);

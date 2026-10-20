@@ -1,0 +1,13 @@
+// Settings with comments and trailing commas (JSONC)
+{
+  /* editor */
+  "editor.fontSize": 14, // pixels
+  "files.exclude": {
+    "**/.git": true,
+    "**/node_modules": true,
+  },
+  "recent": [
+    "a.json",
+    "b.json",
+  ],
+}

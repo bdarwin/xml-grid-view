@@ -107,6 +107,8 @@ tasks {
         inputs.dir(fixturesDir.resolve("json")).withPropertyName("jsonFixtures").withPathSensitivity(PathSensitivity.RELATIVE)
         inputs.dir(fixturesDir.resolve("edits")).withPropertyName("editFixtures").withPathSensitivity(PathSensitivity.RELATIVE)
         inputs.dir(fixturesDir.resolve("structure")).withPropertyName("structureFixtures").withPathSensitivity(PathSensitivity.RELATIVE)
+        inputs.dir(fixturesDir.resolve("jsondoc")).withPropertyName("jsonDocFixtures").withPathSensitivity(PathSensitivity.RELATIVE)
+        inputs.dir(fixturesDir.resolve("jsonedit")).withPropertyName("jsonEditFixtures").withPathSensitivity(PathSensitivity.RELATIVE)
     }
 }
 

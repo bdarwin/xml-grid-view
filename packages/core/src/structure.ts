@@ -9,6 +9,7 @@ import type { XmlModel } from "./model.js";
 import type { XElement } from "./types.js";
 import { elementAtPath, pathOfElement as pathOf, type ElementPath } from "./paths.js";
 import { computeValueEdit, escapeAttr, escapeText, type TextEdit } from "./edits.js";
+import { computeJsonStructureEdit } from "./jsonEdits.js";
 
 export type StructureOp =
   | { kind: "deleteElement"; path: ElementPath }
@@ -129,6 +130,7 @@ function insertAfter(source: string, after: XElement, text: string): TextEdit {
 }
 
 export function computeStructureEdit(source: string, model: XmlModel, op: StructureOp): StructureResult {
+  if (model.doc.format === "json") return computeJsonStructureEdit(source, model, op);
   if (model.errors.length) return { error: "The document is not well-formed; fix it before editing." };
   switch (op.kind) {
     case "deleteElements":

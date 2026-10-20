@@ -15,7 +15,7 @@ const sample = readFileSync(join(HERE, "sample.xml"), "utf8");
 
 type Theme = "light" | "dark";
 
-async function open(page: Page, opts: { theme?: Theme; text?: string; settings?: Record<string, unknown>; width?: number } = {}) {
+async function open(page: Page, opts: { theme?: Theme; text?: string; settings?: Record<string, unknown>; width?: number; fileName?: string } = {}) {
   await page.route("http://xgv.test/**", (route) => {
     const name = new URL(route.request().url()).pathname.slice(1);
     const file = name === "harness.html" ? join(HERE, name) : join(DIST, name);
@@ -27,17 +27,17 @@ async function open(page: Page, opts: { theme?: Theme; text?: string; settings?:
   await page.evaluate((t) => document.documentElement.classList.add(t), opts.theme ?? "light");
   await page.waitForFunction(() => (window as unknown as { __ready: boolean }).__ready);
   await page.evaluate(
-    ([text, theme, settings]) =>
+    ([text, theme, settings, fileName]) =>
       (window as unknown as { __init(m: unknown): void }).__init({
         type: "init",
         version: 1,
-        fileName: "sample.xml",
+        fileName,
         text,
         docVersion: 1,
         theme,
         settings,
       }),
-    [opts.text ?? sample, themeVars(), { readOnly: false, ...opts.settings }] as const,
+    [opts.text ?? sample, themeVars(), { readOnly: false, ...opts.settings }, opts.fileName ?? "sample.xml"] as const,
   );
 }
 
@@ -234,4 +234,29 @@ test("problems from the editor in tree, grid and Flat", async ({ page }) => {
   await page.mouse.move(0, 0);
   await page.locator(".toast").click();
   await expect(page).toHaveScreenshot("light-problems-flat.png");
+});
+
+const JSON_SAMPLE = `{
+  "store": "Books & more",
+  "books": [
+    { "id": 1, "title": "XML Developer's Guide", "price": 44.95, "tags": ["xml", "reference"], "inStock": true },
+    { "id": 2, "title": "Midnight Rain", "price": 5.95, "tags": ["fantasy"], "inStock": false },
+    { "id": 3, "title": "Maeve Ascendant", "price": 5.95, "author": null }
+  ],
+  "meta": { "count": 3, "updated": "2026-10-20" }
+}
+`;
+
+test("JSON document as tree and grid", async ({ page }) => {
+  await open(page, { text: JSON_SAMPLE, fileName: "books.json" });
+  await ready(page);
+  const books = page.locator(".tree-row").filter({ has: page.locator(".tag", { hasText: /^books$/ }) });
+  await books.click();
+  await page.locator(".grid-row").nth(2).waitFor();
+  await books.locator(".twisty").dispatchEvent("mousedown");
+  await expect(page.locator(".tree-row", { hasText: "[0]" })).toBeVisible();
+  await shot(page, "light-json-grid");
+  await page.getByRole("tab", { name: "Flat" }).click();
+  await page.locator(".flat-row").first().waitFor();
+  await shot(page, "light-json-flat");
 });

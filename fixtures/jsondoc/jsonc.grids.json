@@ -1,0 +1,79 @@
+{
+  "0": {
+    "default": ".",
+    "groups": [
+      { "tag": "editor.fontSize", "count": 1 },
+      { "tag": "files.exclude", "count": 1 },
+      { "tag": "recent", "count": 1 }
+    ],
+    "grids": {
+      ".": {
+        "columns": [
+          { "key": "editor.fontSize", "kind": "leaf" },
+          { "key": "files.exclude", "kind": "complex" },
+          { "key": "recent", "kind": "complex" }
+        ],
+        "rows": [
+          ["14", { "drill": "files.exclude", "count": 1 }, { "drill": "recent", "count": 1 }]
+        ]
+      },
+      "editor.fontSize": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [["14"]]
+      },
+      "files.exclude": {
+        "columns": [
+          { "key": "**/.git", "kind": "leaf" },
+          { "key": "**/node_modules", "kind": "leaf" }
+        ],
+        "rows": [["true", "true"]]
+      },
+      "recent": {
+        "columns": [{ "key": "item", "kind": "complex" }],
+        "rows": [
+          [{ "drill": "item", "count": 2 }]
+        ]
+      }
+    }
+  },
+  "0/1": {
+    "default": ".",
+    "groups": [
+      { "tag": "**/.git", "count": 1 },
+      { "tag": "**/node_modules", "count": 1 }
+    ],
+    "grids": {
+      ".": {
+        "columns": [
+          { "key": "**/.git", "kind": "leaf" },
+          { "key": "**/node_modules", "kind": "leaf" }
+        ],
+        "rows": [["true", "true"]]
+      },
+      "**/.git": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [["true"]]
+      },
+      "**/node_modules": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [["true"]]
+      }
+    }
+  },
+  "0/2": {
+    "default": "item",
+    "groups": [{ "tag": "item", "count": 2 }],
+    "grids": {
+      ".": {
+        "columns": [{ "key": "item", "kind": "complex" }],
+        "rows": [
+          [{ "drill": "item", "count": 2 }]
+        ]
+      },
+      "item": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [["a.json"], ["b.json"]]
+      }
+    }
+  }
+}

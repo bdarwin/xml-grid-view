@@ -95,9 +95,9 @@ public final class InspectTarget {
   public static @NotNull String pathLabel(@NotNull XNode n) {
     List<String> parts = new ArrayList<>();
     for (XNode e = n; e != null; e = e.parent()) {
-      String label = e.tag();
+      String label = e.displayName();
       XNode p = e.parent();
-      if (p != null) {
+      if (p != null && e.jsonType() == null) {
         int same = 0;
         int pos = 0;
         for (XNode s : p.children()) {

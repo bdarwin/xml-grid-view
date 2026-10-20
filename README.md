@@ -14,18 +14,19 @@
 | **Value inspector: JSON as a grid** | **Value inspector: JSON tree (IntelliJ)** |
 | ![Inspector JSON grid](docs/view-inspector-grid.png) | ![IntelliJ inspector JSON tree](docs/intellij-inspector.png) |
 
-An XML viewer and editor for VS Code and IntelliJ. It shows the document as a
-tree and a grid, plus a Flat outline, with search and XPath. You can edit
-attribute values and element text in place, and add, duplicate, rename or
-delete elements and attributes from the context menu. Edits go through the
-editor's own undo history and are never saved behind your back.
+An XML and JSON viewer and editor for VS Code and IntelliJ. It shows the
+document as a tree and a spreadsheet-like grid, plus a Flat outline, with
+search and XPath. You can edit values in place, paste rows from Excel, add,
+duplicate, rename or delete elements, members and attributes, and export the
+grid as CSV. Edits go through the editor's own undo history and are never
+saved behind your back.
 
 | Package | What it is |
 | --- | --- |
 | `packages/core` | TypeScript model with no DOM or UI dependencies. Includes the saxes parser with source offsets, the grid builder, the search engine, XPath, and the host↔view message protocol. This is the reference implementation for the golden fixtures. |
 | `packages/webview` | Preact UI. All parsing, model building, search and XPath run in a Web Worker. esbuild bundles it to `webview.js` and `webview.css`. |
 | `packages/vscode` | VS Code extension: a `CustomTextEditorProvider` that hosts the web view. |
-| `packages/intellij` | IntelliJ plugin with a native Swing UI. It has its own Java model built from XML PSI, and the Gradle build doesn't need Node. |
+| `packages/intellij` | IntelliJ plugin with a native Swing UI. It has its own Java parsers and model (XML and JSON), and the Gradle build doesn't need Node. |
 | `fixtures/` | Shared golden test cases. Vitest and JUnit both assert against them; see [`fixtures/SCHEMA.md`](fixtures/SCHEMA.md). |
 
 ## Building
@@ -206,6 +207,23 @@ limitations.
   IntelliJ, Shift for the previous one).
 - **Comments, processing instructions and the DOCTYPE** are shown, read-only
   and in grey, in the tree and the Flat view.
+- **JSON** (`.json`, `.jsonc`, `.geojson`): the same views and editing.
+  - An object's members are its children, named by key; an array's items
+    are shown as `[0]`, `[1]`, …; strings, numbers, booleans and null are
+    values. Select an array of objects and it is a grid, one row per object.
+  - Value edits keep types: typing `42` into a number writes a number,
+    `true` into a boolean writes a boolean, and anything else (and every
+    string) is written as a JSON string. New values in a column follow the
+    type the column already has.
+  - The menus speak JSON: **Add Member** / **Add Item**, **Insert Member
+    Before/After**, **Rename Key**, **Duplicate** (array items), **Delete**,
+    plus the grid's row and column actions and paste.
+  - Comments and trailing commas (JSONC) are accepted and kept; commas and
+    indentation are handled when adding and removing.
+  - XPath is XML-only; Find works on JSON. Validation problems (e.g. JSON
+    Schema in VS Code) are marked like XML ones.
+  - In VS Code, open a JSON file with **Open With… → XML Grid View** (it is
+    not the default editor for JSON).
 - **Find (Ctrl/Cmd+F):**
   - Match case, whole word and regex.
   - Scope: the current grid or the whole document.

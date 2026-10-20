@@ -35,6 +35,11 @@ public final class XNode {
   private final @Nullable XNode parent;
   private final int index;
   private XNode[] children = NO_CHILDREN;
+  /** JSON documents: index into {@link #JSON_TYPES} plus one; 0 for XML elements. */
+  private byte json;
+
+  /** JSON value types, as in the fixtures. */
+  public static final String[] JSON_TYPES = {"object", "array", "string", "number", "boolean", "null"};
 
   XNode(int id, String tag, String ns, int start, List<XAttr> attrs, Map<String, String> nsDecls,
         String src, @Nullable XNode parent, int index) {
@@ -60,6 +65,20 @@ public final class XNode {
     this.textStart = textStart;
     this.textEnd = textEnd;
     if (children != null) this.children = children;
+  }
+
+  void setJsonType(int type) {
+    this.json = (byte)(type + 1);
+  }
+
+  /** In a JSON document: object, array, string, number, boolean or null; null for XML elements. */
+  public @Nullable String jsonType() {
+    return json == 0 ? null : JSON_TYPES[json - 1];
+  }
+
+  /** How the element is labelled: its tag, or {@code [i]} for an item of a JSON array. */
+  public @NotNull String displayName() {
+    return parent != null && "array".equals(parent.jsonType()) ? "[" + index + "]" : tag;
   }
 
   /** Document-order index, also the index into {@link XmlDocumentModel#elements()}. */

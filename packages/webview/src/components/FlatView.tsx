@@ -1,4 +1,4 @@
-import { miscByParent, type Diagnostic, type FlatValues, type Matcher, type SkeletonMisc, type TreeSkeleton } from "@xmlgridview/core";
+import { displayName, miscByParent, type Diagnostic, type FlatValues, type Matcher, type SkeletonMisc, type TreeSkeleton } from "@xmlgridview/core";
 import { problemClass, problemTitle } from "../problems";
 import { miscIndex, miscRow } from "./Tree";
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
@@ -182,7 +182,7 @@ export function FlatView(p: FlatViewProps) {
       const id = rows.ids[i];
       const attr = rows.attrs[i];
       const m = flatMisc(sk, id);
-      const name = m ? miscLabel(m) : attr >= 0 ? "@" + (p.values.get(id)?.attrs[attr]?.name ?? "") : sk.names[sk.nameIdx[id]];
+      const name = m ? miscLabel(m) : attr >= 0 ? "@" + (p.values.get(id)?.attrs[attr]?.name ?? "") : displayName(sk, id);
       let tw = cache.get(name);
       if (tw === undefined) cache.set(name, (tw = width(name)));
       // padding-left 4 + twisty 14 + gap 4 + right padding 8 + border/slack 6
@@ -342,7 +342,7 @@ export function FlatView(p: FlatViewProps) {
     const misc = flatMisc(sk, id);
     const v = p.values.get(id);
     const depth = rowDepth(sk, id) + (isAttr ? 1 : 0);
-    const name = misc ? miscLabel(misc) : isAttr ? "@" + (v?.attrs[attr]?.name ?? "…") : sk.names[sk.nameIdx[id]];
+    const name = misc ? miscLabel(misc) : isAttr ? "@" + (v?.attrs[attr]?.name ?? "…") : displayName(sk, id);
     const raw = misc ? misc.value : isAttr ? v?.attrs[attr]?.value : v?.text;
     const canToggle = !isAttr && collapsible(id);
     const open = canToggle && !p.isCollapsed(id);

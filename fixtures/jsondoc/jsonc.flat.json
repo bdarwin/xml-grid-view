@@ -1,0 +1,10 @@
+[
+  { "depth": 0, "kind": "element", "name": "root", "value": "", "path": "0" },
+  { "depth": 1, "kind": "element", "name": "editor.fontSize", "value": "14", "path": "0/0" },
+  { "depth": 1, "kind": "element", "name": "files.exclude", "value": "", "path": "0/1" },
+  { "depth": 2, "kind": "element", "name": "**/.git", "value": "true", "path": "0/1/0" },
+  { "depth": 2, "kind": "element", "name": "**/node_modules", "value": "true", "path": "0/1/1" },
+  { "depth": 1, "kind": "element", "name": "recent", "value": "", "path": "0/2" },
+  { "depth": 2, "kind": "element", "name": "item", "value": "a.json", "path": "0/2/0" },
+  { "depth": 2, "kind": "element", "name": "item", "value": "b.json", "path": "0/2/1" }
+]

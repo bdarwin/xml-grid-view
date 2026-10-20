@@ -38,7 +38,11 @@ export interface XElement extends Span {
   openEnd: number;
   /** Namespace declarations made on this element (prefix → uri, "" for default). */
   nsDecls: Record<string, string>;
+  /** In a JSON document: the type of the value this element stands for. */
+  json?: JsonType;
 }
+
+export type JsonType = "object" | "array" | "string" | "number" | "boolean" | "null";
 
 export type XChild = XElement | XText;
 
@@ -73,4 +77,6 @@ export interface XDocument {
   /** Comments, processing instructions and the DOCTYPE, in document order. */
   misc: XMisc[];
   textLength: number;
+  /** "json" for documents parsed from JSON (see parseJson); XML otherwise. */
+  format?: "xml" | "json";
 }

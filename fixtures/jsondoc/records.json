@@ -1,0 +1,25 @@
+[
+  {
+    "id": 1,
+    "name": "Ada Lovelace",
+    "email": "ada@example.com",
+    "active": true,
+    "score": 98.5,
+    "tags": ["math", "poetry"],
+    "address": { "city": "London", "zip": null }
+  },
+  {
+    "id": 2,
+    "name": "Grace \"Amazing\" Hopper",
+    "active": false,
+    "score": -1.5e3,
+    "tags": [],
+    "manager": null
+  },
+  {
+    "id": 3,
+    "name": "Ünïcödé 😀 é\n\ttab",
+    "email": "",
+    "tags": ["x"]
+  }
+]

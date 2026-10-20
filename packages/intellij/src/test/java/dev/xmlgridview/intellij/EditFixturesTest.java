@@ -9,6 +9,7 @@ import dev.xmlgridview.intellij.model.ValueEdits;
 import dev.xmlgridview.intellij.model.XAttr;
 import dev.xmlgridview.intellij.model.XNode;
 import dev.xmlgridview.intellij.model.XmlDocumentModel;
+import dev.xmlgridview.intellij.model.JsonModelBuilder;
 import dev.xmlgridview.intellij.model.XmlModelBuilder;
 
 import java.io.IOException;
@@ -30,16 +31,24 @@ public class EditFixturesTest extends BasePlatformTestCase {
     Path dir = Path.of(System.getProperty("xmlgridview.fixtures"), "edits");
     List<Path> xmls;
     try (Stream<Path> s = Files.list(dir)) {
-      xmls = s.filter(p -> p.toString().endsWith(".xml")).sorted().toList();
+      xmls = new ArrayList<>(s.filter(p -> p.toString().endsWith(".xml")).sorted().toList());
+    }
+    // JSON documents: fixtures/jsonedit/<name>.json next to <name>.edits.json.
+    Path jsonDir = dir.resolveSibling("jsonedit");
+    try (Stream<Path> s = Files.list(jsonDir)) {
+      xmls.addAll(s.filter(p -> p.toString().endsWith(".json") && !p.toString().matches(".*\\.(ops|edits)\\.json")
+                                && Files.exists(jsonDir.resolve(p.getFileName().toString().replaceFirst("\\.json$", ".edits.json"))))
+                    .sorted().toList());
     }
     assertFalse("no edit fixtures found", xmls.isEmpty());
     List<String> failures = new ArrayList<>();
     int checks = 0;
     for (Path xml : xmls) {
-      String name = xml.getFileName().toString().replaceFirst("\\.xml$", "");
+      boolean json = xml.toString().endsWith(".json");
+      String name = xml.getFileName().toString().replaceFirst(json ? "\\.json$" : "\\.xml$", "");
       String text = Files.readString(xml, StandardCharsets.UTF_8);
-      XmlDocumentModel model = model(text);
-      JsonObject file = JsonParser.parseString(Files.readString(dir.resolve(name + ".edits.json"), StandardCharsets.UTF_8)).getAsJsonObject();
+      XmlDocumentModel model = json ? JsonModelBuilder.build(text, null) : model(text);
+      JsonObject file = JsonParser.parseString(Files.readString(xml.resolveSibling(name + ".edits.json"), StandardCharsets.UTF_8)).getAsJsonObject();
       for (JsonElement ce : file.getAsJsonArray("cases")) {
         checks++;
         JsonObject c = ce.getAsJsonObject();
@@ -71,7 +80,7 @@ public class EditFixturesTest extends BasePlatformTestCase {
           continue;
         }
         // Round trip: apply, rebuild, read the value back.
-        XmlDocumentModel after = model(r.edit().applyTo(text));
+        XmlDocumentModel after = (json ? JsonModelBuilder.build(r.edit().applyTo(text), null) : model(r.edit().applyTo(text)));
         if (after.hasErrors()) failures.add(where + ": result is not well-formed: " + after.errors().get(0));
         XNode el = after.byPath(path.toString());
         String readBack = el == null ? null : target.isAttr() ? valueOf(el.attr(target.attrName())) : el.text();

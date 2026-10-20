@@ -4,3 +4,4 @@ gradlew text eol=lf
 *.bat text eol=crlf
 # Structural edits must keep CRLF documents CRLF; this fixture is checked out byte for byte.
 fixtures/structure/crlf-*.xml -text
+fixtures/jsonedit/crlf-*.json -text

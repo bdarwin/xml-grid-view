@@ -1,0 +1,14 @@
+{
+  "@context": "https://schema.org",
+  "first name": "Lin",
+  "": "empty key",
+  "a.b": { "c": { "d": [1, 2, 3] } },
+  "matrix": [[1, 2], [3, 4], []],
+  "empty": {},
+  "list": [],
+  "mixed": [1, "two", { "three": 3 }, [4], null, true],
+  "orders": [
+    { "sku": "A1", "qty": 2, "lines": [{ "n": 1 }, { "n": 2 }] },
+    { "sku": "B2", "qty": 1 }
+  ]
+}

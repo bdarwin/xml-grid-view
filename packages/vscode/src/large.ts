@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { PROTOCOL_VERSION, isViewToHost, type HostToView } from "@xmlgridview/core/protocol";
-import { readSettings, saveExport, viewHtml, type ViewEntry } from "./provider";
+import { isJsonFileName, readSettings, saveExport, viewHtml, type ViewEntry } from "./provider";
 import { themeVars } from "./theme";
 
 export const LARGE_VIEW_TYPE = "xmlGridView.largeEditor";
@@ -78,6 +78,7 @@ export class LargeFileEditorProvider implements vscode.CustomReadonlyEditorProvi
               type: "init",
               version: PROTOCOL_VERSION,
               fileName: vscode.workspace.asRelativePath(uri, false),
+              format: isJsonFileName(uri.path) ? "json" : "xml",
               text,
               docVersion,
               theme: themeVars(),

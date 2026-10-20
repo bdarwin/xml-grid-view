@@ -8,6 +8,7 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase;
 import dev.xmlgridview.intellij.model.StructureEdits;
 import dev.xmlgridview.intellij.model.ValueEdits;
 import dev.xmlgridview.intellij.model.XmlDocumentModel;
+import dev.xmlgridview.intellij.model.JsonModelBuilder;
 import dev.xmlgridview.intellij.model.XmlModelBuilder;
 
 import java.io.IOException;
@@ -83,16 +84,24 @@ public class StructureFixturesTest extends BasePlatformTestCase {
     Path dir = Path.of(System.getProperty("xmlgridview.fixtures"), "structure");
     List<Path> xmls;
     try (Stream<Path> s = Files.list(dir)) {
-      xmls = s.filter(p -> p.toString().endsWith(".xml")).sorted().toList();
+      xmls = new ArrayList<>(s.filter(p -> p.toString().endsWith(".xml")).sorted().toList());
+    }
+    // JSON documents: fixtures/jsonedit/<name>.json next to <name>.ops.json.
+    Path jsonDir = dir.resolveSibling("jsonedit");
+    try (Stream<Path> s = Files.list(jsonDir)) {
+      xmls.addAll(s.filter(p -> p.toString().endsWith(".json") && !p.toString().matches(".*\\.(ops|edits)\\.json")
+                                && Files.exists(jsonDir.resolve(p.getFileName().toString().replaceFirst("\\.json$", ".ops.json"))))
+                    .sorted().toList());
     }
     assertFalse("no structure fixtures found", xmls.isEmpty());
     List<String> failures = new ArrayList<>();
     int checks = 0;
     for (Path xml : xmls) {
-      String name = xml.getFileName().toString().replaceFirst("\\.xml$", "");
+      boolean json = xml.toString().endsWith(".json");
+      String name = xml.getFileName().toString().replaceFirst(json ? "\\.json$" : "\\.xml$", "");
       String text = Files.readString(xml, StandardCharsets.UTF_8);
-      XmlDocumentModel model = model(text);
-      JsonObject file = JsonParser.parseString(Files.readString(dir.resolve(name + ".ops.json"), StandardCharsets.UTF_8)).getAsJsonObject();
+      XmlDocumentModel model = json ? JsonModelBuilder.build(text, null) : model(text);
+      JsonObject file = JsonParser.parseString(Files.readString(xml.resolveSibling(name + ".ops.json"), StandardCharsets.UTF_8)).getAsJsonObject();
       for (JsonElement ce : file.getAsJsonArray("cases")) {
         checks++;
         JsonObject c = ce.getAsJsonObject();
@@ -118,7 +127,7 @@ public class StructureFixturesTest extends BasePlatformTestCase {
         }
         String result = StructureEdits.apply(text, r.edits());
         if (!result.equals(expected.get("result").getAsString())) failures.add(where + ": result differs");
-        if (model(result).hasErrors()) failures.add(where + ": result is not well-formed");
+        if ((json ? JsonModelBuilder.build(result, null) : model(result)).hasErrors()) failures.add(where + ": result is not well-formed");
       }
     }
     assertTrue("checked " + checks + " cases", checks > 30);

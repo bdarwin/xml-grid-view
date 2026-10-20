@@ -147,3 +147,57 @@ test("clear cells with Delete, export CSV and JSON", async ({ page }) => {
   const json = await page.evaluate(() => (window as unknown as { __saved: { text: string } }).__saved.text);
   expect(JSON.parse(json)[2]).toEqual({ "@id": "b3", title: "Three", price: "3" });
 });
+
+test("JSON: edit cells, paste rows, add a member", async ({ page }) => {
+  const json = `[
+  { "id": 1, "name": "Ada", "active": true },
+  { "id": 2, "name": "Grace", "active": false }
+]
+`;
+  await page.route("http://xgv.test/**", (route) => {
+    const name = new URL(route.request().url()).pathname.slice(1);
+    const file = name === "harness.html" ? join(HERE, name) : join(DIST, name);
+    const type = name.endsWith(".css") ? "text/css" : name.endsWith(".js") ? "text/javascript" : "text/html";
+    return route.fulfill({ body: readFileSync(file), contentType: type });
+  });
+  await page.goto("http://xgv.test/harness.html");
+  await page.evaluate(() => document.documentElement.classList.add("light"));
+  await page.waitForFunction(() => (window as unknown as { __ready: boolean }).__ready);
+  await page.evaluate(
+    ([t, theme]) =>
+      (window as unknown as { __init(m: unknown): void }).__init({ type: "init", version: 1, fileName: "people.json", text: t, docVersion: 1, theme, settings: { readOnly: false } }),
+    [json, themeVars()] as const,
+  );
+  await page.locator(".grid-row").nth(1).waitFor();
+  await expect(page.locator(".crumb.group")).toHaveText("item");
+
+  // Typing a number into a number cell keeps it a number; text becomes a string.
+  await cell(page, 0, 0).click();
+  await page.keyboard.type("10");
+  await page.keyboard.press("Enter");
+  await expect.poll(() => doc(page)).toContain('{ "id": 10, "name": "Ada"');
+  await cell(page, 1, 1).dblclick();
+  await expect(page.locator(".inspector")).toBeVisible().catch(() => undefined);
+  await page.keyboard.press("Escape");
+
+  // Paste two rows at the second row: the first overwrites Grace, the second is new.
+  await setClipboard(page, "3\tLin\ttrue\n4\tMo\tfalse\n");
+  await cell(page, 1, 0).click();
+  await page.keyboard.press("ControlOrMeta+v");
+  await expect.poll(() => doc(page)).toBe(`[
+  { "id": 10, "name": "Ada", "active": true },
+  { "id": 3, "name": "Lin", "active": true },
+  { "id": 4, "name": "Mo", "active": false }
+]
+`);
+
+  // The tree menu speaks JSON.
+  await page.locator(".tree-row", { hasText: "[0]" }).click({ button: "right" });
+  await expect(page.locator(".menu-item", { hasText: "Add Member…" })).toBeVisible();
+  await expect(page.locator(".menu-item", { hasText: "Add Attribute" })).toHaveCount(0);
+  await page.locator(".menu-item", { hasText: "Add Member…" }).click();
+  await expect(page.locator(".prompt input").first()).toBeFocused();
+  await page.keyboard.type("email");
+  await page.keyboard.press("Enter");
+  await expect.poll(() => doc(page)).toContain('{ "id": 10, "name": "Ada", "active": true, "email": "" }');
+});

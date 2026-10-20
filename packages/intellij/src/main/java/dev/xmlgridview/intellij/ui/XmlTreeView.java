@@ -342,7 +342,7 @@ final class XmlTreeView extends JPanel {
 
   static String label(XNode n) {
     String keys = keyAttrs(n);
-    return keys.isEmpty() ? n.tag() : n.tag() + " " + keys;
+    return keys.isEmpty() ? n.displayName() : n.displayName() + " " + keys;
   }
 
   private final class Renderer extends ColoredTreeCellRenderer {
@@ -370,7 +370,7 @@ final class XmlTreeView extends JPanel {
         tagAttrs = new SimpleTextAttributes(tagAttrs.getBgColor(), tagAttrs.getFgColor(), DocumentProblems.color(own),
                                             tagAttrs.getStyle() | SimpleTextAttributes.STYLE_WAVED);
       }
-      Highlight.append(this, n.tag(), tagAttrs, fs.targets().names() ? fs.matcher() : null);
+      Highlight.append(this, n.displayName(), tagAttrs, fs.targets().names() ? fs.matcher() : null);
       if (own.isEmpty() && problems != null && !expanded && problems.within(n)) {
         append(" ●", new SimpleTextAttributes(SimpleTextAttributes.STYLE_PLAIN, DocumentProblems.ERROR));
       }
@@ -467,7 +467,7 @@ final class XmlTreeView extends JPanel {
     Descriptor(Object element, @Nullable NodeDescriptor<?> parent) {
       super(null, parent);
       this.element = element;
-      if (element instanceof XNode n) myName = n.tag();
+      if (element instanceof XNode n) myName = n.displayName();
     }
 
     @Override

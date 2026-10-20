@@ -1,0 +1,232 @@
+{
+  "0": {
+    "default": "item",
+    "groups": [{ "tag": "item", "count": 3 }],
+    "grids": {
+      ".": {
+        "columns": [{ "key": "item", "kind": "complex" }],
+        "rows": [
+          [{ "drill": "item", "count": 3 }]
+        ]
+      },
+      "item": {
+        "columns": [
+          { "key": "id", "kind": "leaf" },
+          { "key": "name", "kind": "leaf" },
+          { "key": "email", "kind": "leaf" },
+          { "key": "active", "kind": "leaf" },
+          { "key": "score", "kind": "leaf" },
+          { "key": "tags", "kind": "complex" },
+          { "key": "address", "kind": "complex" },
+          { "key": "manager", "kind": "leaf" }
+        ],
+        "rows": [
+          ["1", "Ada Lovelace", "ada@example.com", "true", "98.5", { "drill": "tags", "count": 1 }, { "drill": "address", "count": 1 }, null],
+          ["2", "Grace \"Amazing\" Hopper", null, "false", "-1.5e3", { "drill": "tags", "count": 1 }, null, "null"],
+          ["3", "Ünïcödé 😀 é\n\ttab", "", null, null, { "drill": "tags", "count": 1 }, null, null]
+        ]
+      }
+    }
+  },
+  "0/0": {
+    "default": ".",
+    "groups": [
+      { "tag": "id", "count": 1 },
+      { "tag": "name", "count": 1 },
+      { "tag": "email", "count": 1 },
+      { "tag": "active", "count": 1 },
+      { "tag": "score", "count": 1 },
+      { "tag": "tags", "count": 1 },
+      { "tag": "address", "count": 1 }
+    ],
+    "grids": {
+      ".": {
+        "columns": [
+          { "key": "id", "kind": "leaf" },
+          { "key": "name", "kind": "leaf" },
+          { "key": "email", "kind": "leaf" },
+          { "key": "active", "kind": "leaf" },
+          { "key": "score", "kind": "leaf" },
+          { "key": "tags", "kind": "complex" },
+          { "key": "address", "kind": "complex" }
+        ],
+        "rows": [
+          ["1", "Ada Lovelace", "ada@example.com", "true", "98.5", { "drill": "tags", "count": 1 }, { "drill": "address", "count": 1 }]
+        ]
+      },
+      "id": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [["1"]]
+      },
+      "name": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [["Ada Lovelace"]]
+      },
+      "email": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [["ada@example.com"]]
+      },
+      "active": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [["true"]]
+      },
+      "score": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [["98.5"]]
+      },
+      "tags": {
+        "columns": [{ "key": "item", "kind": "complex" }],
+        "rows": [
+          [{ "drill": "item", "count": 2 }]
+        ]
+      },
+      "address": {
+        "columns": [
+          { "key": "city", "kind": "leaf" },
+          { "key": "zip", "kind": "leaf" }
+        ],
+        "rows": [["London", "null"]]
+      }
+    }
+  },
+  "0/0/5": {
+    "default": "item",
+    "groups": [{ "tag": "item", "count": 2 }],
+    "grids": {
+      ".": {
+        "columns": [{ "key": "item", "kind": "complex" }],
+        "rows": [
+          [{ "drill": "item", "count": 2 }]
+        ]
+      },
+      "item": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [["math"], ["poetry"]]
+      }
+    }
+  },
+  "0/0/6": {
+    "default": ".",
+    "groups": [
+      { "tag": "city", "count": 1 },
+      { "tag": "zip", "count": 1 }
+    ],
+    "grids": {
+      ".": {
+        "columns": [
+          { "key": "city", "kind": "leaf" },
+          { "key": "zip", "kind": "leaf" }
+        ],
+        "rows": [["London", "null"]]
+      },
+      "city": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [["London"]]
+      },
+      "zip": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [["null"]]
+      }
+    }
+  },
+  "0/1": {
+    "default": ".",
+    "groups": [
+      { "tag": "id", "count": 1 },
+      { "tag": "name", "count": 1 },
+      { "tag": "active", "count": 1 },
+      { "tag": "score", "count": 1 },
+      { "tag": "tags", "count": 1 },
+      { "tag": "manager", "count": 1 }
+    ],
+    "grids": {
+      ".": {
+        "columns": [
+          { "key": "id", "kind": "leaf" },
+          { "key": "name", "kind": "leaf" },
+          { "key": "active", "kind": "leaf" },
+          { "key": "score", "kind": "leaf" },
+          { "key": "tags", "kind": "leaf" },
+          { "key": "manager", "kind": "leaf" }
+        ],
+        "rows": [["2", "Grace \"Amazing\" Hopper", "false", "-1.5e3", "", "null"]]
+      },
+      "id": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [["2"]]
+      },
+      "name": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [["Grace \"Amazing\" Hopper"]]
+      },
+      "active": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [["false"]]
+      },
+      "score": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [["-1.5e3"]]
+      },
+      "tags": {
+        "columns": [],
+        "rows": [[]]
+      },
+      "manager": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [["null"]]
+      }
+    }
+  },
+  "0/2": {
+    "default": ".",
+    "groups": [
+      { "tag": "id", "count": 1 },
+      { "tag": "name", "count": 1 },
+      { "tag": "email", "count": 1 },
+      { "tag": "tags", "count": 1 }
+    ],
+    "grids": {
+      ".": {
+        "columns": [
+          { "key": "id", "kind": "leaf" },
+          { "key": "name", "kind": "leaf" },
+          { "key": "email", "kind": "leaf" },
+          { "key": "tags", "kind": "complex" }
+        ],
+        "rows": [
+          ["3", "Ünïcödé 😀 é\n\ttab", "", { "drill": "tags", "count": 1 }]
+        ]
+      },
+      "id": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [["3"]]
+      },
+      "name": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [["Ünïcödé 😀 é\n\ttab"]]
+      },
+      "email": {
+        "columns": [],
+        "rows": [[]]
+      },
+      "tags": {
+        "columns": [{ "key": "item", "kind": "leaf" }],
+        "rows": [["x"]]
+      }
+    }
+  },
+  "0/2/3": {
+    "default": ".",
+    "groups": [{ "tag": "item", "count": 1 }],
+    "grids": {
+      ".": {
+        "columns": [{ "key": "item", "kind": "leaf" }],
+        "rows": [["x"]]
+      },
+      "item": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [["x"]]
+      }
+    }
+  }
+}

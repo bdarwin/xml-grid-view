@@ -7,6 +7,7 @@ import com.intellij.openapi.progress.util.ProgressIndicatorBase;
 import com.intellij.openapi.util.Key;
 import com.intellij.openapi.util.UserDataHolder;
 import com.intellij.util.concurrency.AppExecutorUtil;
+import dev.xmlgridview.intellij.model.JsonModelBuilder;
 import dev.xmlgridview.intellij.model.XmlDocumentModel;
 import dev.xmlgridview.intellij.model.XmlModelBuilder;
 import org.jetbrains.annotations.NotNull;
@@ -49,6 +50,11 @@ final class SharedModels {
    * that reads the text from {@code text} on the pooled thread.
    */
   static @NotNull Build request(@NotNull UserDataHolder holder, long stamp, @NotNull Supplier<CharSequence> text) {
+    return request(holder, stamp, text, false);
+  }
+
+  /** As {@link #request(UserDataHolder, long, Supplier)}, parsing the text as JSON when {@code json}. */
+  static @NotNull Build request(@NotNull UserDataHolder holder, long stamp, @NotNull Supplier<CharSequence> text, boolean json) {
     synchronized (holder) {
       Entry e = holder.getUserData(KEY);
       if (e != null && e.stamp == stamp) {
@@ -64,15 +70,15 @@ final class SharedModels {
       if (e != null && e.running != null && !e.running.future.isDone()) e.running.indicator.cancel();
       Build b = new Build(stamp);
       holder.putUserData(KEY, new Entry(stamp, b, null));
-      AppExecutorUtil.getAppExecutorService().execute(() -> run(holder, b, text));
+      AppExecutorUtil.getAppExecutorService().execute(() -> run(holder, b, text, json));
       return b;
     }
   }
 
-  private static void run(UserDataHolder holder, Build b, Supplier<CharSequence> text) {
+  private static void run(UserDataHolder holder, Build b, Supplier<CharSequence> text, boolean json) {
     try {
       XmlDocumentModel m = ProgressManager.getInstance().runProcess(
-        () -> XmlModelBuilder.build(text.get(), f -> b.fraction = f), b.indicator);
+        () -> json ? JsonModelBuilder.build(text.get(), f -> b.fraction = f) : XmlModelBuilder.build(text.get(), f -> b.fraction = f), b.indicator);
       synchronized (holder) {
         Entry e = holder.getUserData(KEY);
         if (e != null && e.running == b) holder.putUserData(KEY, new Entry(b.stamp, null, new WeakReference<>(m)));

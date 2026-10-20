@@ -195,6 +195,12 @@ final class FindBar extends JPanel {
     field.setText(q);
   }
 
+  /** Offers the XPath mode only for XML documents. */
+  void setXPathAvailable(boolean available) {
+    if (!available && mode() == Mode.XPATH) mode.setSelectedItem(Mode.TEXT);
+    mode.setVisible(available);
+  }
+
   Mode mode() {
     return (Mode)mode.getSelectedItem();
   }

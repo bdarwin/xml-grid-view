@@ -62,6 +62,7 @@ export class XmlGridEditorProvider implements vscode.CustomTextEditorProvider {
         type: "init",
         version: PROTOCOL_VERSION,
         fileName: vscode.workspace.asRelativePath(document.uri, false),
+        format: isJsonFileName(document.uri.path) ? "json" : "xml",
         text: document.getText(),
         docVersion: document.version,
         theme: themeVars(),
@@ -216,6 +217,11 @@ function isReadOnly(document: vscode.TextDocument): boolean {
 }
 
 /** Opens (or focuses) the text editor beside the view, selects the range and centers it. */
+/** Whether a file is opened as JSON (by extension); everything else is XML. */
+export function isJsonFileName(path: string): boolean {
+  return /\.(json|jsonc|json5|geojson|har|webmanifest)$/i.test(path);
+}
+
 /** Asks where to save an export (next to the document by default) and writes it. */
 export async function saveExport(docUri: vscode.Uri, fileName: string, text: string): Promise<void> {
   const ext = fileName.slice(fileName.lastIndexOf(".") + 1);

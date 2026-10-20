@@ -5,6 +5,11 @@
 - **Structural editing:** right-click an element in the tree, the Grid or
   Flat to insert a child, sibling or duplicate, rename it, add or delete
   attributes, or delete it. This works in both VS Code and IntelliJ.
+- **Element summary in the Grid:** the selected element's own attributes,
+  single child values and text now show above the grid of its repeated
+  children, instead of being hidden behind the group dropdown. Double-click
+  a value to edit it, right-click for the structure menu. Chips with counts
+  replace the dropdown for switching between child groups and (fields).
 - **Formatting kept:** each structural edit is one undo step. Indentation is
   copied from the surrounding lines and CRLF files stay CRLF.
 - **Checks:** names are validated, including that prefixes are declared, and

@@ -107,15 +107,18 @@ limitations.
 - **Tree:** keyboard navigation. Enter or F4 moves the text editor's caret to
   the element, centers it and focuses the editor.
 - **Grid:**
-  - Rows are the selected element's children with one tag. When there are
-    several tags, a combo box switches between them.
+  - Rows are the selected element's children with one tag.
+  - A summary above the grid shows the element's own attributes, single
+    child values and text, which you can edit in place (double-click) or
+    right-click for the structure menu. Chips under it switch between its
+    child tags and **(fields)**.
   - Columns are the attributes (`@id`), text-only child elements, and `#text`
     for mixed content.
   - Repeated or complex children appear as `{tag ×n}` cells that drill down,
     and a breadcrumb leads back up.
   - An element whose children don't repeat (say a `<book>` with `title`,
     `author`, `price`) opens as one row of **(fields)**: its attributes and
-    children side by side. Pick (fields) or a child tag from the dropdown.
+    children side by side.
   - Sorting is numeric when every value is a number.
   - A quick filter (web view) and per-column filters (text plus a checklist of
     up to 1,000 distinct values, all ANDed together).

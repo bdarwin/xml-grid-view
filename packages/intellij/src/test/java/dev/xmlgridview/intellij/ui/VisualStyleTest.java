@@ -207,6 +207,30 @@ public class VisualStyleTest extends BasePlatformTestCase {
     }
   }
 
+  public void testElementSummaryAboveTheGrid() throws Exception {
+    XmlGridPanel p = grid();
+    BufferedImage img = paint(p, "grid-summary");
+    SummaryPanel s = p.summaryForTest();
+    assertTrue(s.isVisible() && s.getHeight() > 0);
+    assertEquals(List.of("@updated", "config", "note"), s.valueLabelsForTest());
+    // Value colours: attribute names like the grid's attribute headers, element names like tags.
+    List<SimpleColoredComponent> items = s.itemComponentsForTest();
+    assertEquals(XmlColors.attrName(), firstFragmentColor(items.get(0)));
+    assertEquals(XmlColors.tag(), firstFragmentColor(items.get(1)));
+    assertNull(items.get(0).getIcon());
+    assertNotNull("JSON values get the inspect icon", items.get(1).getIcon());
+    // Chips: the grid's group is filled with the selection colour, the others are outlined only.
+    List<String> chips = s.chipsForTest();
+    List<SimpleColoredComponent> chipViews = s.chipComponentsForTest();
+    assertEquals(chips.size(), chipViews.size());
+    for (int i = 0; i < chips.size(); i++) {
+      Rectangle r = SwingUtilities.convertRectangle(chipViews.get(i).getParent(), chipViews.get(i).getBounds(), p);
+      Color inside = new Color(img.getRGB(r.x + r.width / 2, r.y + 2));
+      if (chips.get(i).startsWith("*")) assertEquals("active chip " + chips.get(i), UIUtil.getListSelectionBackground(true), inside);
+      else assertEquals("chip " + chips.get(i), s.getBackground(), inside);
+    }
+  }
+
   public void testFlatSectionBandsAndNameColours() throws Exception {
     FlatPanel p = flat();
     JBTable t = table(p, 2);

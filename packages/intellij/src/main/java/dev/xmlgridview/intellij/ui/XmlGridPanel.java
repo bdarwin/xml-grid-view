@@ -11,7 +11,6 @@ import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.progress.ProgressManager;
 import com.intellij.openapi.project.DumbAwareAction;
 import com.intellij.openapi.project.Project;
-import com.intellij.openapi.ui.ComboBox;
 import com.intellij.openapi.util.Disposer;
 import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.ui.ColoredListCellRenderer;
@@ -31,7 +30,6 @@ import dev.xmlgridview.intellij.model.ColumnFilter;
 import dev.xmlgridview.intellij.model.DocMatch;
 import dev.xmlgridview.intellij.model.GridMatch;
 import dev.xmlgridview.intellij.model.GridTable;
-import dev.xmlgridview.intellij.model.GroupInfo;
 import dev.xmlgridview.intellij.model.InvalidQueryException;
 import dev.xmlgridview.intellij.model.Matcher;
 import dev.xmlgridview.intellij.model.SearchEngine;
@@ -83,7 +81,7 @@ public final class XmlGridPanel extends JPanel implements Disposable {
   private final XmlTreeView tree;
   private final GridView grid;
   private final Breadcrumbs crumbs = new Breadcrumbs();
-  private final ComboBox<GroupInfo> groupCombo = new ComboBox<>();
+  private final SummaryPanel summary;
   private final JBLabel rowsLabel = new JBLabel();
   private final LinkLabel<Void> clearFilters = new LinkLabel<>("Clear filters", null);
   private final DefaultListModel<ResultEntry> resultsModel = new DefaultListModel<>();
@@ -97,12 +95,12 @@ public final class XmlGridPanel extends JPanel implements Disposable {
   private List<Object> matches = List.of();
   private boolean matchesTruncated;
   private int current = -1;
-  private boolean updatingGroups;
   private int modelVersion;
   /** Element to select after the next rebuild (one just inserted, renamed or duplicated). */
   private @Nullable String pendingSelect;
   private final com.intellij.openapi.actionSystem.DefaultActionGroup treeStructureActions;
   private final com.intellij.openapi.actionSystem.DefaultActionGroup gridStructureActions;
+  private final com.intellij.openapi.actionSystem.DefaultActionGroup summaryStructureActions;
 
   public XmlGridPanel(@NotNull Project project, @NotNull Document document, @NotNull IntConsumer navigator,
                       @NotNull Disposable parent) {
@@ -164,6 +162,29 @@ public final class XmlGridPanel extends JPanel implements Disposable {
     tree.addMenuActions(treeStructureActions);
     gridStructureActions = StructureActions.create(this, () -> model == null ? null : grid.structureTarget(model), applier);
     grid.addMenuActions(gridStructureActions);
+    summary = new SummaryPanel(new SummaryPanel.Listener() {
+      @Override
+      public void chooseGroup(@NotNull String tag) {
+        if (gridNode != null && !tag.equals(gridGroup)) showGrid(gridNode, tag, Map.of(), Map.of());
+      }
+
+      @Override
+      public boolean canEdit() {
+        return loader.canEdit();
+      }
+
+      @Override
+      public @Nullable String applyEdit(@NotNull dev.xmlgridview.intellij.model.ValueEdits.Target target, @NotNull String value) {
+        return loader.applyValueEdit(target, value);
+      }
+
+      @Override
+      public void inspect(@NotNull dev.xmlgridview.intellij.model.InspectTarget target) {
+        ValueInspector.show(project, target, loader.canEdit() ? loader::applyValueEdit : null);
+      }
+    });
+    summaryStructureActions = StructureActions.create(this, summary::menuTarget, applier);
+    summary.setMenuActions(summaryStructureActions);
     findBar = new FindBar(this, new FindBar.Listener() {
       @Override
       public void queryChanged() {
@@ -205,14 +226,6 @@ public final class XmlGridPanel extends JPanel implements Disposable {
     north.add(findBar);
     add(north, BorderLayout.NORTH);
 
-    groupCombo.setRenderer(new TextListRenderer<GroupInfo>(
-      g -> XmlDocumentModel.SELF_GROUP.equals(g.tag()) ? "(fields)" : g.tag() + " (" + g.count() + ")"));
-    groupCombo.setToolTipText("Rows: one child tag, or (fields) for this element as a single row");
-    groupCombo.addActionListener(e -> {
-      if (updatingGroups || gridNode == null) return;
-      GroupInfo g = (GroupInfo)groupCombo.getSelectedItem();
-      if (g != null && !g.tag().equals(gridGroup)) showGrid(gridNode, g.tag(), Map.of(), Map.of());
-    });
     crumbs.onSelect((crumb, event) -> {
       if (crumb instanceof NodeCrumb nc) tree.select(nc.node.path(), false);
     });
@@ -225,11 +238,16 @@ public final class XmlGridPanel extends JPanel implements Disposable {
     JPanel headerRight = new JPanel(new FlowLayout(FlowLayout.RIGHT, JBUI.scale(8), 0));
     headerRight.add(clearFilters);
     headerRight.add(rowsLabel);
-    headerRight.add(groupCombo);
     gridHeader.add(headerRight, BorderLayout.EAST);
 
+    JPanel gridTop = new JPanel();
+    gridTop.setLayout(new BoxLayout(gridTop, BoxLayout.Y_AXIS));
+    gridHeader.setAlignmentX(LEFT_ALIGNMENT);
+    summary.setAlignmentX(LEFT_ALIGNMENT);
+    gridTop.add(gridHeader);
+    gridTop.add(summary);
     JPanel right = new JPanel(new BorderLayout());
-    right.add(gridHeader, BorderLayout.NORTH);
+    right.add(gridTop, BorderLayout.NORTH);
     right.add(grid, BorderLayout.CENTER);
 
     OnePixelSplitter splitter = new OnePixelSplitter(false, "XmlGridView.Splitter", 0.3f);
@@ -338,6 +356,7 @@ public final class XmlGridPanel extends JPanel implements Disposable {
     else {
       gridNode = null;
       grid.setTable(null, Map.of(), Map.of());
+      summary.show(null, null);
       crumbs.setCrumbs(List.of());
     }
   }
@@ -363,6 +382,11 @@ public final class XmlGridPanel extends JPanel implements Disposable {
   @TestOnly
   public com.intellij.openapi.actionSystem.AnAction structureActionForTest(boolean inTree, String text) {
     return StructureActions.find(inTree ? treeStructureActions : gridStructureActions, text);
+  }
+
+  @TestOnly
+  com.intellij.openapi.actionSystem.AnAction summaryActionForTest(String text) {
+    return StructureActions.find(summaryStructureActions, text);
   }
 
   @TestOnly
@@ -406,19 +430,7 @@ public final class XmlGridPanel extends JPanel implements Disposable {
     gridGroup = t.group();
     grid.setTable(t, sort, filters);
 
-    updatingGroups = true;
-    try {
-      groupCombo.removeAllItems();
-      if (!t.groups().isEmpty()) groupCombo.addItem(new GroupInfo(XmlDocumentModel.SELF_GROUP, 1));
-      for (GroupInfo g : t.groups()) groupCombo.addItem(g);
-      for (int i = 0; i < groupCombo.getItemCount(); i++) {
-        if (groupCombo.getItemAt(i).tag().equals(t.group())) groupCombo.setSelectedIndex(i);
-      }
-      groupCombo.setVisible(!t.groups().isEmpty());
-    }
-    finally {
-      updatingGroups = false;
-    }
+    summary.show(m, t);
 
     List<Crumb> list = new ArrayList<>();
     for (XNode n = node; n != null; n = n.parent()) list.add(0, new NodeCrumb(n));
@@ -753,6 +765,11 @@ public final class XmlGridPanel extends JPanel implements Disposable {
   @TestOnly
   public void doubleClickGridForTest(int viewRow, int viewCol) {
     grid.onDoubleClick(viewRow, viewCol);
+  }
+
+  @TestOnly
+  SummaryPanel summaryForTest() {
+    return summary;
   }
 
   @TestOnly

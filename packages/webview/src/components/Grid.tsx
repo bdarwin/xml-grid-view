@@ -55,6 +55,8 @@ export interface GridProps {
   canEdit?(pos: CellPos): boolean;
   /** Commits an in-place edit (only called when the value changed). */
   onEdit?(pos: CellPos, value: string): void;
+  /** Right-click on a cell (c = -1 for the row number). */
+  onContextMenu?(pos: CellPos, x: number, y: number): void;
 }
 
 export function Grid(p: GridProps) {
@@ -332,6 +334,11 @@ export function Grid(p: GridProps) {
           title={typeof raw === "string" && raw.length > 40 ? raw.slice(0, 1000) : undefined}
           onMouseDown={(e) => cellDown(e, pos)}
           onMouseEnter={() => cellEnter(pos)}
+          onContextMenu={(e) => {
+            if (!p.onContextMenu) return;
+            e.preventDefault();
+            p.onContextMenu(pos, e.clientX, e.clientY);
+          }}
           onDblClick={() =>
             // Double-click: drill cells drill down, values open the inspector, empty cells go to the source.
             typeof raw === "number" ? p.onDrill(pos) : raw !== null && p.onInspect ? p.onInspect(pos) : p.onActivate(pos)
@@ -343,7 +350,11 @@ export function Grid(p: GridProps) {
     }
     rows.push(
       <div key={r} class={"grid-row" + (rowSelected ? " row-sel" : "") + (v % 2 ? " odd" : "")} role="row" style={{ top: v * ROW_HEIGHT }}>
-        <div class="rownum" style={{ width: rowNumWidth }} onMouseDown={(e) => rowHeaderDown(e, v)} onDblClick={() => p.onActivate({ v, c: -1 })}>
+        <div class="rownum" style={{ width: rowNumWidth }} onMouseDown={(e) => rowHeaderDown(e, v)} onDblClick={() => p.onActivate({ v, c: -1 })} onContextMenu={(e) => {
+          if (!p.onContextMenu) return;
+          e.preventDefault();
+          p.onContextMenu({ v, c: -1 }, e.clientX, e.clientY);
+        }}>
           {r + 1}
         </div>
         {cells}

@@ -1146,3 +1146,75 @@ button.icon {
   box-shadow: 0 2px 8px color-mix(in srgb, CanvasText 25%, transparent);
   cursor: pointer;
 }
+
+/* Context menu (structural edits) */
+.context-menu {
+  position: fixed;
+  z-index: 30;
+  min-width: 200px;
+  padding: 4px 0;
+  background: var(--xgv-bg);
+  color: var(--xgv-fg);
+  border: 1px solid var(--xgv-border);
+  border-radius: 4px;
+  box-shadow: 0 6px 20px color-mix(in srgb, CanvasText 30%, transparent);
+  outline: none;
+  user-select: none;
+}
+.menu-item {
+  padding: 3px 16px;
+  white-space: nowrap;
+  cursor: default;
+}
+.menu-item.active {
+  background: var(--xgv-selection-bg);
+  color: var(--xgv-selection-fg);
+}
+.menu-item.danger:not(.disabled) {
+  color: var(--xgv-error-fg);
+}
+.menu-item.danger.active {
+  color: var(--xgv-selection-fg);
+}
+.menu-item.disabled {
+  color: var(--xgv-muted-fg);
+  opacity: 0.6;
+}
+.menu-sep {
+  height: 1px;
+  margin: 4px 0;
+  background: var(--xgv-border);
+}
+.menu-note {
+  padding: 3px 16px 5px;
+  font-size: 0.9em;
+  color: var(--xgv-muted-fg);
+}
+
+/* Name/value prompt */
+.prompt {
+  width: min(420px, 92vw);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  background: var(--xgv-bg);
+  color: var(--xgv-fg);
+  border: 1px solid var(--xgv-border);
+  border-radius: 4px;
+  box-shadow: 0 8px 28px color-mix(in srgb, CanvasText 35%, transparent);
+}
+.prompt-title {
+  font-weight: 600;
+}
+.prompt-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.prompt-field input {
+  width: 100%;
+}
+.prompt-field input.invalid {
+  border-color: var(--xgv-error-fg);
+}

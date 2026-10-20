@@ -20,6 +20,8 @@ export interface TreeProps {
   onSelect(id: number): void;
   onActivate(id: number): void;
   onInspect?(id: number): void;
+  /** Right-click (or the context-menu key) on a row; the row is selected first. */
+  onContextMenu?(id: number, x: number, y: number): void;
 }
 
 /** Visible rows in display order. */
@@ -125,6 +127,13 @@ export function Tree(p: TreeProps) {
           p.onSelect(id);
         }}
         onDblClick={() => p.onActivate(id)}
+        onContextMenu={(e) => {
+          if (!p.onContextMenu) return;
+          e.preventDefault();
+          e.stopPropagation();
+          p.onSelect(id);
+          p.onContextMenu(id, e.clientX, e.clientY);
+        }}
       >
         <span
           class={"twisty" + (hasKids ? (open ? " open" : " closed") : "")}

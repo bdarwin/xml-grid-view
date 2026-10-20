@@ -99,6 +99,10 @@ public final class XmlGridPanel extends JPanel implements Disposable {
   private int current = -1;
   private boolean updatingGroups;
   private int modelVersion;
+  /** Element to select after the next rebuild (one just inserted, renamed or duplicated). */
+  private @Nullable String pendingSelect;
+  private final com.intellij.openapi.actionSystem.DefaultActionGroup treeStructureActions;
+  private final com.intellij.openapi.actionSystem.DefaultActionGroup gridStructureActions;
 
   public XmlGridPanel(@NotNull Project project, @NotNull Document document, @NotNull IntConsumer navigator,
                       @NotNull Disposable parent) {
@@ -138,6 +142,28 @@ public final class XmlGridPanel extends JPanel implements Disposable {
     });
     tree.setInspector(t -> ValueInspector.show(project, t, loader.canEdit() ? loader::applyValueEdit : null));
     grid.setInspector(t -> ValueInspector.show(project, t, loader.canEdit() ? loader::applyValueEdit : null));
+    StructureActions.Applier applier = new StructureActions.Applier() {
+      @Override
+      public boolean canEdit() {
+        return loader.canEdit();
+      }
+
+      @Override
+      public @Nullable String apply(@NotNull java.util.List<dev.xmlgridview.intellij.model.ValueEdits.TextEdit> edits, @NotNull String label,
+                                    @Nullable String selectPath) {
+        String error = loader.applyEdits(edits, label);
+        if (error == null) pendingSelect = selectPath;
+        return error;
+      }
+    };
+    treeStructureActions = StructureActions.create(this, () -> {
+      XNode n = tree.selected();
+      XmlDocumentModel m = model;
+      return n == null || m == null ? null : new StructureActions.Target(m, n, null);
+    }, applier);
+    tree.addMenuActions(treeStructureActions);
+    gridStructureActions = StructureActions.create(this, () -> model == null ? null : grid.structureTarget(model), applier);
+    grid.addMenuActions(gridStructureActions);
     findBar = new FindBar(this, new FindBar.Listener() {
       @Override
       public void queryChanged() {
@@ -290,8 +316,10 @@ public final class XmlGridPanel extends JPanel implements Disposable {
         if (built.root() != null) tree.select(built.root().path(), true);
       }
       else {
+        String select = pendingSelect != null && built.byPath(pendingSelect) != null ? pendingSelect : state.selected;
+        pendingSelect = null;
         tree.expandPaths(state.expanded).onProcessed(y -> {
-          if (state.selected != null && built.byPath(state.selected) != null) tree.select(state.selected, true);
+          if (select != null && built.byPath(select) != null) tree.select(select, true);
         });
       }
       if (findBar.isVisible()) scheduleSearch(0);
@@ -329,6 +357,23 @@ public final class XmlGridPanel extends JPanel implements Disposable {
     }
     return new ViewState(tree.expandedPaths(), sel == null ? null : sel.path(), gridNode == null ? null : gridNode.path(),
                          gridGroup, grid.sortKeys(), grid.filters(), selectedRow);
+  }
+
+  /** A structural action from the grid's (or the tree's) context menu, by its text. */
+  @TestOnly
+  public com.intellij.openapi.actionSystem.AnAction structureActionForTest(boolean inTree, String text) {
+    return StructureActions.find(inTree ? treeStructureActions : gridStructureActions, text);
+  }
+
+  @TestOnly
+  public void selectGridCellForTest(int viewRow, int viewCol) {
+    grid.table().changeSelection(viewRow, viewCol, false, false);
+  }
+
+  @TestOnly
+  public @Nullable String selectedTreePathForTest() {
+    XNode n = tree.selected();
+    return n == null ? null : n.path();
   }
 
   @TestOnly

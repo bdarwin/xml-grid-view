@@ -1,7 +1,15 @@
 # Changelog
 
-## Unreleased
+## 0.4.0
 
+- **Structural editing:** right-click an element in the tree, the Grid or
+  Flat to insert a child, sibling or duplicate, rename it, add or delete
+  attributes, or delete it. This works in both VS Code and IntelliJ.
+- **Formatting kept:** each structural edit is one undo step. Indentation is
+  copied from the surrounding lines and CRLF files stay CRLF.
+- **Checks:** names are validated, including that prefixes are declared, and
+  the new element is selected afterwards. Both implementations are checked
+  against the same fixtures (`fixtures/structure`).
 - **IntelliJ Flat view:** the indent and the inspect icon area are now painted
   with the row's section colour. They used to show white patches.
 - **IntelliJ Grid:** striped rows stay striped behind the inspect icon.

@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<catalog xmlns:m="urn:media">
+  <book id="bk101" lang="en">
+    <title>XML Developer's Guide</title>
+    <price>44.95</price>
+    <empty/>
+    <spaced />
+    <blank></blank>
+    <tags><tag>a</tag><tag>b</tag></tags>
+  </book>
+  <book id="bk102"><title>Inline</title></book>
+  <note>Text only</note>
+</catalog>

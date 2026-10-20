@@ -1,0 +1,413 @@
+{
+  "cases": [
+    {
+      "op": {
+        "kind": "deleteElement",
+        "path": [0, 0, 1]
+      },
+      "expected": {
+        "edits": [{ "offset": 123, "length": 25, "text": "" }],
+        "result": "<?xml version=\"1.0\"?>\n<catalog xmlns:m=\"urn:media\">\n  <book id=\"bk101\" lang=\"en\">\n    <title>XML Developer's Guide</title>\n    <empty/>\n    <spaced />\n    <blank></blank>\n    <tags><tag>a</tag><tag>b</tag></tags>\n  </book>\n  <book id=\"bk102\"><title>Inline</title></book>\n  <note>Text only</note>\n</catalog>\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "deleteElement",
+        "path": [0, 0]
+      },
+      "expected": {
+        "edits": [{ "offset": 52, "length": 196, "text": "" }],
+        "result": "<?xml version=\"1.0\"?>\n<catalog xmlns:m=\"urn:media\">\n  <book id=\"bk102\"><title>Inline</title></book>\n  <note>Text only</note>\n</catalog>\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "deleteElement",
+        "path": [0, 0, 5, 0]
+      },
+      "expected": {
+        "edits": [{ "offset": 206, "length": 12, "text": "" }],
+        "result": "<?xml version=\"1.0\"?>\n<catalog xmlns:m=\"urn:media\">\n  <book id=\"bk101\" lang=\"en\">\n    <title>XML Developer's Guide</title>\n    <price>44.95</price>\n    <empty/>\n    <spaced />\n    <blank></blank>\n    <tags><tag>b</tag></tags>\n  </book>\n  <book id=\"bk102\"><title>Inline</title></book>\n  <note>Text only</note>\n</catalog>\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "deleteElement",
+        "path": [0, 1, 0]
+      },
+      "expected": {
+        "edits": [{ "offset": 267, "length": 21, "text": "" }],
+        "result": "<?xml version=\"1.0\"?>\n<catalog xmlns:m=\"urn:media\">\n  <book id=\"bk101\" lang=\"en\">\n    <title>XML Developer's Guide</title>\n    <price>44.95</price>\n    <empty/>\n    <spaced />\n    <blank></blank>\n    <tags><tag>a</tag><tag>b</tag></tags>\n  </book>\n  <book id=\"bk102\"></book>\n  <note>Text only</note>\n</catalog>\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "deleteElement",
+        "path": [0]
+      },
+      "expected": { "error": true }
+    },
+    {
+      "op": {
+        "kind": "deleteAttr",
+        "path": [0, 0],
+        "name": "lang"
+      },
+      "expected": {
+        "edits": [{ "offset": 70, "length": 10, "text": "" }],
+        "result": "<?xml version=\"1.0\"?>\n<catalog xmlns:m=\"urn:media\">\n  <book id=\"bk101\">\n    <title>XML Developer's Guide</title>\n    <price>44.95</price>\n    <empty/>\n    <spaced />\n    <blank></blank>\n    <tags><tag>a</tag><tag>b</tag></tags>\n  </book>\n  <book id=\"bk102\"><title>Inline</title></book>\n  <note>Text only</note>\n</catalog>\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "deleteAttr",
+        "path": [0, 0],
+        "name": "id"
+      },
+      "expected": {
+        "edits": [{ "offset": 59, "length": 11, "text": "" }],
+        "result": "<?xml version=\"1.0\"?>\n<catalog xmlns:m=\"urn:media\">\n  <book lang=\"en\">\n    <title>XML Developer's Guide</title>\n    <price>44.95</price>\n    <empty/>\n    <spaced />\n    <blank></blank>\n    <tags><tag>a</tag><tag>b</tag></tags>\n  </book>\n  <book id=\"bk102\"><title>Inline</title></book>\n  <note>Text only</note>\n</catalog>\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "deleteAttr",
+        "path": [0, 0],
+        "name": "missing"
+      },
+      "expected": { "error": true }
+    },
+    {
+      "op": {
+        "kind": "addAttr",
+        "path": [0, 0],
+        "name": "format",
+        "value": "a \"b\" & <c>"
+      },
+      "expected": {
+        "edits": [{ "offset": 80, "length": 0, "text": " format=\"a &quot;b&quot; &amp; &lt;c>\"" }],
+        "result": "<?xml version=\"1.0\"?>\n<catalog xmlns:m=\"urn:media\">\n  <book id=\"bk101\" lang=\"en\" format=\"a &quot;b&quot; &amp; &lt;c>\">\n    <title>XML Developer's Guide</title>\n    <price>44.95</price>\n    <empty/>\n    <spaced />\n    <blank></blank>\n    <tags><tag>a</tag><tag>b</tag></tags>\n  </book>\n  <book id=\"bk102\"><title>Inline</title></book>\n  <note>Text only</note>\n</catalog>\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "addAttr",
+        "path": [0, 0, 2],
+        "name": "x",
+        "value": "1"
+      },
+      "expected": {
+        "edits": [{ "offset": 158, "length": 0, "text": " x=\"1\"" }],
+        "result": "<?xml version=\"1.0\"?>\n<catalog xmlns:m=\"urn:media\">\n  <book id=\"bk101\" lang=\"en\">\n    <title>XML Developer's Guide</title>\n    <price>44.95</price>\n    <empty x=\"1\"/>\n    <spaced />\n    <blank></blank>\n    <tags><tag>a</tag><tag>b</tag></tags>\n  </book>\n  <book id=\"bk102\"><title>Inline</title></book>\n  <note>Text only</note>\n</catalog>\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "addAttr",
+        "path": [0, 0, 3],
+        "name": "x",
+        "value": "1"
+      },
+      "expected": {
+        "edits": [{ "offset": 172, "length": 0, "text": " x=\"1\"" }],
+        "result": "<?xml version=\"1.0\"?>\n<catalog xmlns:m=\"urn:media\">\n  <book id=\"bk101\" lang=\"en\">\n    <title>XML Developer's Guide</title>\n    <price>44.95</price>\n    <empty/>\n    <spaced x=\"1\" />\n    <blank></blank>\n    <tags><tag>a</tag><tag>b</tag></tags>\n  </book>\n  <book id=\"bk102\"><title>Inline</title></book>\n  <note>Text only</note>\n</catalog>\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "addAttr",
+        "path": [0, 0, 0],
+        "name": "m:kind",
+        "value": "print"
+      },
+      "expected": {
+        "edits": [{ "offset": 92, "length": 0, "text": " m:kind=\"print\"" }],
+        "result": "<?xml version=\"1.0\"?>\n<catalog xmlns:m=\"urn:media\">\n  <book id=\"bk101\" lang=\"en\">\n    <title m:kind=\"print\">XML Developer's Guide</title>\n    <price>44.95</price>\n    <empty/>\n    <spaced />\n    <blank></blank>\n    <tags><tag>a</tag><tag>b</tag></tags>\n  </book>\n  <book id=\"bk102\"><title>Inline</title></book>\n  <note>Text only</note>\n</catalog>\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "addAttr",
+        "path": [0, 0],
+        "name": "id",
+        "value": "dup"
+      },
+      "expected": { "error": true }
+    },
+    {
+      "op": {
+        "kind": "addAttr",
+        "path": [0, 0],
+        "name": "1bad",
+        "value": "x"
+      },
+      "expected": { "error": true }
+    },
+    {
+      "op": {
+        "kind": "addAttr",
+        "path": [0, 0],
+        "name": "q:x",
+        "value": "x"
+      },
+      "expected": { "error": true }
+    },
+    {
+      "op": {
+        "kind": "addAttr",
+        "path": [0, 0],
+        "name": "xmlns:z",
+        "value": "urn:z"
+      },
+      "expected": { "error": true }
+    },
+    {
+      "op": {
+        "kind": "renameElement",
+        "path": [0, 0, 0],
+        "name": "heading"
+      },
+      "expected": {
+        "edits": [
+          { "offset": 116, "length": 5, "text": "heading" },
+          { "offset": 87, "length": 5, "text": "heading" }
+        ],
+        "result": "<?xml version=\"1.0\"?>\n<catalog xmlns:m=\"urn:media\">\n  <book id=\"bk101\" lang=\"en\">\n    <heading>XML Developer's Guide</heading>\n    <price>44.95</price>\n    <empty/>\n    <spaced />\n    <blank></blank>\n    <tags><tag>a</tag><tag>b</tag></tags>\n  </book>\n  <book id=\"bk102\"><title>Inline</title></book>\n  <note>Text only</note>\n</catalog>\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "renameElement",
+        "path": [0, 0, 2],
+        "name": "nothing"
+      },
+      "expected": {
+        "edits": [{ "offset": 153, "length": 5, "text": "nothing" }],
+        "result": "<?xml version=\"1.0\"?>\n<catalog xmlns:m=\"urn:media\">\n  <book id=\"bk101\" lang=\"en\">\n    <title>XML Developer's Guide</title>\n    <price>44.95</price>\n    <nothing/>\n    <spaced />\n    <blank></blank>\n    <tags><tag>a</tag><tag>b</tag></tags>\n  </book>\n  <book id=\"bk102\"><title>Inline</title></book>\n  <note>Text only</note>\n</catalog>\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "renameElement",
+        "path": [0],
+        "name": "m:catalog"
+      },
+      "expected": {
+        "edits": [
+          { "offset": 323, "length": 7, "text": "m:catalog" },
+          { "offset": 23, "length": 7, "text": "m:catalog" }
+        ],
+        "result": "<?xml version=\"1.0\"?>\n<m:catalog xmlns:m=\"urn:media\">\n  <book id=\"bk101\" lang=\"en\">\n    <title>XML Developer's Guide</title>\n    <price>44.95</price>\n    <empty/>\n    <spaced />\n    <blank></blank>\n    <tags><tag>a</tag><tag>b</tag></tags>\n  </book>\n  <book id=\"bk102\"><title>Inline</title></book>\n  <note>Text only</note>\n</m:catalog>\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "renameElement",
+        "path": [0, 0],
+        "name": "bad name"
+      },
+      "expected": { "error": true }
+    },
+    {
+      "op": {
+        "kind": "insertElement",
+        "path": [0, 0, 1],
+        "where": "after",
+        "name": "currency"
+      },
+      "expected": {
+        "edits": [{ "offset": 147, "length": 0, "text": "\n    <currency/>" }],
+        "result": "<?xml version=\"1.0\"?>\n<catalog xmlns:m=\"urn:media\">\n  <book id=\"bk101\" lang=\"en\">\n    <title>XML Developer's Guide</title>\n    <price>44.95</price>\n    <currency/>\n    <empty/>\n    <spaced />\n    <blank></blank>\n    <tags><tag>a</tag><tag>b</tag></tags>\n  </book>\n  <book id=\"bk102\"><title>Inline</title></book>\n  <note>Text only</note>\n</catalog>\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "insertElement",
+        "path": [0, 0, 0],
+        "where": "before",
+        "name": "isbn"
+      },
+      "expected": {
+        "edits": [{ "offset": 86, "length": 0, "text": "<isbn/>\n    " }],
+        "result": "<?xml version=\"1.0\"?>\n<catalog xmlns:m=\"urn:media\">\n  <book id=\"bk101\" lang=\"en\">\n    <isbn/>\n    <title>XML Developer's Guide</title>\n    <price>44.95</price>\n    <empty/>\n    <spaced />\n    <blank></blank>\n    <tags><tag>a</tag><tag>b</tag></tags>\n  </book>\n  <book id=\"bk102\"><title>Inline</title></book>\n  <note>Text only</note>\n</catalog>\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "insertElement",
+        "path": [0, 0],
+        "where": "child",
+        "name": "year"
+      },
+      "expected": {
+        "edits": [{ "offset": 237, "length": 0, "text": "\n    <year/>" }],
+        "result": "<?xml version=\"1.0\"?>\n<catalog xmlns:m=\"urn:media\">\n  <book id=\"bk101\" lang=\"en\">\n    <title>XML Developer's Guide</title>\n    <price>44.95</price>\n    <empty/>\n    <spaced />\n    <blank></blank>\n    <tags><tag>a</tag><tag>b</tag></tags>\n    <year/>\n  </book>\n  <book id=\"bk102\"><title>Inline</title></book>\n  <note>Text only</note>\n</catalog>\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "insertElement",
+        "path": [0, 0, 2],
+        "where": "child",
+        "name": "x"
+      },
+      "expected": {
+        "edits": [{ "offset": 158, "length": 2, "text": ">\n      <x/>\n    </empty>" }],
+        "result": "<?xml version=\"1.0\"?>\n<catalog xmlns:m=\"urn:media\">\n  <book id=\"bk101\" lang=\"en\">\n    <title>XML Developer's Guide</title>\n    <price>44.95</price>\n    <empty>\n      <x/>\n    </empty>\n    <spaced />\n    <blank></blank>\n    <tags><tag>a</tag><tag>b</tag></tags>\n  </book>\n  <book id=\"bk102\"><title>Inline</title></book>\n  <note>Text only</note>\n</catalog>\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "insertElement",
+        "path": [0, 0, 3],
+        "where": "child",
+        "name": "x"
+      },
+      "expected": {
+        "edits": [{ "offset": 173, "length": 2, "text": ">\n      <x/>\n    </spaced>" }],
+        "result": "<?xml version=\"1.0\"?>\n<catalog xmlns:m=\"urn:media\">\n  <book id=\"bk101\" lang=\"en\">\n    <title>XML Developer's Guide</title>\n    <price>44.95</price>\n    <empty/>\n    <spaced >\n      <x/>\n    </spaced>\n    <blank></blank>\n    <tags><tag>a</tag><tag>b</tag></tags>\n  </book>\n  <book id=\"bk102\"><title>Inline</title></book>\n  <note>Text only</note>\n</catalog>\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "insertElement",
+        "path": [0, 0, 4],
+        "where": "child",
+        "name": "x"
+      },
+      "expected": {
+        "edits": [{ "offset": 187, "length": 0, "text": "\n      <x/>\n    " }],
+        "result": "<?xml version=\"1.0\"?>\n<catalog xmlns:m=\"urn:media\">\n  <book id=\"bk101\" lang=\"en\">\n    <title>XML Developer's Guide</title>\n    <price>44.95</price>\n    <empty/>\n    <spaced />\n    <blank>\n      <x/>\n    </blank>\n    <tags><tag>a</tag><tag>b</tag></tags>\n  </book>\n  <book id=\"bk102\"><title>Inline</title></book>\n  <note>Text only</note>\n</catalog>\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "insertElement",
+        "path": [0, 0, 5],
+        "where": "child",
+        "name": "tag"
+      },
+      "expected": {
+        "edits": [{ "offset": 230, "length": 0, "text": "<tag/>" }],
+        "result": "<?xml version=\"1.0\"?>\n<catalog xmlns:m=\"urn:media\">\n  <book id=\"bk101\" lang=\"en\">\n    <title>XML Developer's Guide</title>\n    <price>44.95</price>\n    <empty/>\n    <spaced />\n    <blank></blank>\n    <tags><tag>a</tag><tag>b</tag><tag/></tags>\n  </book>\n  <book id=\"bk102\"><title>Inline</title></book>\n  <note>Text only</note>\n</catalog>\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "insertElement",
+        "path": [0, 1, 0],
+        "where": "after",
+        "name": "author"
+      },
+      "expected": {
+        "edits": [{ "offset": 288, "length": 0, "text": "<author/>" }],
+        "result": "<?xml version=\"1.0\"?>\n<catalog xmlns:m=\"urn:media\">\n  <book id=\"bk101\" lang=\"en\">\n    <title>XML Developer's Guide</title>\n    <price>44.95</price>\n    <empty/>\n    <spaced />\n    <blank></blank>\n    <tags><tag>a</tag><tag>b</tag></tags>\n  </book>\n  <book id=\"bk102\"><title>Inline</title><author/></book>\n  <note>Text only</note>\n</catalog>\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "insertElement",
+        "path": [0, 1],
+        "where": "child",
+        "name": "author"
+      },
+      "expected": {
+        "edits": [{ "offset": 288, "length": 0, "text": "<author/>" }],
+        "result": "<?xml version=\"1.0\"?>\n<catalog xmlns:m=\"urn:media\">\n  <book id=\"bk101\" lang=\"en\">\n    <title>XML Developer's Guide</title>\n    <price>44.95</price>\n    <empty/>\n    <spaced />\n    <blank></blank>\n    <tags><tag>a</tag><tag>b</tag></tags>\n  </book>\n  <book id=\"bk102\"><title>Inline</title><author/></book>\n  <note>Text only</note>\n</catalog>\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "insertElement",
+        "path": [0, 2],
+        "where": "child",
+        "name": "x"
+      },
+      "expected": { "error": true }
+    },
+    {
+      "op": {
+        "kind": "insertElement",
+        "path": [0],
+        "where": "after",
+        "name": "x"
+      },
+      "expected": { "error": true }
+    },
+    {
+      "op": {
+        "kind": "insertElement",
+        "path": [0, 0],
+        "where": "child",
+        "name": "m:cover"
+      },
+      "expected": {
+        "edits": [{ "offset": 237, "length": 0, "text": "\n    <m:cover/>" }],
+        "result": "<?xml version=\"1.0\"?>\n<catalog xmlns:m=\"urn:media\">\n  <book id=\"bk101\" lang=\"en\">\n    <title>XML Developer's Guide</title>\n    <price>44.95</price>\n    <empty/>\n    <spaced />\n    <blank></blank>\n    <tags><tag>a</tag><tag>b</tag></tags>\n    <m:cover/>\n  </book>\n  <book id=\"bk102\"><title>Inline</title></book>\n  <note>Text only</note>\n</catalog>\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "duplicateElement",
+        "path": [0, 0, 1]
+      },
+      "expected": {
+        "edits": [{ "offset": 147, "length": 0, "text": "\n    <price>44.95</price>" }],
+        "result": "<?xml version=\"1.0\"?>\n<catalog xmlns:m=\"urn:media\">\n  <book id=\"bk101\" lang=\"en\">\n    <title>XML Developer's Guide</title>\n    <price>44.95</price>\n    <price>44.95</price>\n    <empty/>\n    <spaced />\n    <blank></blank>\n    <tags><tag>a</tag><tag>b</tag></tags>\n  </book>\n  <book id=\"bk102\"><title>Inline</title></book>\n  <note>Text only</note>\n</catalog>\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "duplicateElement",
+        "path": [0, 1]
+      },
+      "expected": {
+        "edits": [{ "offset": 295, "length": 0, "text": "\n  <book id=\"bk102\"><title>Inline</title></book>" }],
+        "result": "<?xml version=\"1.0\"?>\n<catalog xmlns:m=\"urn:media\">\n  <book id=\"bk101\" lang=\"en\">\n    <title>XML Developer's Guide</title>\n    <price>44.95</price>\n    <empty/>\n    <spaced />\n    <blank></blank>\n    <tags><tag>a</tag><tag>b</tag></tags>\n  </book>\n  <book id=\"bk102\"><title>Inline</title></book>\n  <book id=\"bk102\"><title>Inline</title></book>\n  <note>Text only</note>\n</catalog>\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "duplicateElement",
+        "path": [0, 0, 5, 1]
+      },
+      "expected": {
+        "edits": [{ "offset": 230, "length": 0, "text": "<tag>b</tag>" }],
+        "result": "<?xml version=\"1.0\"?>\n<catalog xmlns:m=\"urn:media\">\n  <book id=\"bk101\" lang=\"en\">\n    <title>XML Developer's Guide</title>\n    <price>44.95</price>\n    <empty/>\n    <spaced />\n    <blank></blank>\n    <tags><tag>a</tag><tag>b</tag><tag>b</tag></tags>\n  </book>\n  <book id=\"bk102\"><title>Inline</title></book>\n  <note>Text only</note>\n</catalog>\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "duplicateElement",
+        "path": [0]
+      },
+      "expected": { "error": true }
+    }
+  ]
+}

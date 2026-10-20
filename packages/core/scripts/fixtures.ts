@@ -11,6 +11,9 @@ import {
   canonicalFlat,
   canonicalJsonValue,
   applyEdit,
+  applyEdits,
+  computeStructureEdit,
+  type StructureOp,
   computeValueEdit,
   elementAtPath,
   elementText,
@@ -28,6 +31,7 @@ import {
 export const CASES_DIR = resolve(fileURLToPath(new URL(".", import.meta.url)), "../../../fixtures/cases");
 export const JSON_DIR = resolve(CASES_DIR, "../json");
 export const EDITS_DIR = resolve(CASES_DIR, "../edits");
+export const STRUCTURE_DIR = resolve(CASES_DIR, "../structure");
 
 /** Value-edit cases: fixtures/edits/<name>.xml with <name>.edits.json (inputs + expected). */
 export function listEditCases(): { name: string; xml: string; edits: string }[] {
@@ -49,6 +53,28 @@ export function expectedEditsOutput(c: { xml: string; edits: string }): string {
     const el = elementAtPath(after.doc, target.path);
     const readBack = !el ? null : target.kind === "attr" ? (el.attrs.find((a) => a.name === target.name)?.value ?? null) : elementText(el);
     return { target, value, expected: { edit: r.edit, readBack, wellFormed: after.errors.length === 0 } };
+  });
+  return stableJson({ cases });
+}
+
+/** Structural-edit cases: fixtures/structure/<name>.xml with <name>.ops.json (inputs + expected). */
+export function listStructureCases(): { name: string; xml: string; ops: string }[] {
+  return readdirSync(STRUCTURE_DIR)
+    .filter((f) => f.endsWith(".xml"))
+    .sort()
+    .map((f) => ({ name: f.slice(0, -4), xml: join(STRUCTURE_DIR, f), ops: join(STRUCTURE_DIR, f.slice(0, -4) + ".ops.json") }));
+}
+
+export function expectedStructureOutput(c: { xml: string; ops: string }): string {
+  const text = readFileSync(c.xml, "utf8");
+  const model = new XmlModel(parseXml(text));
+  const input = JSON.parse(readFileSync(c.ops, "utf8")) as { cases: { op: StructureOp }[] };
+  const cases = input.cases.map(({ op }) => {
+    const r = computeStructureEdit(text, model, op);
+    if ("error" in r) return { op, expected: { error: true } };
+    // The whole document after the edit, for review, and a well-formedness self-check.
+    const result = applyEdits(text, r.edits);
+    return { op, expected: { edits: r.edits, result, wellFormed: parseXml(result).errors.length === 0 } };
   });
   return stableJson({ cases });
 }

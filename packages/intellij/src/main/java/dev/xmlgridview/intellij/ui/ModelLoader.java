@@ -153,9 +153,26 @@ final class ModelLoader implements Disposable {
     if (!r.isOk()) return r.error();
     ValueEdits.TextEdit e = Objects.requireNonNull(r.edit());
     if (e.length() == 0 && e.text().isEmpty()) return null;
+    return applyEdits(java.util.List.of(e), ValueEdits.label(m, target));
+  }
+
+  /**
+   * Applies text edits computed against the current model's text (any order, non-overlapping) to the
+   * document as one undoable command and refreshes immediately. Returns null on success, or why not.
+   */
+  @Nullable String applyEdits(@NotNull java.util.List<ValueEdits.TextEdit> edits, @NotNull String label) {
+    XmlDocumentModel m = model;
+    if (m == null) return "The view is still loading.";
+    if (largeFile != null) return "This file is too large for IntelliJ to edit, so the view is read-only.";
+    if (!m.text().contentEquals(document.getImmutableCharSequence())) {
+      return "The document changed since the view was last updated; try again in a moment.";
+    }
     if (!FileDocumentManager.getInstance().requestWriting(document, project)) return "The file is read-only.";
-    WriteCommandAction.runWriteCommandAction(project, ValueEdits.label(m, target), null,
-                                             () -> document.replaceString(e.offset(), e.offset() + e.length(), e.text()));
+    java.util.List<ValueEdits.TextEdit> sorted = new java.util.ArrayList<>(edits);
+    sorted.sort(java.util.Comparator.comparingInt(ValueEdits.TextEdit::offset).reversed());
+    WriteCommandAction.runWriteCommandAction(project, label, null, () -> {
+      for (ValueEdits.TextEdit e : sorted) document.replaceString(e.offset(), e.offset() + e.length(), e.text());
+    });
     // Our own edit: rebuild now rather than after the typing debounce.
     refreshAlarm.cancelAllRequests();
     refresh();

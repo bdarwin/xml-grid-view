@@ -61,6 +61,7 @@ final class XmlTreeView extends JPanel {
   private static final int MAX_RESTORED_EXPANSIONS = 2_000;
 
   private final Structure structure = new Structure();
+  private final DefaultActionGroup menu = new DefaultActionGroup();
   private final StructureTreeModel<Structure> structureModel;
   private final Tree tree;
   private final Supplier<FindState> findState;
@@ -110,7 +111,6 @@ final class XmlTreeView extends JPanel {
     }, t -> {
       if (inspector != null) inspector.accept(t);
     });
-    DefaultActionGroup menu = new DefaultActionGroup();
     menu.add(inspect);
     menu.add(new DumbAwareAction("Go to Source", null, AllIcons.Actions.EditSource) {
       @Override
@@ -201,6 +201,11 @@ final class XmlTreeView extends JPanel {
 
   void setBoxFilterListener(@NotNull Consumer<@Nullable Set<XNode>> listener) {
     boxFilterListener = listener;
+  }
+
+  /** Appends actions (e.g. structural edits) to the tree's context menu. */
+  void addMenuActions(@NotNull DefaultActionGroup actions) {
+    menu.addAll(actions);
   }
 
   void setInspector(@NotNull Consumer<InspectTarget> inspector) {

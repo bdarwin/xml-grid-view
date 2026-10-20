@@ -374,3 +374,85 @@ literally.
     is kept, so `<t />` becomes `<t >value</t>`.
   - With an empty value, it is a no-op edit: offset is the tag's end, length
     0, empty text.
+
+## Structural edits: `structure/<name>.xml` + `structure/<name>.ops.json`
+
+Structural edits add, remove, copy and rename things. Each operation becomes
+**one or more text replacements** `{ offset, length, text }` on the source, in
+descending offset order. Hosts apply all of them as one undoable edit.
+Formatting is kept: inserted lines copy the indentation around them, and a
+document that uses CRLF gets CRLF line breaks.
+
+```json
+{ "op": { "kind": "insertElement", "path": [0, 0], "where": "child", "name": "year" },
+  "expected": { "edits": [{ "offset": 237, "length": 0, "text": "\n    <year/>" }], "result": "…", "wellFormed": true } }
+```
+
+`op` is the input. The generator fills in `expected`. Implementations must
+produce the same `edits`, or `{ "error": true }` when the operation is refused.
+`result` (the whole document after the edit) is there for review, and
+`wellFormed` is a self-check of the reference implementation.
+
+### Operations
+
+| `kind` | Fields | Effect |
+| --- | --- | --- |
+| `deleteElement` | `path` | Removes the element. |
+| `deleteAttr` | `path`, `name` | Removes the attribute and the whitespace before it. |
+| `addAttr` | `path`, `name`, `value` | Adds ` name="value"` at the end of the start tag. |
+| `renameElement` | `path`, `name` | Renames the start tag and the end tag. |
+| `insertElement` | `path`, `where`, `name` | Inserts an empty element `<name/>` before or after the element, or as its last child. |
+| `duplicateElement` | `path` | Inserts a copy of the element's source right after it. |
+
+### Shared terms
+
+- **Own line:** an element is on its own line when only spaces and tabs come
+  before its `<` on that line. Its **indent** is those spaces and tabs.
+- **Line break:** CRLF if the document contains CRLF anywhere, else LF.
+- **Indent unit:** taken from the document. It is the extra indentation of
+  the first element (in document order) that is on its own line, below a
+  parent that is on its own line, and indented deeper than that parent. With
+  no such element it is two spaces.
+
+### Rules
+
+- **`deleteElement`:** if the element is on its own line and only spaces and
+  tabs follow its end on that line, the whole line or lines are removed,
+  including the line break. Otherwise only the element's span is removed.
+- **`deleteAttr`:** the removal starts at the first whitespace character of the
+  run that comes before the attribute's name.
+- **`addAttr`:** the text goes before the start tag's closing `>` or `/>`,
+  before any whitespace that comes ahead of it. So `<spaced />` becomes
+  `<spaced x="1" />`. The value is escaped like an attribute value edit, with
+  `"` quotes.
+- **`renameElement`:** replaces the name in the start tag and, if there is
+  one, the end tag. Renaming to the same name produces no edits.
+- **`insertElement` / `duplicateElement` after an element:** if the element is
+  on its own line, the new text goes on a new line after it, with the
+  element's indent. Otherwise it goes directly after the element.
+- **`insertElement` before an element:** if the element is on its own line,
+  the new element is followed by a line break and the element's indent.
+  Otherwise it goes directly before the element.
+- **`insertElement` as a child:**
+  - **Element has element children:** inserted after the last element child,
+    following the after-an-element rule.
+  - **Empty-element tag `<a …/>`:** the `/>` becomes `>`, then the new
+    element, then `</a>`. If the element is on its own line, the child goes
+    on its own line, indented one unit deeper, and `</a>` goes on the next
+    line at the element's indent. Whitespace before the `/` is kept.
+  - **Otherwise:** the content between the tags must be empty or whitespace,
+    and it is replaced in the same way.
+
+### Refused (error)
+
+- The element doesn't exist, or the document has parse errors.
+- `deleteElement`, `duplicateElement`, or `insertElement` before or after, on
+  the root element.
+- A name that isn't a valid QName, or whose prefix isn't declared on the
+  element or its ancestors (`xml` is always declared). For an insert before or
+  after, the check is made at the element's parent.
+- `addAttr` with an attribute name the element already has, or with
+  `xmlns`/`xmlns:*`.
+- `deleteAttr` with an attribute that doesn't exist.
+- `insertElement` as a child of an element that has text and no element
+  children, which would create mixed content.

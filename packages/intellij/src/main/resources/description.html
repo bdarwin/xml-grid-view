@@ -1,6 +1,6 @@
 <p>View and edit XML as a <b>tree</b>, a <b>grid</b> of repeating elements, or a <b>Flat</b> outline sheet,
 right next to the text editor. Includes text, regex and XPath search, a value inspector with JSON support,
-and in-place editing of values.</p>
+in-place editing of values, and structural edits from the context menu.</p>
 <ul>
   <li><b>Grid</b> tab: a tree of elements (key attributes, child counts, speed search and a node filter)
       beside a grid of repeating children. Columns are attributes, text-only children and mixed text, and
@@ -11,6 +11,9 @@ and in-place editing of values.</p>
   <li><b>Edit values</b>: select an attribute value or a leaf element's text and press F2, or just type.
       Enter commits. Values are escaped automatically and CDATA is preserved, and every edit is a normal,
       undoable change.</li>
+  <li><b>Edit structure</b> from the context menu of the tree, grid or Flat view: insert child, before or
+      after, duplicate, rename, add or delete attributes, and delete elements. Formatting and indentation
+      are kept, names are validated, and each edit is one undo step.</li>
   <li><b>Value inspector</b> (double-click or Shift+Enter): long text in full, plus JSON as a Tree, a
       drill-down Grid or pretty Text. Large numbers are shown exactly, and the value can be edited and
       saved, with JSON validation.</li>

@@ -14,10 +14,11 @@
 | **Value inspector: JSON as a grid** | **Value inspector: JSON tree (IntelliJ)** |
 | ![Inspector JSON grid](docs/view-inspector-grid.png) | ![IntelliJ inspector JSON tree](docs/intellij-inspector.png) |
 
-An XML viewer and value editor for VS Code and IntelliJ. It shows the document
-as a tree and a grid, plus a Flat outline, with search and XPath. You can edit
-attribute values and element text in place. Edits go through the editor's own
-undo history and are never saved behind your back.
+An XML viewer and editor for VS Code and IntelliJ. It shows the document as a
+tree and a grid, plus a Flat outline, with search and XPath. You can edit
+attribute values and element text in place, and add, duplicate, rename or
+delete elements and attributes from the context menu. Edits go through the
+editor's own undo history and are never saved behind your back.
 
 | Package | What it is |
 | --- | --- |
@@ -154,11 +155,27 @@ limitations.
     empty `<tag/>` expands when it gets a value.
   - **Undo and save:** each edit is one normal, undoable change to the
     document. Saving is up to you.
-  - **Not supported:** structural changes, meaning adding or removing
-    attributes and elements, or renaming. Values that contain comments are
-    left to the text editor.
+  - **Not supported:** values that contain comments are left to the text
+    editor.
   - **Read-only:** set `xmlGridView.readOnly` in VS Code to turn editing off.
     Read-only files can't be edited.
+- **Editing structure:** right-click an element in the tree, a grid row or
+  cell, or a Flat row. The menu has these actions:
+  - **Insert Child Element**, **Insert Element Before** and **Insert Element
+    After:** insert a new empty element with the name you give.
+  - **Duplicate:** copies the element right after itself.
+  - **Rename:** renames the start and end tags.
+  - **Add Attribute:** asks for a name and a value.
+  - **Delete Attribute:** shown when you right-click an attribute.
+  - **Delete:** removes the element.
+
+  Each action is one undoable edit and keeps the file's formatting: new lines
+  copy the surrounding indentation, an empty `<a/>` opens up when it gets a
+  child, and CRLF files stay CRLF. Names are checked before anything changes,
+  including that a prefix is declared. The root can't be deleted or given
+  siblings. An element that holds text doesn't take child elements, since
+  that would mix text and elements. The new element is selected after the
+  edit.
 - **Find (Ctrl/Cmd+F):**
   - Match case, whole word and regex.
   - Scope: the current grid or the whole document.

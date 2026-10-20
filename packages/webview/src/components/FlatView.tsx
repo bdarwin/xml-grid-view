@@ -109,6 +109,8 @@ export interface FlatViewProps {
   canEdit?(pos: FlatPos): boolean;
   /** Commits an in-place edit (only called when the value changed). */
   onEdit?(pos: FlatPos, value: string): void;
+  /** Right-click on a row. */
+  onContextMenu?(pos: FlatPos, x: number, y: number): void;
 }
 
 let measureCtx: CanvasRenderingContext2D | null = null;
@@ -339,6 +341,11 @@ export function FlatView(p: FlatViewProps) {
         role="row"
         aria-selected={inRows}
         style={{ top: i * FLAT_ROW_HEIGHT }}
+        onContextMenu={(e) => {
+          if (!p.onContextMenu) return;
+          e.preventDefault();
+          p.onContextMenu(posAt(i), e.clientX, e.clientY);
+        }}
       >
         <div
           class="rownum"

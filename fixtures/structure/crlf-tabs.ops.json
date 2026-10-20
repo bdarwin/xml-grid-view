@@ -1,0 +1,41 @@
+{
+  "cases": [
+    {
+      "op": {
+        "kind": "insertElement",
+        "path": [0, 0],
+        "where": "child",
+        "name": "c"
+      },
+      "expected": {
+        "edits": [{ "offset": 20, "length": 0, "text": "\r\n\t\t<c/>" }],
+        "result": "<root>\r\n\t<a>\r\n\t\t<b/>\r\n\t\t<c/>\r\n\t</a>\r\n</root>\r\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "insertElement",
+        "path": [0, 0, 0],
+        "where": "after",
+        "name": "d"
+      },
+      "expected": {
+        "edits": [{ "offset": 20, "length": 0, "text": "\r\n\t\t<d/>" }],
+        "result": "<root>\r\n\t<a>\r\n\t\t<b/>\r\n\t\t<d/>\r\n\t</a>\r\n</root>\r\n",
+        "wellFormed": true
+      }
+    },
+    {
+      "op": {
+        "kind": "deleteElement",
+        "path": [0, 0, 0]
+      },
+      "expected": {
+        "edits": [{ "offset": 14, "length": 8, "text": "" }],
+        "result": "<root>\r\n\t<a>\r\n\t</a>\r\n</root>\r\n",
+        "wellFormed": true
+      }
+    }
+  ]
+}

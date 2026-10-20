@@ -5,6 +5,7 @@ import {
   DEFAULT_SETTINGS,
   createMatcher,
   idAtPath,
+  isQName,
   pathKey,
   pathOfId,
   parsePathKey,
@@ -16,6 +17,7 @@ import {
   type Matcher,
   type ParseError,
   type SearchQuery,
+  type StructureOp,
   type ThemeVars,
   type TreeSkeleton,
   type ViewSettings,
@@ -25,7 +27,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks"
 import { FilterPopup } from "./components/FilterPopup";
 import { FindBar, type FindState } from "./components/FindBar";
 import { FlatView, flatRows, rowIndexOf, type FlatPos, type FlatSelection } from "./components/FlatView";
+import { ContextMenu, type MenuItem } from "./components/ContextMenu";
 import { Grid, selectionRange, type CellPos, type GridSelection } from "./components/Grid";
+import { PromptDialog, type PromptDialogProps, type PromptField } from "./components/PromptDialog";
 import { Results, type ResultItem } from "./components/Results";
 import { Split } from "./components/Split";
 import { Tree } from "./components/Tree";
@@ -234,6 +238,17 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
       if (r.skeleton) {
         setKeptOld(false);
         applySnapshot(r.skeleton, snap);
+        const want = selectAfterLoad.current;
+        selectAfterLoad.current = null;
+        const newId = want ? resolveNamed(r.skeleton, want) : -1;
+        if (newId >= 0) {
+          const sk = r.skeleton;
+          setSelected(newId);
+          setGroup(null);
+          setExpanded((prev) => new Set([...prev, ...ancestors(sk, newId)]));
+          setFlatCollapsed((prev) => new Set([...prev].filter((c) => !ancestors(sk, newId).includes(c))));
+          setFlatSel({ anchor: { id: newId, attr: -1, col: 0 }, focus: { id: newId, attr: -1, col: 1 } });
+        }
         pendingRestore.current = null;
         modelDocVersion.current = version;
         setSkeleton(r.skeleton);
@@ -555,6 +570,130 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
 
   const canEditDoc = !settings.readOnly && errors.length === 0;
 
+  /** Asks the host to apply text edits as one undoable step; resolves with the host's answer. */
+  const postEdits = (edits: { offset: number; length: number; text: string }[], label: string) =>
+    new Promise<{ ok: boolean; message?: string }>((resolve) => {
+      pendingEdit.current = resolve;
+      host.post({ type: "edit", docVersion: modelDocVersion.current, edits, label });
+      setTimeout(() => resolve({ ok: false, message: "The editor did not respond to the edit." }), 10_000);
+    });
+
+  // ----- structural edits (context menu) ---------------------------------------
+
+  const [menu, setMenu] = useState<{ x: number; y: number; items: MenuItem[]; note?: string } | null>(null);
+  const [prompt, setPrompt] = useState<PromptDialogProps | null>(null);
+  /** Element to select once the edited document has been re-parsed (e.g. the one just inserted). */
+  const selectAfterLoad = useRef<NamedPath | null>(null);
+
+  /** Computes a structural edit in the worker and asks the host to apply it. */
+  const requestStructure = async (op: StructureOp, label: string, select?: NamedPath) => {
+    try {
+      const r = await worker.request<"structure">({ type: "structure", gen, op });
+      if ("error" in r) return setToast(r.error);
+      if (!r.edits.length) return;
+      selectAfterLoad.current = select ?? null;
+      const result = await postEdits(r.edits, label);
+      if (!result.ok) {
+        selectAfterLoad.current = null;
+        setToast(result.message ?? "The edit was not applied.");
+      }
+    } catch (e) {
+      setToast(e instanceof StaleError ? "The document changed while editing; please try again." : String((e as Error).message ?? e));
+    }
+  };
+
+  /** Opens the element (and attribute) actions menu at (x, y). */
+  const openStructureMenu = (id: number, attr: string | null, x: number, y: number) => {
+    if (!skeleton || id < 0) return;
+    const sk = skeleton;
+    const path = pathOfId(sk, id);
+    const name = sk.names[sk.nameIdx[id]];
+    const tag = `<${name}>`;
+    const isRoot = sk.parent[id] < 0;
+    const ro = !canEditDoc;
+    const parentPath = path.slice(0, -1);
+    const next = [...parentPath, path[path.length - 1] + 1];
+    const nameField = (label: string, initial = ""): PromptField => ({
+      label,
+      initial,
+      validate: (v) => (isQName(v.trim()) ? null : "Not a valid XML name."),
+    });
+    const ask = (title: string, fields: PromptField[], okLabel: string, run: (values: string[]) => void) =>
+      setPrompt({
+        title,
+        fields,
+        okLabel,
+        onCancel: () => setPrompt(null),
+        onSubmit: (values) => {
+          setPrompt(null);
+          run(values);
+        },
+      });
+    const insert = (where: "before" | "after" | "child", title: string, selectPath: number[]) => () =>
+      ask(title, [nameField("Element name")], "Insert", ([n]) =>
+        void requestStructure({ kind: "insertElement", path, where, name: n.trim() }, `Insert <${n.trim()}>`, [pathKey(selectPath), n.trim()]),
+      );
+    const items: MenuItem[] = [
+      { label: "Insert Child Element…", disabled: ro, onClick: insert("child", `New child of ${tag}`, [...path, sk.childCount[id]]) },
+      { label: "Insert Element Before…", disabled: ro || isRoot, onClick: insert("before", `New element before ${tag}`, path) },
+      { label: "Insert Element After…", disabled: ro || isRoot, onClick: insert("after", `New element after ${tag}`, next) },
+      {
+        label: "Duplicate",
+        disabled: ro || isRoot,
+        onClick: () => void requestStructure({ kind: "duplicateElement", path }, `Duplicate ${tag}`, [pathKey(next), name]),
+      },
+      "separator",
+      {
+        label: "Rename…",
+        disabled: ro,
+        onClick: () =>
+          ask(`Rename ${tag}`, [nameField("New name", name)], "Rename", ([n]) =>
+            void requestStructure({ kind: "renameElement", path, name: n.trim() }, `Rename ${tag} to <${n.trim()}>`, [pathKey(path), n.trim()]),
+          ),
+      },
+      {
+        label: "Add Attribute…",
+        disabled: ro,
+        onClick: () =>
+          ask(`New attribute on ${tag}`, [nameField("Attribute name"), { label: "Value" }], "Add", ([n, v]) =>
+            void requestStructure({ kind: "addAttr", path, name: n.trim(), value: v }, `Add @${n.trim()}`),
+          ),
+      },
+    ];
+    if (attr) {
+      items.push({
+        label: `Delete Attribute @${attr}`,
+        danger: true,
+        disabled: ro,
+        onClick: () => void requestStructure({ kind: "deleteAttr", path, name: attr }, `Delete @${attr}`),
+      });
+    }
+    items.push("separator", {
+      label: `Delete ${tag}`,
+      danger: true,
+      disabled: ro || isRoot,
+      onClick: () =>
+        void requestStructure({ kind: "deleteElement", path }, `Delete ${tag}`, isRoot ? undefined : [pathKey(parentPath), sk.names[sk.nameIdx[sk.parent[id]]]]),
+    });
+    setMenu({ x, y, items, note: ro ? (settings.readOnly ? "This document is read-only." : "Fix the XML errors to edit.") : undefined });
+  };
+
+  /** Grid cell → the element it shows: a leaf cell's child element, else the row element (with its attribute for @ cells). */
+  const openGridMenu = (pos: CellPos, x: number, y: number) => {
+    if (!table || !skeleton) return;
+    const r = view[pos.v];
+    if (r === undefined) return;
+    const rowId = table.rowIds[r];
+    const col = pos.c >= 0 ? table.columns[pos.c] : null;
+    const raw = col ? table.cells[r * table.columns.length + pos.c] : null;
+    if (col?.kind === "attr" && raw !== null) return openStructureMenu(rowId, col.label.slice(1), x, y);
+    if (col?.kind === "leaf" && raw !== null) {
+      const child = childNamed(rowId, col.label);
+      if (child >= 0) return openStructureMenu(child, null, x, y);
+    }
+    openStructureMenu(rowId, null, x, y);
+  };
+
   /** Computes the text edit in the worker and asks the host to apply it (one undoable step). */
   const requestEdit = async (target: EditTarget, value: string, label: string): Promise<string | null> => {
     try {
@@ -563,11 +702,7 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
         setToast(r.error);
         return r.error;
       }
-      const result = await new Promise<{ ok: boolean; message?: string }>((resolve) => {
-        pendingEdit.current = resolve;
-        host.post({ type: "edit", docVersion: modelDocVersion.current, edits: [r.edit], label });
-        setTimeout(() => resolve({ ok: false, message: "The editor did not respond to the edit." }), 10_000);
-      });
+      const result = await postEdits([r.edit], label);
       return result.ok ? null : (result.message ?? "The edit was not applied.");
     } catch (e) {
       const message = e instanceof StaleError ? "The document changed while editing; please try again." : String((e as Error).message ?? e);
@@ -1034,6 +1169,7 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
               onSelect={(id) => (mode === "flat" ? showInFlat(id) : selectElement(id))}
               onActivate={activateElement}
               onInspect={(id) => void inspectElement(id)}
+              onContextMenu={(id, x, y) => openStructureMenu(id, null, x, y)}
             />
           </div>
         }
@@ -1069,6 +1205,9 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
                 const e = flatEditTarget(pos);
                 if (e) void requestEdit(e.target, value, e.label);
               }}
+              onContextMenu={(pos, x, y) =>
+                openStructureMenu(pos.id, pos.attr >= 0 ? (flatValues.get(pos.id)?.attrs[pos.attr]?.name ?? null) : null, x, y)
+              }
             />
               )}
             </div>
@@ -1168,6 +1307,7 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
                   const e = gridEditTarget(pos);
                   if (e) void requestEdit(e.target, value, e.label);
                 }}
+                onContextMenu={openGridMenu}
               />
             ) : (
               <div class="grid-empty">Select an element.</div>
@@ -1195,6 +1335,8 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
           )
         }
       />
+      {menu && <ContextMenu {...menu} onClose={() => setMenu(null)} />}
+      {prompt && <PromptDialog {...prompt} />}
       {toast && (
         <div class="toast" role="status" onClick={() => setToast(null)}>
           {toast}

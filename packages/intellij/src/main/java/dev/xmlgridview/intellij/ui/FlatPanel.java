@@ -107,6 +107,9 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
    * Collapse All doesn't record millions of paths in large documents.
    */
   private boolean collapsedByDefault;
+  /** Element to select after the next rebuild (one just inserted, renamed or duplicated). */
+  private @Nullable String pendingSelect;
+  private DefaultActionGroup structureActions;
   private final Set<String> toggled = new HashSet<>();
 
   private @Nullable XmlDocumentModel model;
@@ -229,6 +232,7 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
     inspectorOpener = t -> ValueInspector.show(this.project, t, loader.canEdit() ? loader::applyValueEdit : null);
     inspectAction = InspectAction.install(table, this, this::inspectTarget, t -> inspectorOpener.accept(t));
     PopupHandler.installPopupMenu(table, popupActions(), "XmlGridView.Flat");
+    GridView.selectCellOnRightClick(table);
     JScrollPane scroll = ScrollPaneFactory.createScrollPane(table, true);
     scroll.setRowHeaderView(new RowNumberHeader(table));
     scroll.getViewport().addComponentListener(new java.awt.event.ComponentAdapter() {
@@ -355,6 +359,10 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
     // Collapsed paths that no longer exist are dropped; the rest carry over.
     toggled.removeIf(p -> built.byPath(p) == null);
     rebuildRows(selected);
+    String select = pendingSelect;
+    pendingSelect = null;
+    XNode inserted = select == null ? null : built.byPath(select);
+    if (inserted != null) showInFlat(inserted);
     fitNameColumn();
     if (findBar.isVisible()) scheduleSearch(0);
   }
@@ -660,6 +668,27 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
         if (row >= 0) navigateRow(row);
       }
     });
+    structureActions = StructureActions.create(this, () -> {
+      XmlDocumentModel m = model;
+      int row = leadRow();
+      if (m == null || row < 0 || row >= rowsModel.rows.size()) return null;
+      FlatRow r = rowsModel.rows.get(row);
+      return new StructureActions.Target(m, r.node(), r.kind() == FlatRow.Kind.ATTR ? r.attr().name() : null);
+    }, new StructureActions.Applier() {
+      @Override
+      public boolean canEdit() {
+        return loader.canEdit();
+      }
+
+      @Override
+      public @Nullable String apply(@NotNull List<dev.xmlgridview.intellij.model.ValueEdits.TextEdit> edits, @NotNull String label,
+                                    @Nullable String selectPath) {
+        String error = loader.applyEdits(edits, label);
+        if (error == null) pendingSelect = selectPath;
+        return error;
+      }
+    });
+    g.addAll(structureActions);
     return g;
   }
 
@@ -1010,6 +1039,11 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
   public void selectCellsForTest(int fromRow, int toRow, int fromCol, int toCol) {
     table.getSelectionModel().setSelectionInterval(fromRow, toRow);
     table.getColumnModel().getSelectionModel().setSelectionInterval(fromCol, toCol);
+  }
+
+  @TestOnly
+  public com.intellij.openapi.actionSystem.AnAction structureActionForTest(String text) {
+    return StructureActions.find(structureActions, text);
   }
 
   @TestOnly

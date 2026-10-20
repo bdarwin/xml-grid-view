@@ -8,3 +8,4 @@ export * from "./protocol.js";
 export * from "./canonical.js";
 export * from "./json.js";
 export * from "./edits.js";
+export * from "./structure.js";

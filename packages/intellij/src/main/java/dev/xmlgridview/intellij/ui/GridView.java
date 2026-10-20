@@ -97,6 +97,7 @@ final class GridView extends JPanel implements UiDataProvider {
   private final Supplier<FindState> findState;
   private boolean copyWithHeader;
   private @Nullable Consumer<InspectTarget> inspector;
+  private DefaultActionGroup popupMenu;
   private final InspectAction inspectAction;
 
   GridView(@NotNull Disposable parent, @NotNull Supplier<FindState> findState, @NotNull Listener listener) {
@@ -250,7 +251,9 @@ final class GridView extends JPanel implements UiDataProvider {
     inspectAction = InspectAction.install(table, parent, this::inspectTarget, t -> {
       if (inspector != null) inspector.accept(t);
     });
-    PopupHandler.installPopupMenu(table, popupActions(), "XmlGridView.Grid");
+    popupMenu = popupActions();
+    PopupHandler.installPopupMenu(table, popupMenu, "XmlGridView.Grid");
+    selectCellOnRightClick(table);
 
     JScrollPane scroll = ScrollPaneFactory.createScrollPane(table, true);
     RowNumberHeader rowHeader = new RowNumberHeader(table);
@@ -389,6 +392,47 @@ final class GridView extends JPanel implements UiDataProvider {
 
   void setInspector(@NotNull Consumer<InspectTarget> inspector) {
     this.inspector = inspector;
+  }
+
+  /** Appends actions (e.g. structural edits) to the grid's context menu. */
+  void addMenuActions(@NotNull DefaultActionGroup actions) {
+    popupMenu.addAll(actions);
+  }
+
+  /** Right-clicking a cell outside the selection selects it first, so the menu acts on what was clicked. */
+  static void selectCellOnRightClick(@NotNull JTable t) {
+    t.addMouseListener(new java.awt.event.MouseAdapter() {
+      @Override
+      public void mousePressed(java.awt.event.MouseEvent e) {
+        if (!javax.swing.SwingUtilities.isRightMouseButton(e)) return;
+        int row = t.rowAtPoint(e.getPoint());
+        int col = t.columnAtPoint(e.getPoint());
+        if (row < 0 || col < 0 || t.isCellSelected(row, col)) return;
+        t.changeSelection(row, col, false, false);
+      }
+    });
+  }
+
+  /**
+   * The element the context menu acts on: for the lead cell, an attribute cell's row element and
+   * attribute, a leaf cell's child element, otherwise the row element.
+   */
+  @Nullable StructureActions.Target structureTarget(@NotNull dev.xmlgridview.intellij.model.XmlDocumentModel m) {
+    GridTable t = model.table();
+    int viewRow = table.getSelectionModel().getLeadSelectionIndex();
+    if (t == null || viewRow < 0 || viewRow >= table.getRowCount()) return null;
+    XNode row = t.rows().get(table.convertRowIndexToModel(viewRow));
+    int viewCol = table.getColumnModel().getSelectionModel().getLeadSelectionIndex();
+    if (viewCol >= 0 && viewCol < table.getColumnCount()) {
+      GridColumn c = t.columns().get(table.convertColumnIndexToModel(viewCol));
+      if (c.kind() == GridColumn.Kind.ATTR && row.attr(c.label().substring(1)) != null) {
+        return new StructureActions.Target(m, row, c.label().substring(1));
+      }
+      if (c.kind() == GridColumn.Kind.LEAF) {
+        for (XNode ch : row.children()) if (ch.tag().equals(c.label())) return new StructureActions.Target(m, ch, null);
+      }
+    }
+    return new StructureActions.Target(m, row, null);
   }
 
   /**

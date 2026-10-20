@@ -7,6 +7,8 @@ import type {
   GridTable,
   ParseError,
   SearchQuery,
+  StructureOp,
+  StructureResult,
   TreeSkeleton,
   XPathEvalResult,
 } from "@xmlgridview/core";
@@ -19,7 +21,8 @@ export type WorkerRequest =
   | { id: number; type: "searchGrid"; gen: number; elementId: number; group: string | null; query: SearchQuery }
   | { id: number; type: "xpath"; gen: number; expr: string }
   | { id: number; type: "flatValues"; gen: number; ids: number[] }
-  | { id: number; type: "edit"; gen: number; target: EditTarget; value: string };
+  | { id: number; type: "edit"; gen: number; target: EditTarget; value: string }
+  | { id: number; type: "structure"; gen: number; op: StructureOp };
 
 export interface LoadResult {
   /** Generation of the model now held by the worker. */
@@ -40,6 +43,7 @@ export interface WorkerResults {
   xpath: XPathEvalResult;
   flatValues: FlatValues[];
   edit: EditResult;
+  structure: StructureResult;
 }
 
 export type WorkerResponse =

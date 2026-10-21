@@ -3,6 +3,9 @@ name: Release
 # Push a tag like v0.1.1 to build, test and publish. Each marketplace step runs
 # only when its token secret is configured, so a tag without tokens just
 # produces a GitHub release with both builds attached.
+#
+# A tag with a suffix, like v0.5.0-beta.1, is a test build: it makes a GitHub
+# pre-release of the version in the files (0.5.0) and publishes to no store.
 
 on:
   push:
@@ -23,7 +26,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: Tag matches the extension version
-        run: test "v$(node -p "require('./packages/vscode/package.json').version")" = "$GITHUB_REF_NAME"
+        run: test "v$(node -p "require('./packages/vscode/package.json').version")" = "${GITHUB_REF_NAME%%-*}"
       - run: pnpm lint
       - run: pnpm test
       - run: pnpm fixtures:check
@@ -54,7 +57,7 @@ jobs:
       - name: Free disk space for the Plugin Verifier's IDE downloads
         run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL && df -h /
       - name: Tag matches the plugin version
-        run: test "v$(grep '^pluginVersion=' gradle.properties | cut -d= -f2)" = "$GITHUB_REF_NAME"
+        run: test "v$(grep '^pluginVersion=' gradle.properties | cut -d= -f2)" = "${GITHUB_REF_NAME%%-*}"
       - run: ./gradlew test buildPlugin --no-daemon
       - name: Plugin Verifier (recommended IDE versions)
         run: ./gradlew verifyPlugin --no-daemon
@@ -87,13 +90,22 @@ jobs:
           if ls artifacts/*-signed.zip >/dev/null 2>&1; then
             for f in artifacts/*-signed.zip; do rm -f "${f%-signed.zip}.zip"; done
           fi
-          notes=$(awk -v v="## ${GITHUB_REF_NAME#v}" '$0==v{f=1;next} /^## /{f=0} f' CHANGELOG.md)
-          gh release create "$GITHUB_REF_NAME" artifacts/* --title "XML Grid View $GITHUB_REF_NAME" --notes "$notes
+          version=${GITHUB_REF_NAME%%-*}
+          notes=$(awk -v v="## ${version#v}" '$0==v{f=1;next} /^## /{f=0} f' CHANGELOG.md)
+          prerelease=()
+          if [ "$version" != "$GITHUB_REF_NAME" ]; then
+            prerelease=(--prerelease)
+            notes="**Test build, not published to the marketplaces.** Installing the final release over it needs an uninstall first, as both are version ${version#v}.
+
+          $notes"
+          fi
+          gh release create "$GITHUB_REF_NAME" artifacts/* "${prerelease[@]}" --title "XML Grid View $GITHUB_REF_NAME" --notes "$notes
 
           **Install:** VS Code: Extensions → … → Install from VSIX. IntelliJ 2024.3+: Settings → Plugins → ⚙ → Install Plugin from Disk."
 
   publish-vscode:
     needs: [github-release]
+    if: ${{ !contains(github.ref_name, '-') }}
     runs-on: ubuntu-latest
     env:
       VSCE_PAT: ${{ secrets.VSCE_PAT }}
@@ -124,6 +136,7 @@ jobs:
 
   publish-jetbrains:
     needs: [github-release]
+    if: ${{ !contains(github.ref_name, '-') }}
     runs-on: ubuntu-latest
     defaults:
       run:

@@ -82,6 +82,11 @@ final class ModelLoader implements Disposable {
   }
 
   /** Whether the file is JSON (by name), so it is parsed with {@link dev.xmlgridview.intellij.model.JsonModelBuilder}. */
+  /** True when the file is too large for IntelliJ to load as a document (read from disk, read-only). */
+  boolean isLarge() {
+    return largeFile != null;
+  }
+
   boolean isJson() {
     VirtualFile f = largeFile != null ? largeFile : com.intellij.openapi.fileEditor.FileDocumentManager.getInstance().getFile(document);
     return f != null && dev.xmlgridview.intellij.model.JsonModelBuilder.isJsonFileName(f.getName());

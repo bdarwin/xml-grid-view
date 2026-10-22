@@ -231,6 +231,41 @@ public class VisualStyleTest extends BasePlatformTestCase {
     }
   }
 
+  /** The baseline for the change tests: bk101 was an ebook, bk102 cost 4.95, bk103 is new and a bk104 was removed. */
+  private static final String BASELINE = XML.replace("id=\"bk101\" format=\"hardcover\"", "id=\"bk101\" format=\"ebook\"")
+    .replace("<price currency=\"USD\">5.95</price>", "<price currency=\"USD\">4.95</price>")
+    .replaceFirst("(?s)  <book id=\"bk103\".*?</book>\n", "")
+    .replace("  <config>", "  <book id=\"bk104\" format=\"ebook\">\n    <author>Knorr, Stefan</author>\n    <title>Creepy Crawlies</title>\n  </book>\n  <config>");
+
+  public void testChangesAreTintedInGridAndFlat() throws Exception {
+    XmlGridPanel p = grid();
+    p.changesForTest().setBaselineForTest(BASELINE, ChangeBaseline.LAST_COMMIT);
+    settle(p);
+    JBTable t = widestTable(p);
+    t.clearSelection();
+    BufferedImage img = paint(p, "grid-changes");
+    assertEquals("+1 ~2 −1", p.changesLinkTextForTest());
+    int format = t.convertColumnIndexToView(p.gridForTest().gridTable().columnIndex("@format"));
+    int author = t.convertColumnIndexToView(p.gridForTest().gridTable().columnIndex("author"));
+    assertEquals("changed cell is tinted", DocumentChanges.tint(DocumentChanges.modified(), XmlColors.stripe(0, t.getBackground())), pixelInCell(img, p, t, 0, format));
+    assertEquals("unchanged cell is not", XmlColors.stripe(0, t.getBackground()), pixelInCell(img, p, t, 0, author));
+    assertEquals("new row is tinted", DocumentChanges.tint(DocumentChanges.added(), XmlColors.stripe(2, t.getBackground())), pixelInCell(img, p, t, 2, author));
+    // bk104 was where bk103 is now: a red line along the top of that row.
+    Rectangle gap = SwingUtilities.convertRectangle(t, t.getCellRect(2, author, false), p);
+    assertEquals(DocumentChanges.removed(), new Color(img.getRGB(gap.x + gap.width / 2, gap.y)));
+    // The tree shows the removed book struck through, after the root is expanded.
+    PlatformTestUtil.waitForPromise(p.treeForTest().select("0/0", true));
+    settle(p);
+    BufferedImage expanded = paint(p, "grid-changes");
+    assertEquals(List.of("book id=bk101", "book id=bk102", "-book bk104 · ebook · Knorr, Stefan · Creepy Crawlies", "book id=bk103", "config", "note"),
+                 p.treeForTest().childLabelsForTest(p.model().root()));
+    assertNotBlank(expanded);
+
+    FlatPanel f = flat();
+    f.changesForTest().setBaselineForTest(BASELINE, ChangeBaseline.LAST_COMMIT);
+    paint(f, "flat-changes");
+  }
+
   public void testFlatSectionBandsAndNameColours() throws Exception {
     FlatPanel p = flat();
     JBTable t = table(p, 2);

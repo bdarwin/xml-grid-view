@@ -1610,13 +1610,12 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
             {m === "grid" ? "Grid" : "Flat"}
           </button>
         ))}
-        {marks && (
+        {marks && marks.list.length > 0 && (
           <button
             class={"changes-btn" + (problems ? " with-problems" : "")}
             title={`Changes since ${marks.label}. Click (or Alt+F5 / Shift+Alt+F5) to go to the next / previous.`}
             onClick={(e) => changeNav.current(e.shiftKey ? -1 : 1)}
           >
-            {!marks.list.length && <span class="changes-none">No changes</span>}
             {marks.added > 0 && <span class="changes-added">+{marks.added}</span>}
             {marks.modified > 0 && <span class="changes-modified">~{marks.modified}</span>}
             {marks.removedCount > 0 && <span class="changes-removed">−{marks.removedCount}</span>}

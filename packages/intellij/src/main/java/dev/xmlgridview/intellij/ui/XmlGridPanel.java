@@ -105,6 +105,9 @@ public final class XmlGridPanel extends JPanel implements Disposable {
   private final DocumentProblems problems;
   private final LinkLabel<Void> problemsLink = new LinkLabel<>("", null);
   private int problemIndex = -1;
+  private final DocumentChanges changes;
+  private final LinkLabel<Void> changesLink = new LinkLabel<>("", null);
+  private int changeIndex = -1;
   private final Project project;
   private final com.intellij.openapi.actionSystem.DefaultActionGroup treeStructureActions;
   private final com.intellij.openapi.actionSystem.DefaultActionGroup gridStructureActions;
@@ -193,6 +196,14 @@ public final class XmlGridPanel extends JPanel implements Disposable {
     problems = new DocumentProblems(project, document, this, this::problemsChanged);
     tree.setProblems(problems);
     grid.setProblems(problems);
+    changes = new DocumentChanges(this, this::changesChanged);
+    tree.setChanges(changes);
+    grid.setChanges(changes);
+    if (!loader.isLarge()) {
+      boolean json = loader.isJson();
+      ChangeBaseline.start(project, com.intellij.openapi.fileEditor.FileDocumentManager.getInstance().getFile(document), document.getText(), this,
+                           (text, label) -> changes.setBaseline(text, label, json));
+    }
     summary = new SummaryPanel(new SummaryPanel.Listener() {
       @Override
       public void chooseGroup(@NotNull String tag) {
@@ -270,7 +281,22 @@ public final class XmlGridPanel extends JPanel implements Disposable {
     problemsLink.setToolTipText("Problems the IDE reports for this file. Click (or F2 / Shift+F2) for the next / previous.");
     problemsLink.setListener((l, d) -> stepProblem(1), null);
     problemsLink.setVisible(false);
+    changesLink.setListener((l, d) -> stepChange(1), null);
+    changesLink.setVisible(false);
+    headerRight.add(changesLink);
     headerRight.add(problemsLink);
+    // Next / previous change: the IDE's "Next Change" / "Previous Change" shortcuts (Ctrl+Alt+Shift+Down / Up).
+    for (boolean next : new boolean[]{true, false}) {
+      com.intellij.openapi.actionSystem.AnAction ide = com.intellij.openapi.actionSystem.ActionManager.getInstance()
+        .getAction(next ? "VcsShowNextChangeMarker" : "VcsShowPrevChangeMarker");
+      if (ide == null) continue;
+      new DumbAwareAction() {
+        @Override
+        public void actionPerformed(@NotNull AnActionEvent e) {
+          stepChange(next ? 1 : -1);
+        }
+      }.registerCustomShortcutSet(ide.getShortcutSet(), this, this);
+    }
     for (boolean next : new boolean[]{true, false}) {
       com.intellij.openapi.actionSystem.AnAction ide = com.intellij.openapi.actionSystem.ActionManager.getInstance()
         .getAction(next ? "GotoNextError" : "GotoPreviousError");
@@ -394,6 +420,7 @@ public final class XmlGridPanel extends JPanel implements Disposable {
       if (findBar.isVisible()) scheduleSearch(0);
     }, ModalityState.any()));
     problems.refresh(built);
+    changes.refresh(built);
 
     XNode target = state == null ? null : built.byPath(state.gridPath);
     if (target == null) target = built.root();
@@ -510,6 +537,80 @@ public final class XmlGridPanel extends JPanel implements Disposable {
     if (total > errors) text.append(text.isEmpty() ? "" : ", ").append(total - errors).append(total - errors == 1 ? " warning" : " warnings");
     problemsLink.setText(text.toString());
     problemsLink.setIcon(errors > 0 ? com.intellij.icons.AllIcons.General.Error : com.intellij.icons.AllIcons.General.Warning);
+  }
+
+  private void changesChanged() {
+    changeIndex = -1;
+    grid.recomputeChanges();
+    tree.changesChanged();
+    // Shown only when there are changes, so files without any don't get a permanent label.
+    changesLink.setVisible(changes.active() && !changes.stops().isEmpty());
+    if (!changesLink.isVisible()) return;
+    List<String> parts = new ArrayList<>();
+    if (changes.addedCount() > 0) parts.add("+" + changes.addedCount());
+    if (changes.modifiedCount() > 0) parts.add("~" + changes.modifiedCount());
+    if (changes.removedCount() > 0) parts.add("−" + changes.removedCount());
+    changesLink.setText(String.join(" ", parts));
+    changesLink.setIcon(com.intellij.icons.AllIcons.Actions.Diff);
+    String shortcut = com.intellij.openapi.keymap.KeymapUtil.getFirstKeyboardShortcutText("VcsShowNextChangeMarker");
+    changesLink.setToolTipText("Changes since " + changes.label() + ". Click" + (shortcut.isEmpty() ? "" : " (or " + shortcut + ")") + " for the next one.");
+  }
+
+  /** Shows the next (step 1) or previous (-1) change: the changed element, or the gap where elements were removed. */
+  void stepChange(int step) {
+    List<DocumentChanges.Stop> list = changes.stops();
+    if (list.isEmpty()) return;
+    int n = list.size();
+    changeIndex = changeIndex < 0 ? (step > 0 ? 0 : n - 1) : ((changeIndex + step) % n + n) % n;
+    DocumentChanges.Stop s = list.get(changeIndex);
+    String msg;
+    if (s.isRemoval()) {
+      List<String> names = new ArrayList<>();
+      for (dev.xmlgridview.intellij.model.DocumentDiff.Removed r : s.removed()) names.add(r.preview().isEmpty() ? r.name() : r.name() + " (" + r.preview() + ")");
+      msg = "Removed " + String.join(", ", names);
+      XNode parent = s.parent();
+      if (parent != null) {
+        String tag = s.removed().get(0).name();
+        if (parent != gridNode || !tag.equals(gridGroup)) showGrid(parent, parent.childCount() > 0 ? tag : null, Map.of(), Map.of());
+        if (s.node() != parent) grid.selectRow(s.node());
+        tree.select(parent.path(), true);
+      }
+    }
+    else {
+      DocumentChanges.Mark m = changes.of(s.node());
+      msg = s.node().displayName() + ": " + (m == null ? "" : m.tooltip().replaceAll("<br>", " · ").replaceAll("<[^>]+>", ""));
+      revealNode(s.node());
+    }
+    lastChangeMessage = "Change " + (changeIndex + 1) + "/" + n + ": " + StringUtil.unescapeXmlEntities(msg);
+    if (!com.intellij.openapi.application.ApplicationManager.getApplication().isUnitTestMode() && changesLink.isShowing()) {
+      com.intellij.openapi.ui.popup.JBPopupFactory.getInstance()
+        .createHtmlTextBalloonBuilder(StringUtil.escapeXmlEntities(lastChangeMessage), com.intellij.openapi.ui.MessageType.INFO, null)
+        .setFadeoutTime(5000)
+        .createBalloon()
+        .show(com.intellij.ui.awt.RelativePoint.getSouthOf(changesLink), com.intellij.openapi.ui.popup.Balloon.Position.below);
+    }
+  }
+
+  private String lastChangeMessage = "";
+
+  @TestOnly
+  XmlTreeView treeForTest() {
+    return tree;
+  }
+
+  @TestOnly
+  DocumentChanges changesForTest() {
+    return changes;
+  }
+
+  @TestOnly
+  String changesLinkTextForTest() {
+    return changesLink.isVisible() ? changesLink.getText() : "";
+  }
+
+  @TestOnly
+  String lastChangeMessageForTest() {
+    return lastChangeMessage;
   }
 
   /** Shows the next (step 1) or previous (-1) problem: its element in the grid, with the message. */

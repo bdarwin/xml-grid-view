@@ -139,6 +139,9 @@ function bestPairs(bs: XElement[], cs: XElement[], bh: Uint32Array, ch: Uint32Ar
   const cf = cs.map((e) => features(e, ch));
   const score = (i: number, j: number) => {
     if (bs[i].name !== cs[j].name) return 0;
+    const bk = identity(bs[i]);
+    const ck = identity(cs[j]);
+    if (bk !== null && ck !== null && bk !== ck) return 0;
     let common = 0;
     for (const f of cf[j]) if (bf[i].has(f)) common++;
     return 1 + common;
@@ -163,6 +166,26 @@ function bestPairs(bs: XElement[], cs: XElement[], bh: Uint32Array, ch: Uint32Ar
     else j++;
   }
   return pairs;
+}
+
+const KEY_ATTRS = ["id", "key", "name"];
+const KEY_CHILDREN = ["id", "key"];
+
+/**
+ * What identifies a record: its id, key or name attribute, else the text of an id or key child
+ * without children of its own (e.g. a JSON "id" member). Records with different identities are never
+ * paired as edits of each other: one was removed and another added.
+ */
+function identity(el: XElement): string | null {
+  for (const k of KEY_ATTRS) {
+    const a = el.attrs.find((x) => x.name === k);
+    if (a) return "@" + k + "=" + a.value;
+  }
+  for (const k of KEY_CHILDREN) {
+    const c = el.elements.find((x) => x.name === k && !x.elements.length);
+    if (c) return k + "=" + elementText(c);
+  }
+  return null;
 }
 
 /** What an element is made of, for similarity: its attributes, its text and its children's hashes. */

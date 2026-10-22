@@ -84,6 +84,37 @@ final class XmlTreeView extends JPanel {
     this.problems = problems;
   }
 
+  private @Nullable DocumentChanges changes;
+
+  void setChanges(@NotNull DocumentChanges changes) {
+    this.changes = changes;
+  }
+
+  /** A removed element, shown struck through among its former siblings. */
+  record Removed(@Nullable XNode parent, @NotNull dev.xmlgridview.intellij.model.DocumentDiff.Removed removed) {
+  }
+
+  /** The changes were recomputed: reloads the tree when removed elements changed, else repaints. */
+  void changesChanged() {
+    java.util.Map<XNode, List<Removed>> gone = new java.util.HashMap<>();
+    List<Removed> top = new ArrayList<>();
+    XmlDocumentModel m = structure.model;
+    if (changes != null && changes.active() && m != null) {
+      for (var r : changes.removedIn(null)) top.add(new Removed(null, r));
+      for (XNode n : m.elements()) {
+        if (!changes.within(n)) continue;
+        List<dev.xmlgridview.intellij.model.DocumentDiff.Removed> rs = changes.removedIn(n);
+        if (!rs.isEmpty()) gone.put(n, rs.stream().map(r -> new Removed(n, r)).toList());
+      }
+    }
+    if (!gone.equals(structure.removed) || !top.equals(structure.removedTop)) {
+      structure.removed = gone;
+      structure.removedTop = top;
+      structureModel.invalidateAsync();
+    }
+    tree.repaint();
+  }
+
 
   /** Where Enter on a comment, PI or DOCTYPE goes (its source offset). */
   void setOffsetNavigator(@NotNull java.util.function.IntConsumer navigator) {
@@ -349,6 +380,13 @@ final class XmlTreeView extends JPanel {
     @Override
     public void customizeCellRenderer(@NotNull JTree tree, Object value, boolean selected, boolean expanded,
                                       boolean leaf, int row, boolean hasFocus) {
+      if (TreeUtil.getLastUserObject(new TreePath(value)) instanceof NodeDescriptor<?> d && d.getElement() instanceof Removed r) {
+        SimpleTextAttributes gone = new SimpleTextAttributes(SimpleTextAttributes.STYLE_STRIKEOUT, DocumentChanges.removed());
+        append(r.parent() != null && "array".equals(r.parent().jsonType()) ? "[removed]" : r.removed().name(), gone);
+        if (!r.removed().preview().isEmpty()) append("  " + r.removed().preview(), gone);
+        setToolTipText(changes != null && changes.label() != null ? "Removed since " + changes.label() : null);
+        return;
+      }
       if (miscOf(new TreePath(value)) instanceof XMisc x) {
         append(x.display(), selected && tree.hasFocus() ? new SimpleTextAttributes(SimpleTextAttributes.STYLE_ITALIC, null)
                                                          : SimpleTextAttributes.GRAY_ITALIC_ATTRIBUTES);
@@ -370,10 +408,17 @@ final class XmlTreeView extends JPanel {
         tagAttrs = new SimpleTextAttributes(tagAttrs.getBgColor(), tagAttrs.getFgColor(), DocumentProblems.color(own),
                                             tagAttrs.getStyle() | SimpleTextAttributes.STYLE_WAVED);
       }
+      DocumentChanges.Mark change = changes == null ? null : changes.of(n);
+      if (change != null && !(selected && tree.hasFocus())) {
+        tagAttrs = new SimpleTextAttributes(DocumentChanges.tint(DocumentChanges.color(change.kind()), tree.getBackground()), tagAttrs.getFgColor(), tagAttrs.getWaveColor(),
+                                            tagAttrs.getStyle() | SimpleTextAttributes.STYLE_OPAQUE);
+      }
       Highlight.append(this, n.displayName(), tagAttrs, fs.targets().names() ? fs.matcher() : null);
       if (own.isEmpty() && problems != null && !expanded && problems.within(n)) {
         append(" ●", new SimpleTextAttributes(SimpleTextAttributes.STYLE_PLAIN, DocumentProblems.ERROR));
       }
+      boolean changedBelow = change == null && changes != null && !expanded && changes.within(n);
+      if (changedBelow) append(" ●", new SimpleTextAttributes(SimpleTextAttributes.STYLE_PLAIN, DocumentChanges.text(DocumentChanges.Kind.MODIFIED)));
       for (String k : KEY_ATTRS) {
         XAttr a = n.attr(k);
         if (a == null) continue;
@@ -389,7 +434,9 @@ final class XmlTreeView extends JPanel {
         append("  ", SimpleTextAttributes.REGULAR_ATTRIBUTES);
         Highlight.append(this, t.replace('\n', ' '), SimpleTextAttributes.GRAYED_ATTRIBUTES, fs.targets().text() ? fs.matcher() : null);
       }
-      setToolTipText(own.isEmpty() ? n.path() : DocumentProblems.tooltip(own));
+      setToolTipText(!own.isEmpty() ? DocumentProblems.tooltip(own)
+                     : change != null ? change.tooltip()
+                     : changedBelow ? "Changed below since " + changes.label() : n.path());
     }
   }
 
@@ -398,6 +445,9 @@ final class XmlTreeView extends JPanel {
     private static final Object ROOT = new Object();
     volatile @Nullable XmlDocumentModel model;
     volatile @Nullable Set<XNode> visible;
+    /** Removed elements by current parent, and at the top level (shown unless filtered). */
+    volatile java.util.Map<XNode, List<Removed>> removed = java.util.Map.of();
+    volatile List<Removed> removedTop = List.of();
 
     @Override
     public @NotNull Object getRootElement() {
@@ -421,13 +471,16 @@ final class XmlTreeView extends JPanel {
       else return new Object[0];
       Set<XNode> v = visible;
       if (v != null) return kids.stream().filter(v::contains).toArray();
-      // Comments, PIs and DOCTYPE among the elements (not in a filtered tree).
+      // Comments, PIs and DOCTYPE, and removed elements, among the elements (not in a filtered tree).
       List<XMisc> misc = m.miscOf(parent);
-      if (misc.isEmpty() || (parent == null && m.root() == null)) return kids.toArray();
-      List<Object> out = new ArrayList<>(kids.size() + misc.size());
+      List<Removed> gone = parent == null ? removedTop : removed.getOrDefault(parent, List.of());
+      if ((misc.isEmpty() && gone.isEmpty()) || (parent == null && m.root() == null)) return kids.toArray();
+      List<Object> out = new ArrayList<>(kids.size() + misc.size() + gone.size());
       int j = 0;
+      int k = 0;
       for (int i = 0; i <= kids.size(); i++) {
         while (j < misc.size() && misc.get(j).before() <= i) out.add(misc.get(j++));
+        while (k < gone.size() && gone.get(k).removed().before() <= i) out.add(gone.get(k++));
         if (i < kids.size()) out.add(kids.get(i));
       }
       return out.toArray();
@@ -437,6 +490,7 @@ final class XmlTreeView extends JPanel {
     public @Nullable Object getParentElement(@NotNull Object element) {
       if (element instanceof XNode n) return n.parent() == null ? ROOT : n.parent();
       if (element instanceof XMisc x) return x.parent() == null ? ROOT : x.parent();
+      if (element instanceof Removed r) return r.parent() == null ? ROOT : r.parent();
       return null;
     }
 
@@ -448,7 +502,7 @@ final class XmlTreeView extends JPanel {
     @Override
     public boolean isAlwaysLeaf(@NotNull Object element) {
       // Leaf elements stay leaves; their comments show in the Flat view.
-      return element instanceof XMisc || element instanceof XNode n && n.children().isEmpty();
+      return element instanceof XMisc || element instanceof Removed || element instanceof XNode n && n.children().isEmpty();
     }
 
     @Override
@@ -479,6 +533,19 @@ final class XmlTreeView extends JPanel {
     public Object getElement() {
       return element;
     }
+  }
+
+  /** The tree's children of {@code parent} (null: top level) as labels; removed elements as "-name" (tests). */
+  @org.jetbrains.annotations.TestOnly
+  List<String> childLabelsForTest(@Nullable XNode parent) {
+    List<String> out = new ArrayList<>();
+    Object[] kids = structure.getChildElements(parent == null ? structure.getRootElement() : parent);
+    for (Object k : kids) {
+      if (k instanceof XNode n) out.add(label(n));
+      else if (k instanceof Removed r) out.add("-" + r.removed().name() + " " + r.removed().preview());
+      else if (k instanceof XMisc x) out.add(x.display());
+    }
+    return out;
   }
 
   /** Applies the filter box synchronously (tests). Returns the visible nodes' paths, or null when unfiltered. */

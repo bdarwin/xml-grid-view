@@ -209,9 +209,13 @@ limitations.
   outside git, since it was opened) is highlighted. New rows and elements
   are green, changed values blue with the old value as a tooltip, and
   removed elements are struck through in the tree and marked with a red
-  line in the grid. Elements are compared, not lines, so reformatting is not
-  a change. A counter above the view steps through them (Alt+F5, Shift for
-  the previous one). Turn it off with `xmlGridView.showChanges`.
+  line in the grid. Records whose `id`, `key` or `name` differs are never
+  taken for edits of each other. Elements are compared, not lines, so reformatting is not
+  a change. A counter above the view steps through them (VS Code: Alt+F5,
+  Shift for the previous one; IntelliJ: the Next / Previous Change shortcuts,
+  Ctrl+Alt+Shift+Down / Up). In IntelliJ the last commit is the base revision
+  of the IDE's version control. Turn it off in VS Code with
+  `xmlGridView.showChanges`.
 - **Comments, processing instructions and the DOCTYPE** are shown, read-only
   and in grey, in the tree and the Flat view.
 - **JSON** (`.json`, `.jsonc`, `.geojson`): the same views and editing.

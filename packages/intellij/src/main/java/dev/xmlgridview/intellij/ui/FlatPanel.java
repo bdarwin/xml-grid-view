@@ -128,6 +128,12 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
     Disposer.register(parent, this);
     loader = new ModelLoader(project, document, this, navigator, (previous, built) -> modelChanged(built), this);
     problems = new DocumentProblems(project, document, this, () -> table.repaint());
+    changes = new DocumentChanges(this, this::changesChanged);
+    if (!loader.isLarge()) {
+      boolean json = loader.isJson();
+      ChangeBaseline.start(project, com.intellij.openapi.fileEditor.FileDocumentManager.getInstance().getFile(document), document.getText(), this,
+                           (text, label) -> changes.setBaseline(text, label, json));
+    }
 
     findBar = new FindBar(this, new FindBar.Listener() {
       @Override
@@ -259,6 +265,7 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
     });
     // Element tree on the left, like the Grid view; selecting a node scrolls the sheet to it.
     tree = new XmlTreeView(this, () -> findState, this::showInFlat, n -> navigator.accept(n.start()));
+    tree.setChanges(changes);
     tree.setInspector(t -> inspectorOpener.accept(t));
     tree.setBoxFilterListener(box -> {
       boxFilter = box;
@@ -343,6 +350,40 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
   }
 
   private final DocumentProblems problems;
+  private final DocumentChanges changes;
+
+  private void changesChanged() {
+    table.repaint();
+    // The baseline can arrive while the panel is still being built (in tests, right away).
+    if (tree != null) tree.changesChanged();
+  }
+
+  @TestOnly
+  DocumentChanges changesForTest() {
+    return changes;
+  }
+
+  /**
+   * The change on a Flat row: a new element (and its attribute rows), a new or changed attribute on
+   * its row, and changed text or removed attributes on the element row.
+   */
+  @Nullable DocumentChanges.Mark changeOf(FlatRow r) {
+    if (r.kind() == FlatRow.Kind.MISC || !changes.active()) return null;
+    DocumentChanges.Mark m = changes.of(r.node());
+    if (m == null || m.kind() == DocumentChanges.Kind.ADDED) return m;
+    dev.xmlgridview.intellij.model.DocumentDiff.Modified d = changes.details(r.node());
+    if (d == null) return null;
+    if (r.kind() == FlatRow.Kind.ATTR) {
+      String name = r.attr().name();
+      if (!d.attrs().containsKey(name)) return null;
+      String was = d.attrs().get(name);
+      return was == null ? new DocumentChanges.Mark(DocumentChanges.Kind.ADDED, "New since " + changes.label())
+                         : new DocumentChanges.Mark(DocumentChanges.Kind.MODIFIED, DocumentChanges.html(List.of("Was: " + DocumentChanges.shortText(was))));
+    }
+    if (d.text() == null && d.removedAttrs().isEmpty()) return null;
+    return new DocumentChanges.Mark(DocumentChanges.Kind.MODIFIED, DocumentChanges.modifiedTooltip(
+      new dev.xmlgridview.intellij.model.DocumentDiff.Modified(d.node(), java.util.Map.of(), d.removedAttrs(), d.text(), d.type()), changes.label()));
+  }
 
   /** Problems of a Flat row: an attribute row takes those inside its span, the element row the rest. */
   private List<DocumentProblems.Problem> problemsOf(FlatRow r) {
@@ -358,6 +399,14 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
     return out;
   }
 
+  /** Removed elements shown on an element row: those it now follows, else its removed last children. */
+  private List<dev.xmlgridview.intellij.model.DocumentDiff.Removed> removedAt(FlatRow r) {
+    if (r.kind() != FlatRow.Kind.ELEMENT || !changes.active()) return List.of();
+    List<dev.xmlgridview.intellij.model.DocumentDiff.Removed> before = changes.removedBefore(r.node());
+    if (!before.isEmpty()) return before;
+    return changes.removedIn(r.node()).stream().filter(x -> x.before() >= r.node().childCount()).toList();
+  }
+
   @TestOnly
   DocumentProblems problemsForTest() {
     return problems;
@@ -369,6 +418,7 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
     model = built;
     findBar.setXPathAvailable(!built.isJson());
     problems.refresh(built);
+    changes.refresh(built);
     sectionLevel = FlatRow.sectionLevel(built);
     boxFilter = null; // the tree re-applies its filter box to the new model and reports back
     int version = ++modelVersion;
@@ -924,6 +974,11 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
         }
         else {
           List<DocumentProblems.Problem> ps = problemsOf(r);
+          DocumentChanges.Mark change = changeOf(r);
+          if (change != null && !selected) {
+            base = new SimpleTextAttributes(DocumentChanges.tint(DocumentChanges.color(change.kind()), tbl.getBackground()), base.getFgColor(), null,
+                                            base.getStyle() | SimpleTextAttributes.STYLE_OPAQUE);
+          }
           if (!ps.isEmpty()) {
             base = new SimpleTextAttributes(base.getBgColor(), base.getFgColor(), DocumentProblems.color(ps), base.getStyle() | SimpleTextAttributes.STYLE_WAVED);
           }
@@ -934,7 +989,10 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
           else {
             Highlight.append(this, r.node().displayName(), base, highlight ? m : null);
           }
-          setToolTipText(ps.isEmpty() ? r.node().path() : DocumentProblems.tooltip(ps));
+          List<dev.xmlgridview.intellij.model.DocumentDiff.Removed> gone = removedAt(r);
+          setToolTipText(!ps.isEmpty() ? DocumentProblems.tooltip(ps)
+                         : change != null ? change.tooltip()
+                         : !gone.isEmpty() ? DocumentChanges.removedTooltip(gone, changes.label()) : r.node().path());
         }
       }
       else {
@@ -953,6 +1011,17 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
         setToolTipText(inspect ? "Double-click, Shift+Enter or click the icon to inspect the full value" : null);
       }
       if (!selected) setBackground(XmlColors.band(FlatRow.band(r.node(), sectionLevel), r.isValueRow(), tbl.getBackground()));
+      DocumentChanges.Mark change = changeOf(r);
+      if (change != null && column != NAME_COL) {
+        setBackground(DocumentChanges.tint(DocumentChanges.color(change.kind()), selected ? tbl.getSelectionBackground() : getBackground()));
+        setToolTipText(change.tooltip());
+      }
+      // Removed elements: a red line above the element that now follows them, or below their parent when they were last.
+      if (r.kind() == FlatRow.Kind.ELEMENT && changes.active()) {
+        boolean above = !changes.removedBefore(r.node()).isEmpty();
+        boolean below = !above && !removedAt(r).isEmpty();
+        if (above || below) setBorder(javax.swing.BorderFactory.createMatteBorder(above ? JBUI.scale(2) : 0, 0, below ? JBUI.scale(2) : 0, 0, DocumentChanges.removed()));
+      }
       // SimpleColoredComponent fills the icon area (indent and twisty, or the inspect icon) with the
       // table's background; leave it unfilled so the row's section colour shows there too.
       setTransparentIconBackground(true);

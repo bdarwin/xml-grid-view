@@ -1443,9 +1443,6 @@ button.icon {
 .changes-btn + .modebar-actions {
   margin-left: 8px;
 }
-.changes-none {
-  color: var(--xgv-muted-fg);
-}
 .changes-added {
   color: var(--xgv-change-added-fg);
 }

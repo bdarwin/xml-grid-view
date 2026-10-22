@@ -102,6 +102,8 @@ final class GridView extends JPanel implements UiDataProvider {
   /** Problems by cell (model row << 32 | model column) and by model row, for the current table. */
   private Map<Long, List<DocumentProblems.Problem>> cellProblems = Map.of();
   private Map<Integer, List<DocumentProblems.Problem>> rowProblems = Map.of();
+  private @Nullable DocumentChanges changes;
+  private DocumentChanges.GridMarks changeMarks = DocumentChanges.GridMarks.NONE;
   private RowNumberHeader rowHeader;
   private final InspectAction inspectAction;
 
@@ -266,12 +268,51 @@ final class GridView extends JPanel implements UiDataProvider {
       List<DocumentProblems.Problem> ps = rowProblems.get(r);
       return ps == null ? null : DocumentProblems.color(ps);
     });
+    rowHeader.setChangeMarker(r -> {
+      DocumentChanges.Mark m = changeMarks.rows().get(r);
+      return m == null ? null : DocumentChanges.color(m.kind());
+    });
+    rowHeader.setGapMarkers(r -> changeMarks.removedAbove().containsKey(r),
+                            r -> r == tableRows() - 1 && changeMarks.removedAbove().containsKey(r + 1));
+    rowHeader.setTooltips(r -> {
+      List<String> lines = new ArrayList<>();
+      DocumentChanges.Mark m = changeMarks.rows().get(r);
+      if (m != null) lines.add(m.tooltip().replaceAll("<br>", "\n").replaceAll("<[^>]+>", ""));
+      String above = changeMarks.removedAbove().get(r);
+      if (above != null) lines.add("Above: " + above);
+      String below = r == tableRows() - 1 ? changeMarks.removedAbove().get(r + 1) : null;
+      if (below != null) lines.add("Below: " + below);
+      if (lines.isEmpty()) return null;
+      return DocumentChanges.html(java.util.Arrays.asList(String.join("\n\n", lines).split("\n", -1)));
+    });
     scroll.setRowHeaderView(rowHeader);
     add(scroll, BorderLayout.CENTER);
   }
 
   JBTable table() {
     return table;
+  }
+
+  private int tableRows() {
+    GridTable t = model.table();
+    return t == null ? 0 : t.rowCount();
+  }
+
+  void setChanges(@NotNull DocumentChanges changes) {
+    this.changes = changes;
+    recomputeChanges();
+  }
+
+  /** Maps the changes against the baseline onto the current table. */
+  void recomputeChanges() {
+    changeMarks = changes == null ? DocumentChanges.GridMarks.NONE : changes.grid(model.table());
+    table.repaint();
+    if (rowHeader != null) rowHeader.repaint();
+  }
+
+  @org.jetbrains.annotations.TestOnly
+  DocumentChanges.GridMarks changeMarksForTest() {
+    return changeMarks;
   }
 
   void setProblems(@NotNull DocumentProblems problems) {
@@ -360,6 +401,7 @@ final class GridView extends JPanel implements UiDataProvider {
       });
       for (int c = 0; c < t.columnCount(); c++) sorter.setComparator(c, CellComparator.INSTANCE);
       recomputeProblems();
+      recomputeChanges();
       sorter.setSortKeys(keys);
       sorter.allRowsChanged();
       autoFit();
@@ -765,6 +807,20 @@ final class GridView extends JPanel implements UiDataProvider {
       if (c.kind() == GridColumn.Kind.COMPLEX && t.cell(row, col) != null) setToolTipText("Double-click or Alt+Down to drill down");
       else setToolTipText(inspect ? "Double-click, Shift+Enter or click the icon to inspect the full value" : null);
       if (!selected) setBackground(XmlColors.stripe(viewRow, tbl.getBackground()));
+      // Changes: a tint over the cell (the whole row for a new row) and what changed as tooltip.
+      DocumentChanges.Mark change = changeMarks.cells().get(((long)row << 32) | col);
+      DocumentChanges.Mark rowChange = changeMarks.rows().get(row);
+      if (change == null && rowChange != null && rowChange.kind() == DocumentChanges.Kind.ADDED) change = rowChange;
+      if (change != null) {
+        setBackground(DocumentChanges.tint(DocumentChanges.color(change.kind()), selected ? tbl.getSelectionBackground() : getBackground()));
+        String tip = change.tooltip();
+        setToolTipText(tip.startsWith("<html>") ? tip : DocumentChanges.html(List.of(tip.split("\n", -1))));
+      }
+      boolean gapAbove = changeMarks.removedAbove().containsKey(row);
+      boolean gapBelow = row == t.rowCount() - 1 && changeMarks.removedAbove().containsKey(row + 1);
+      if (gapAbove || gapBelow) {
+        setBorder(javax.swing.BorderFactory.createMatteBorder(gapAbove ? JBUI.scale(2) : 0, 0, gapBelow ? JBUI.scale(2) : 0, 0, DocumentChanges.removed()));
+      }
       List<DocumentProblems.Problem> ps = cellProblems.get(((long)row << 32) | col);
       if (ps != null) {
         // A bar along the bottom of the cell, like the web view, and the messages as tooltip.

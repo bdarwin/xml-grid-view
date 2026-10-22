@@ -21,9 +21,40 @@ final class RowNumberHeader extends JComponent {
   /** Colour of a problem bar for a model row, or null. */
   private java.util.function.IntFunction<java.awt.Color> marker = r -> null;
 
+  /** Colour of a change bar (right edge) for a model row, or null. */
+  private java.util.function.IntFunction<java.awt.Color> changeMarker = r -> null;
+  /** Whether rows were removed just above / below a model row: a red line. */
+  private java.util.function.IntPredicate gapAbove = r -> false;
+  private java.util.function.IntPredicate gapBelow = r -> false;
+  private java.util.function.IntFunction<String> tooltips = r -> null;
+
   void setMarker(@org.jetbrains.annotations.NotNull java.util.function.IntFunction<java.awt.Color> marker) {
     this.marker = marker;
     repaint();
+  }
+
+  void setChangeMarker(@org.jetbrains.annotations.NotNull java.util.function.IntFunction<java.awt.Color> marker) {
+    this.changeMarker = marker;
+    repaint();
+  }
+
+  void setGapMarkers(@org.jetbrains.annotations.NotNull java.util.function.IntPredicate above,
+                     @org.jetbrains.annotations.NotNull java.util.function.IntPredicate below) {
+    this.gapAbove = above;
+    this.gapBelow = below;
+    repaint();
+  }
+
+  /** Tooltip for a model row (HTML), or null. */
+  void setTooltips(@org.jetbrains.annotations.NotNull java.util.function.IntFunction<String> tooltips) {
+    this.tooltips = tooltips;
+    javax.swing.ToolTipManager.sharedInstance().registerComponent(this);
+  }
+
+  @Override
+  public String getToolTipText(MouseEvent e) {
+    int row = table.rowAtPoint(new Point(0, e.getY()));
+    return row < 0 ? null : tooltips.apply(table.convertRowIndexToModel(row));
   }
 
   RowNumberHeader(JTable table) {
@@ -83,10 +114,24 @@ final class RowNumberHeader extends JComponent {
       int x = getWidth() - fm.stringWidth(s) - JBUI.scale(6);
       int y = cell.y + (cell.height + fm.getAscent() - fm.getDescent()) / 2;
       g.drawString(s, x, y);
-      java.awt.Color bar = marker.apply(table.convertRowIndexToModel(r));
+      int modelRow = table.convertRowIndexToModel(r);
+      java.awt.Color bar = marker.apply(modelRow);
       if (bar != null) {
         g.setColor(bar);
         g.fillRect(0, cell.y, JBUI.scale(3), cell.height);
+      }
+      java.awt.Color change = changeMarker.apply(modelRow);
+      if (change != null) {
+        g.setColor(change);
+        g.fillRect(getWidth() - JBUI.scale(4), cell.y, JBUI.scale(3), cell.height);
+      }
+      if (gapAbove.test(modelRow)) {
+        g.setColor(DocumentChanges.removed());
+        g.fillRect(0, cell.y, getWidth(), JBUI.scale(2));
+      }
+      if (gapBelow.test(modelRow)) {
+        g.setColor(DocumentChanges.removed());
+        g.fillRect(0, cell.y + cell.height - JBUI.scale(2), getWidth(), JBUI.scale(2));
       }
     }
     g.setColor(JBColor.border());

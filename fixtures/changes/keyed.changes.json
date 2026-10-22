@@ -1,0 +1,5 @@
+{
+  "added": ["0/1"],
+  "modified": [{ "path": "0/0/2", "text": "dev" }],
+  "removed": [{ "parent": "0", "before": 1, "name": "item", "preview": "2 · Alan · dev" }]
+}

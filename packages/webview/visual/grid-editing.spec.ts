@@ -201,3 +201,33 @@ test("JSON: edit cells, paste rows, add a member", async ({ page }) => {
   await page.keyboard.press("Enter");
   await expect.poll(() => doc(page)).toContain('{ "id": 10, "name": "Ada", "active": true, "email": "" }');
 });
+
+test("value suggestions while editing a cell", async ({ page }) => {
+  await open(page, XML.replace('<book id="b1">', '<book id="b1" format="hardcover">').replace('<book id="b2">', '<book id="b2" format="ebook">'));
+  // Like an XSD enumeration for @format: offered where the value starts in the document.
+  await page.evaluate(() => {
+    (window as unknown as { __suggest(o: number, d: string): string[] }).__suggest = (o, d) =>
+      /^(hardcover|paperback|ebook)"/.test(d.slice(o)) ? ["hardcover", "paperback", "ebook"] : [];
+  });
+  await cell(page, 0, 1).click();
+  await page.keyboard.press("F2");
+  await expect(page.locator(".suggest-item")).toHaveText(["hardcover", "paperback", "ebook"]);
+  await expect(page.locator(".suggest-item.current")).toHaveText("hardcover");
+  await page.mouse.move(0, 0);
+  await expect(page).toHaveScreenshot("light-suggestions.png");
+  // Typing filters; Down + Enter takes the value.
+  await page.keyboard.press("End");
+  await page.keyboard.press("Control+a");
+  await page.keyboard.type("bo", { delay: 20 });
+  await expect(page.locator(".suggest-item")).toHaveText(["ebook"]);
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("Enter");
+  await expect.poll(() => doc(page)).toContain('<book id="b1" format="ebook">');
+  // A cell without suggestions edits as before (no list).
+  await cell(page, 1, 2).click();
+  await page.keyboard.press("F2");
+  await expect(page.locator(".cell-editor")).toBeVisible();
+  await page.waitForTimeout(300);
+  await expect(page.locator(".suggest-list")).toHaveCount(0);
+  await page.keyboard.press("Escape");
+});

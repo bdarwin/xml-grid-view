@@ -148,6 +148,11 @@ public final class XmlGridPanel extends JPanel implements Disposable {
       }
 
       @Override
+      public @NotNull List<String> suggestions(@NotNull dev.xmlgridview.intellij.model.ValueEdits.Target target) {
+        return suggestionsFor(target);
+      }
+
+      @Override
       public void filtersChanged() {
         updateRowsLabel();
         if (findBar.isVisible() && findBar.scope() == FindBar.Scope.GRID) scheduleSearch(0);
@@ -226,6 +231,11 @@ public final class XmlGridPanel extends JPanel implements Disposable {
       @Override
       public void inspect(@NotNull dev.xmlgridview.intellij.model.InspectTarget target) {
         ValueInspector.show(project, target, loader.canEdit() ? loader::applyValueEdit : null);
+      }
+
+      @Override
+      public @NotNull List<String> suggestions(@NotNull dev.xmlgridview.intellij.model.ValueEdits.Target target) {
+        return suggestionsFor(target);
       }
     });
     summaryStructureActions = StructureActions.create(this, summary::menuTarget, applier);
@@ -546,6 +556,12 @@ public final class XmlGridPanel extends JPanel implements Disposable {
     if (total > errors) text.append(text.isEmpty() ? "" : ", ").append(total - errors).append(total - errors == 1 ? " warning" : " warnings");
     problemsLink.setText(text.toString());
     problemsLink.setIcon(errors > 0 ? com.intellij.icons.AllIcons.General.Error : com.intellij.icons.AllIcons.General.Warning);
+  }
+
+  /** Values the IDE knows are allowed for an edit target (XSD/DTD enumerations). */
+  private @NotNull List<String> suggestionsFor(@NotNull dev.xmlgridview.intellij.model.ValueEdits.Target target) {
+    XmlDocumentModel m = model;
+    return m == null || !loader.canEdit() ? List.of() : ValueSuggestions.of(project, loader.document(), m, target);
   }
 
   private void changesChanged() {

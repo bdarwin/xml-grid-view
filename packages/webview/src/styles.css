@@ -1554,3 +1554,29 @@ button.icon {
 .flat-row.removed-child::after {
   bottom: 0;
 }
+
+/* Values the editor suggests while editing a cell (a schema's enumeration, JSON Schema enums) */
+.suggest-list {
+  position: fixed;
+  z-index: 50;
+  max-height: 240px;
+  overflow-y: auto;
+  background: var(--vscode-editorSuggestWidget-background, var(--xgv-bg));
+  color: var(--vscode-editorSuggestWidget-foreground, var(--xgv-fg));
+  border: 1px solid var(--vscode-editorSuggestWidget-border, var(--xgv-border));
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  font-family: var(--xgv-mono-font-family);
+  font-size: var(--xgv-mono-font-size);
+}
+.suggest-item {
+  padding: 2px 8px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.suggest-item.active {
+  background: var(--vscode-editorSuggestWidget-selectedBackground, var(--xgv-selection-bg));
+  color: var(--vscode-editorSuggestWidget-selectedForeground, var(--xgv-selection-fg));
+}
+.suggest-item.current {
+  font-weight: 600;
+}

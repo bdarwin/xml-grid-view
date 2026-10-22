@@ -57,6 +57,8 @@ export interface GridProps {
   canEdit?(pos: CellPos): boolean;
   /** Commits an in-place edit (only called when the value changed). */
   onEdit?(pos: CellPos, value: string): void;
+  /** Values the editor suggests for a cell while it is edited (e.g. a schema's enumeration). */
+  suggest?(pos: CellPos): Promise<string[]>;
   /** Right-click on a cell (c = -1 for the row number). */
   onContextMenu?(pos: CellPos, x: number, y: number): void;
   /** Problems by cell (table coordinates r * ncols + c) and by table row. */
@@ -328,7 +330,7 @@ export function Grid(p: GridProps) {
           </span>
         );
       } else if (editing && editing.v === v && editing.c === c) {
-        content = <CellEditor initial={editing.initial} selectAll={editing.selectAll} onCommit={commitEdit} onCancel={() => {
+        content = <CellEditor initial={editing.initial} selectAll={editing.selectAll} suggest={p.suggest ? () => p.suggest!(pos) : undefined} onCommit={commitEdit} onCancel={() => {
           setEditing(null);
           ref.current?.focus({ preventScroll: true });
         }} />;

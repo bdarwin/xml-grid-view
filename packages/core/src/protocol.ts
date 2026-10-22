@@ -112,6 +112,12 @@ export interface DiagnosticsMessage {
   type: "diagnostics";
   items: Diagnostic[];
 }
+/** Reply to `suggest`: the values the editor offers there, in its order (empty when none). */
+export interface SuggestionsMessage {
+  type: "suggestions";
+  id: number;
+  items: string[];
+}
 /** Reply to `readClipboard`. */
 export interface ClipboardMessage {
   type: "clipboard";
@@ -130,7 +136,7 @@ export interface BaselineMessage {
   /** True when the user chose it (Compare with…), so "no differences" is worth saying. */
   explicit?: boolean;
 }
-export type HostToView = InitMessage | UpdateMessage | ThemeMessage | FocusFindMessage | EditResultMessage | ClipboardMessage | DiagnosticsMessage | BaselineMessage;
+export type HostToView = InitMessage | UpdateMessage | ThemeMessage | FocusFindMessage | EditResultMessage | ClipboardMessage | DiagnosticsMessage | BaselineMessage | SuggestionsMessage;
 
 export interface ReadyMessage {
   type: "ready";
@@ -164,16 +170,23 @@ export interface ReadClipboardMessage {
 export interface CompareWithMessage {
   type: "compareWith";
 }
+/** Ask which values the editor suggests at a document offset (e.g. a schema's enumeration); answered by `suggestions`. */
+export interface SuggestMessage {
+  type: "suggest";
+  id: number;
+  offset: number;
+  docVersion?: number;
+}
 /** Offer to save `text` as a new file (export); the host asks where. */
 export interface SaveMessage {
   type: "save";
   fileName: string;
   text: string;
 }
-export type ViewToHost = ReadyMessage | NavigateMessage | CopyMessage | ErrorMessage | EditMessage | ReadClipboardMessage | SaveMessage | CompareWithMessage;
+export type ViewToHost = ReadyMessage | NavigateMessage | CopyMessage | ErrorMessage | EditMessage | ReadClipboardMessage | SaveMessage | CompareWithMessage | SuggestMessage;
 
-const HOST_TYPES = new Set(["init", "update", "theme", "focusFind", "editResult", "clipboard", "diagnostics", "baseline"]);
-const VIEW_TYPES = new Set(["ready", "navigate", "copy", "error", "edit", "readClipboard", "save", "compareWith"]);
+const HOST_TYPES = new Set(["init", "update", "theme", "focusFind", "editResult", "clipboard", "diagnostics", "baseline", "suggestions"]);
+const VIEW_TYPES = new Set(["ready", "navigate", "copy", "error", "edit", "readClipboard", "save", "compareWith", "suggest"]);
 
 export function isHostToView(m: unknown): m is HostToView {
   return typeof m === "object" && m !== null && HOST_TYPES.has((m as { type?: string }).type ?? "");

@@ -205,6 +205,12 @@ limitations.
   the IDE's own validation, as of the last time the Text tab analysed the
   file. A counter above the view steps through them (F8 in VS Code, F2 in
   IntelliJ, Shift for the previous one).
+- **Allowed values while editing:** when the schema limits a value (an XSD
+  enumeration, a DTD's enumerated attribute, a JSON Schema `enum`), editing
+  the cell opens a list of the allowed values; type to narrow it, Up/Down and
+  Enter to pick. VS Code asks the editor's own completion, so XML needs an
+  XML extension such as Red Hat's, while JSON Schema works out of the box.
+  IntelliJ uses its built-in XML support (JSON is not covered there yet).
 - **Changes:** what changed since the last git commit (or, for a file
   outside git, since it was opened) is highlighted. New rows and elements
   are green, changed values blue with the old value as a tooltip, and

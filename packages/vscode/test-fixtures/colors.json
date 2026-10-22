@@ -1,0 +1,7 @@
+{
+  "$schema": "./colors.schema.json",
+  "items": [
+    { "name": "apple", "color": "red" },
+    { "name": "leaf", "color": "green" }
+  ]
+}

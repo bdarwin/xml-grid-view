@@ -26,7 +26,8 @@ export type WorkerRequest =
   | { id: number; type: "structure"; gen: number; op: StructureOp }
   /** Sets the earlier version that `changes` compares against (null: none). */
   | { id: number; type: "baseline"; text: string | null; format?: "xml" | "json" }
-  | { id: number; type: "changes"; gen: number };
+  | { id: number; type: "changes"; gen: number }
+  | { id: number; type: "valueOffset"; gen: number; target: EditTarget };
 
 export interface LoadResult {
   /** Generation of the model now held by the worker. */
@@ -52,6 +53,7 @@ export interface WorkerResults {
   baseline: boolean;
   /** Null when there is no baseline or it does not parse. */
   changes: DocumentChanges | null;
+  valueOffset: number | null;
 }
 
 export type WorkerResponse =

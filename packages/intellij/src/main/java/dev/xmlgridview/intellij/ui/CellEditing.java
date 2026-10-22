@@ -23,9 +23,17 @@ final class CellEditing {
   private CellEditing() {
   }
 
+  /** Values to offer while editing a cell (view coordinates), e.g. a schema's enumeration; empty for none. */
+  interface Suggester {
+    @NotNull java.util.List<String> suggestions(int viewRow, int viewCol);
+  }
+
   static void install(@NotNull JBTable table, @NotNull Disposable parent) {
-    DefaultCellEditor editor = new DefaultCellEditor(new JBTextField());
-    editor.setClickCountToStart(Integer.MAX_VALUE);
+    install(table, parent, (r, c) -> java.util.List.of());
+  }
+
+  static void install(@NotNull JBTable table, @NotNull Disposable parent, @NotNull Suggester suggester) {
+    SuggestingEditor editor = new SuggestingEditor(suggester);
     table.setDefaultEditor(Object.class, editor);
     table.setDefaultEditor(String.class, editor);
     table.setSurrendersFocusOnKeystroke(true);
@@ -61,6 +69,85 @@ final class CellEditing {
     Component c = table.getEditorComponent();
     if (c != null) c.requestFocusInWindow();
     return true;
+  }
+
+  /**
+   * A text field, or an editable combo box with the suggested values (its list opens when editing
+   * starts) when there are any. Clicks never start editing.
+   */
+  static final class SuggestingEditor extends javax.swing.AbstractCellEditor implements javax.swing.table.TableCellEditor {
+    private final Suggester suggester;
+    private final DefaultCellEditor text = new DefaultCellEditor(new JBTextField());
+    private final com.intellij.openapi.ui.ComboBox<String> combo = new com.intellij.openapi.ui.ComboBox<>();
+    private final DefaultCellEditor list = new DefaultCellEditor(combo);
+    private DefaultCellEditor active = text;
+    /** The suggestions of the cell being edited (tests). */
+    private java.util.List<String> current = java.util.List.of();
+
+    SuggestingEditor(Suggester suggester) {
+      this.suggester = suggester;
+      combo.setEditable(true);
+      for (DefaultCellEditor e : new DefaultCellEditor[]{text, list}) {
+        e.setClickCountToStart(Integer.MAX_VALUE);
+        e.addCellEditorListener(new javax.swing.event.CellEditorListener() {
+          @Override
+          public void editingStopped(javax.swing.event.ChangeEvent ev) {
+            fireEditingStopped();
+          }
+
+          @Override
+          public void editingCanceled(javax.swing.event.ChangeEvent ev) {
+            fireEditingCanceled();
+          }
+        });
+      }
+    }
+
+    @Override
+    public Component getTableCellEditorComponent(javax.swing.JTable table, Object value, boolean isSelected, int row, int column) {
+      current = suggester.suggestions(row, column);
+      if (current.isEmpty()) {
+        active = text;
+        return text.getTableCellEditorComponent(table, value, isSelected, row, column);
+      }
+      active = list;
+      combo.setModel(new javax.swing.DefaultComboBoxModel<>(current.toArray(String[]::new)));
+      Component c = list.getTableCellEditorComponent(table, value, isSelected, row, column);
+      combo.getEditor().setItem(value == null ? "" : value.toString());
+      javax.swing.SwingUtilities.invokeLater(() -> {
+        if (combo.isShowing()) combo.showPopup();
+      });
+      return c;
+    }
+
+    @Override
+    public Object getCellEditorValue() {
+      if (active == list) {
+        Object typed = combo.getEditor().getItem();
+        return typed == null ? "" : typed.toString();
+      }
+      return text.getCellEditorValue();
+    }
+
+    @Override
+    public boolean isCellEditable(java.util.EventObject e) {
+      return text.isCellEditable(e);
+    }
+
+    @Override
+    public boolean stopCellEditing() {
+      return active.stopCellEditing();
+    }
+
+    @Override
+    public void cancelCellEditing() {
+      active.cancelCellEditing();
+    }
+
+    @org.jetbrains.annotations.TestOnly
+    java.util.List<String> suggestionsForTest() {
+      return current;
+    }
   }
 
   /** True while {@code c} is a table with an active cell editor (keyboard actions should then stay out of the way). */

@@ -216,7 +216,12 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
       }
     });
     table.setDefaultRenderer(Object.class, new Renderer());
-    CellEditing.install(table, this);
+    CellEditing.install(table, this, (viewRow, viewCol) -> {
+      XmlDocumentModel m = model;
+      if (m == null || !loader.canEdit() || viewRow < 0 || viewRow >= rowsModel.rows.size()) return List.of();
+      ValueEdits.Target target = ValueEdits.flatTarget(rowsModel.rows.get(viewRow));
+      return target == null ? List.of() : ValueSuggestions.of(project, loader.document(), m, target);
+    });
     table.addMouseListener(new MouseAdapter() {
       @Override
       public void mousePressed(MouseEvent e) {

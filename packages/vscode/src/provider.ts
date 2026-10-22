@@ -7,6 +7,7 @@ import {
   type ViewToHost,
 } from "@xmlgridview/core/protocol";
 import { pickBaselineSource, watchBaseline, type BaselineSource } from "./baseline";
+import { suggestionsAt } from "./suggest";
 import { themeVars } from "./theme";
 
 export const VIEW_TYPE = "xmlGridView.editor";
@@ -147,6 +148,9 @@ export class XmlGridEditorProvider implements vscode.CustomTextEditorProvider {
             break;
           case "compareWith":
             await compareWith();
+            break;
+          case "suggest":
+            post({ type: "suggestions", id: msg.id, items: await suggestionsAt(document, msg.offset, msg.docVersion) });
             break;
           case "error":
             this.log.appendLine(`[${document.uri.fsPath}] ${msg.message}`);

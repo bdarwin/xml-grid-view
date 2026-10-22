@@ -62,6 +62,11 @@ final class SummaryPanel extends JPanel {
     @Nullable String applyEdit(@NotNull ValueEdits.Target target, @NotNull String value);
 
     void inspect(@NotNull InspectTarget target);
+
+    /** Values to offer while editing (e.g. a schema's enumeration). */
+    default @NotNull java.util.List<String> suggestions(@NotNull ValueEdits.Target target) {
+      return java.util.List.of();
+    }
   }
 
   private static final int VALUE_CHARS = 80;
@@ -168,6 +173,11 @@ final class SummaryPanel extends JPanel {
   }
 
   private void edit(@NotNull Item item, @NotNull ValueEdits.Target target) {
+    java.util.List<String> suggested = listener.suggestions(target);
+    if (!suggested.isEmpty()) {
+      editWithSuggestions(item, target, suggested);
+      return;
+    }
     JBTextField field = new JBTextField(item.value);
     field.setColumns(Math.min(40, Math.max(12, item.value.length() + 2)));
     field.selectAll();
@@ -191,6 +201,36 @@ final class SummaryPanel extends JPanel {
       }
     });
     popup.show(new com.intellij.ui.awt.RelativePoint(item, new java.awt.Point(0, 0)));
+  }
+
+  /** Editing a value that has suggestions: an editable combo box whose list opens right away. */
+  private void editWithSuggestions(@NotNull Item item, @NotNull ValueEdits.Target target, @NotNull java.util.List<String> suggested) {
+    com.intellij.openapi.ui.ComboBox<String> combo = new com.intellij.openapi.ui.ComboBox<>(suggested.toArray(String[]::new));
+    combo.setEditable(true);
+    combo.getEditor().setItem(item.value);
+    JBPopup popup = JBPopupFactory.getInstance().createComponentPopupBuilder(combo, (javax.swing.JComponent)combo.getEditor().getEditorComponent())
+      .setRequestFocus(true)
+      .setCancelOnClickOutside(true)
+      .createPopup();
+    combo.addActionListener(e -> {
+      if (!"comboBoxEdited".equals(e.getActionCommand()) && combo.isPopupVisible()) return;
+      Object v = combo.getEditor().getItem();
+      String value = v == null ? "" : v.toString();
+      popup.closeOk(null);
+      if (!value.equals(item.value)) commit(target, value);
+    });
+    lastSuggestions = suggested;
+    popup.show(new com.intellij.ui.awt.RelativePoint(item, new java.awt.Point(0, 0)));
+    javax.swing.SwingUtilities.invokeLater(() -> {
+      if (combo.isShowing()) combo.showPopup();
+    });
+  }
+
+  private java.util.List<String> lastSuggestions = java.util.List.of();
+
+  @org.jetbrains.annotations.TestOnly
+  java.util.List<String> lastSuggestionsForTest() {
+    return lastSuggestions;
   }
 
   private void commit(@NotNull ValueEdits.Target target, @NotNull String value) {
@@ -424,6 +464,13 @@ final class SummaryPanel extends JPanel {
     List<SimpleColoredComponent> out = new ArrayList<>();
     for (Component c : values.getComponents()) if (c instanceof Item it) out.add(it);
     return out;
+  }
+
+  /** What editing the value labelled {@code label} would offer (tests; the popup itself needs a screen). */
+  @TestOnly
+  List<String> suggestionsForTest(@NotNull String label) {
+    ValueEdits.Target t = editTargetForTest(label);
+    return t == null ? List.of() : listener.suggestions(t);
   }
 
   @TestOnly

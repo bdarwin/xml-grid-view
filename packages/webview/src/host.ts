@@ -12,6 +12,8 @@ export interface HostBridge {
   copy(text: string): void;
   /** Reads the clipboard through the host. */
   readClipboard(): Promise<string>;
+  /** Values the editor suggests at a document offset (empty when none, or when the host doesn't answer). */
+  suggest(offset: number, docVersion?: number): Promise<string[]>;
 }
 
 interface VsCodeApi {
@@ -33,6 +35,8 @@ declare global {
 export function createHostBridge(): HostBridge {
   const listeners: ((m: HostToView) => void)[] = [];
   const clipboardWaiters: ((text: string) => void)[] = [];
+  const suggestWaiters = new Map<number, (items: string[]) => void>();
+  let nextSuggest = 1;
   const deliver = (raw: unknown) => {
     let m = raw;
     if (typeof m === "string") {
@@ -45,6 +49,11 @@ export function createHostBridge(): HostBridge {
     if (!isHostToView(m)) return;
     if (m.type === "clipboard") {
       for (const w of clipboardWaiters.splice(0)) w(m.text);
+      return;
+    }
+    if (m.type === "suggestions") {
+      suggestWaiters.get(m.id)?.(m.items);
+      suggestWaiters.delete(m.id);
       return;
     }
     for (const l of listeners) l(m);
@@ -79,6 +88,20 @@ export function createHostBridge(): HostBridge {
           resolve(t);
         });
         post({ type: "readClipboard" });
+      }),
+    suggest: (offset, docVersion) =>
+      new Promise<string[]>((resolve) => {
+        const id = nextSuggest++;
+        // Hosts without suggestion support never answer.
+        const timer = setTimeout(() => {
+          suggestWaiters.delete(id);
+          resolve([]);
+        }, 3000);
+        suggestWaiters.set(id, (items) => {
+          clearTimeout(timer);
+          resolve(items);
+        });
+        post({ type: "suggest", id, offset, docVersion });
       }),
   };
 }

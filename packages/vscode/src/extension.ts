@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import type { ViewToHost } from "@xmlgridview/core/protocol";
 import type { BaselineSource } from "./baseline";
+import { suggestionsAt } from "./suggest";
 import { VIEW_TYPE, XmlGridEditorProvider } from "./provider";
 import { LARGE_VIEW_TYPE, LargeFileEditorProvider, TEXT_DOCUMENT_LIMIT } from "./large";
 
@@ -10,6 +11,7 @@ export interface XmlGridViewApi {
   readyCount(uri: vscode.Uri): number;
   simulateViewMessage(uri: vscode.Uri, msg: ViewToHost): Promise<void>;
   baseline(uri: vscode.Uri): { text: string | null; label: string; explicit: boolean } | undefined;
+  suggestionsAt(uri: vscode.Uri, offset: number): Promise<string[]>;
 }
 
 export function activate(context: vscode.ExtensionContext): XmlGridViewApi {
@@ -63,6 +65,7 @@ export function activate(context: vscode.ExtensionContext): XmlGridViewApi {
       for (const v of viewsFor(uri)) await v.handle(msg);
     },
     baseline: (uri) => viewsFor(uri)[0]?.baseline,
+    suggestionsAt: async (uri, offset) => suggestionsAt(await vscode.workspace.openTextDocument(uri), offset),
   };
 }
 

@@ -1165,6 +1165,17 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
   /** Edit target for a grid cell, or null when it is not editable (absent, complex, has child elements). */
   const gridEditTarget = (pos: CellPos) => (table ? cellEditTarget(table, view[pos.v], pos.c) : null);
 
+  /** Values the host's editor suggests for an edit target (completion at the value: a schema's enumeration, …). */
+  const suggestFor = async (target: EditTarget | undefined): Promise<string[]> => {
+    if (!target) return [];
+    try {
+      const offset = await worker.request<"valueOffset">({ type: "valueOffset", gen, target });
+      return offset === null ? [] : await host.suggest(offset, modelDocVersion.current);
+    } catch {
+      return [];
+    }
+  };
+
   const cellEditTarget = (t: GridTable, r: number | undefined, c: number): { target: EditTarget; label: string } | null => {
     if (!skeleton || !canEditDoc || c < 0 || r === undefined) return null;
     const col = t.columns[c];
@@ -1749,6 +1760,7 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
               onCopy={(sel) => void copyFlat(sel, rowsForFlat)}
               onInspect={(pos) => void inspectFlat(pos)}
               canEdit={(pos) => flatEditTarget(pos) !== null}
+              suggest={(pos) => suggestFor(flatEditTarget(pos)?.target)}
               onEdit={(pos, value) => {
                 const e = flatEditTarget(pos);
                 if (e) void requestEdit(e.target, value, e.label);
@@ -1837,6 +1849,7 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
                 fields={fields}
                 onGroup={chooseGroup}
                 canEdit={(c) => !!fields && cellEditTarget(fields, 0, c) !== null}
+                suggest={(c) => suggestFor((fields && cellEditTarget(fields, 0, c))?.target)}
                 onEdit={(c, value) => {
                   const e = fields && cellEditTarget(fields, 0, c);
                   if (e) void requestEdit(e.target, value, e.label);
@@ -1872,6 +1885,7 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
                 onCopy={copy}
                 onInspect={inspectCell}
                 canEdit={(pos) => gridEditTarget(pos) !== null}
+                suggest={(pos) => suggestFor(gridEditTarget(pos)?.target)}
                 onEdit={(pos, value) => {
                   const e = gridEditTarget(pos);
                   if (e) void requestEdit(e.target, value, e.label);

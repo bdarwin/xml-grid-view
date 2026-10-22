@@ -139,6 +139,8 @@ export interface FlatViewProps {
   onEdit?(pos: FlatPos, value: string): void;
   /** Right-click on a row. */
   onContextMenu?(pos: FlatPos, x: number, y: number): void;
+  /** Values the editor suggests for a row's value while it is edited. */
+  suggest?(pos: FlatPos): Promise<string[]>;
   /** Problems by element; ones inside an attribute's span mark that attribute's row. */
   problems?: Map<number, Diagnostic[]>;
   /** Changes against the baseline, and the details of changed elements by id. */
@@ -465,6 +467,7 @@ export function FlatView(p: FlatViewProps) {
             <CellEditor
               initial={editing.initial}
               selectAll={editing.selectAll}
+              suggest={p.suggest ? () => p.suggest!({ id, attr }) : undefined}
               onCommit={(value) => {
                 const pos = { id, attr };
                 setEditing(null);

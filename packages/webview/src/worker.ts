@@ -7,6 +7,7 @@ import {
   computeValueEdit,
   computeStructureEdit,
   diffDocuments,
+  valueOffset,
   evaluateXPath,
   jsBackend,
   searchDocument,
@@ -112,6 +113,9 @@ export function createWorkerHandler(post: (r: WorkerResponse, transfer?: Transfe
           return;
         case "flatValues":
           post({ id: req.id, ok: true, result: model.flatValues(req.ids) });
+          return;
+        case "valueOffset":
+          post({ id: req.id, ok: true, result: valueOffset(modelText, model, req.target) });
           return;
         case "changes":
           post({ id: req.id, ok: true, result: baseDoc && modelGood ? diffDocuments(baseDoc, model.doc) : null });

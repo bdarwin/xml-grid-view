@@ -14,6 +14,8 @@ export function Summary(p: {
   onGroup(group: string): void;
   canEdit(c: number): boolean;
   onEdit(c: number, value: string): void;
+  /** Values the editor suggests for field c while it is edited. */
+  suggest?(c: number): Promise<string[]>;
   onInspect(c: number): void;
   onContextMenu(c: number, x: number, y: number): void;
 }) {
@@ -81,6 +83,7 @@ export function Summary(p: {
                     <CellEditor
                       initial={it.value}
                       selectAll
+                      suggest={p.suggest ? () => p.suggest!(it.c) : undefined}
                       onCommit={(v) => {
                         setEditing(null);
                         if (v !== it.value) p.onEdit(it.c, v);

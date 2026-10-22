@@ -114,6 +114,23 @@ export function computeValueEdit(source: string, model: XmlModel, target: EditTa
   return { edit: { offset: el.openEnd, length: closeStart - el.openEnd, text: isCdata ? cdata(value) : escapeText(value) } };
 }
 
+/**
+ * Where a value starts in the source, for asking the editor what values are allowed there (code
+ * completion): just inside an attribute's or JSON string's quotes, at the start of an element's
+ * content or a JSON value. Null when there is no such place (an empty-element tag) or the value
+ * can't be edited.
+ */
+export function valueOffset(source: string, model: XmlModel, target: EditTarget): number | null {
+  const r = computeValueEdit(source, model, target, "x");
+  if ("error" in r) return null;
+  if (model.doc.format === "json") return source[r.edit.offset] === '"' ? r.edit.offset + 1 : r.edit.offset;
+  if (target.kind === "text") {
+    const el = elementAtPath(model.doc, target.path);
+    if (!el || el.end === el.openEnd) return null;
+  }
+  return r.edit.offset;
+}
+
 /** Applies an edit to a string (for tests and previews). */
 export function applyEdit(source: string, edit: TextEdit): string {
   return source.slice(0, edit.offset) + edit.text + source.slice(edit.offset + edit.length);

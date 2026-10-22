@@ -83,6 +83,11 @@ final class GridView extends JPanel implements UiDataProvider {
     default @Nullable String applyEdit(@NotNull ValueEdits.Target target, @NotNull String value) {
       return "Editing is not available.";
     }
+
+    /** Values to offer while editing (e.g. a schema's enumeration). */
+    default @NotNull List<String> suggestions(@NotNull ValueEdits.Target target) {
+      return List.of();
+    }
   }
 
   private static final int AUTO_FIT_SAMPLE = 500;
@@ -123,7 +128,11 @@ final class GridView extends JPanel implements UiDataProvider {
     table.getEmptyText().setText("No rows");
     table.setDefaultRenderer(Object.class, new CellRenderer());
     table.setDefaultRenderer(String.class, new CellRenderer());
-    CellEditing.install(table, parent);
+    CellEditing.install(table, parent, (viewRow, viewCol) -> {
+      GridTable t = model.table();
+      ValueEdits.Target target = t == null ? null : ValueEdits.gridTarget(t, table.convertRowIndexToModel(viewRow), table.convertColumnIndexToModel(viewCol));
+      return target == null ? List.of() : listener.suggestions(target);
+    });
     model.setEditHandler(new GridTableModel.EditHandler() {
       @Override
       public boolean isEditable(int row, int col) {

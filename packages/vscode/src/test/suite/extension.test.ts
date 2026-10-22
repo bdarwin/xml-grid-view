@@ -25,6 +25,7 @@ interface Api {
   readyCount(uri: vscode.Uri): number;
   simulateViewMessage(uri: vscode.Uri, msg: { type: string; [k: string]: unknown }): Promise<void>;
   baseline(uri: vscode.Uri): { text: string | null; label: string; explicit: boolean } | undefined;
+  suggestionsAt(uri: vscode.Uri, offset: number): Promise<string[]>;
 }
 
 function fixture(): vscode.Uri {
@@ -32,10 +33,10 @@ function fixture(): vscode.Uri {
   return vscode.Uri.file(path.join(root, "books.xml"));
 }
 
-async function waitFor<T>(fn: () => T | undefined | false, what: string, ms = 20_000): Promise<T> {
+async function waitFor<T>(fn: () => T | undefined | false | Promise<T | undefined | false>, what: string, ms = 20_000): Promise<T> {
   const end = Date.now() + ms;
   for (;;) {
-    const v = fn();
+    const v = await fn();
     if (v) return v;
     if (Date.now() > end) throw new Error(`Timed out waiting for ${what}`);
     await new Promise((r) => setTimeout(r, 100));
@@ -244,5 +245,21 @@ suite("XML Grid View", () => {
       await vscode.commands.executeCommand("workbench.action.closeAllEditors");
       fs.rmSync(other, { force: true });
     }
+  });
+
+  test("value suggestions come from the editor's completion (JSON Schema enum)", async function () {
+    this.timeout(60_000);
+    const root = vscode.workspace.workspaceFolders![0].uri.fsPath;
+    const uri = vscode.Uri.file(path.join(root, "colors.json"));
+    const text = fs.readFileSync(uri.fsPath, "utf8");
+    const inColor = text.indexOf('"red"') + 1;
+    // The JSON language service loads the schema asynchronously; ask until it answers.
+    const items = await waitFor(async () => {
+      const got = await api.suggestionsAt(uri, inColor);
+      return got.length ? got : undefined;
+    }, "enum suggestions", 30_000);
+    assert.deepStrictEqual([...items].sort(), ["blue", "green", "red"]);
+    // A value without an enum gets none.
+    assert.deepStrictEqual(await api.suggestionsAt(uri, text.indexOf('"apple"') + 1), []);
   });
 });

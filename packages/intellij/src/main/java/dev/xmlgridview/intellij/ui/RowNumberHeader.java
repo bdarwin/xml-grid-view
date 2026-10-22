@@ -1,5 +1,6 @@
 package dev.xmlgridview.intellij.ui;
 
+import com.intellij.ide.ui.UISettings;
 import com.intellij.ui.JBColor;
 import com.intellij.util.ui.JBUI;
 import com.intellij.util.ui.UIUtil;
@@ -103,6 +104,8 @@ final class RowNumberHeader extends JComponent {
     int first = Math.max(0, table.rowAtPoint(new Point(0, clip.y)));
     int last = table.rowAtPoint(new Point(0, clip.y + clip.height));
     if (last < 0) last = table.getRowCount() - 1;
+    // Text drawn directly (not by a Swing component) gets the IDE's antialiasing only when asked.
+    UISettings.setupAntialiasing(g);
     FontMetrics fm = g.getFontMetrics(getFont());
     g.setFont(getFont());
     int[] selected = table.getSelectedRows();

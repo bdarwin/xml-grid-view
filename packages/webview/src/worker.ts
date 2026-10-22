@@ -78,11 +78,13 @@ export function createWorkerHandler(post: (r: WorkerResponse, transfer?: Transfe
       }
       if (req.type === "baseline") {
         baseDoc = null;
+        let parsed = true;
         if (req.text !== null) {
           const doc = req.format === "json" ? parseJsonDocument(req.text) : new XmlParser(req.text).run();
           if (!doc.errors.length) baseDoc = doc;
+          else parsed = false;
         }
-        post({ id: req.id, ok: true, result: null });
+        post({ id: req.id, ok: true, result: parsed });
         return;
       }
       if (!model || req.gen !== gen) {

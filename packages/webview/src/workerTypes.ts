@@ -48,7 +48,8 @@ export interface WorkerResults {
   flatValues: FlatValues[];
   edit: EditResult;
   structure: StructureResult;
-  baseline: null;
+  /** False when the baseline text does not parse (it is then ignored). */
+  baseline: boolean;
   /** Null when there is no baseline or it does not parse. */
   changes: DocumentChanges | null;
 }

@@ -127,6 +127,8 @@ export interface BaselineMessage {
   text: string | null;
   /** What the baseline is, for tooltips, e.g. "the last commit" or "when the file was opened". */
   label: string;
+  /** True when the user chose it (Compare with…), so "no differences" is worth saying. */
+  explicit?: boolean;
 }
 export type HostToView = InitMessage | UpdateMessage | ThemeMessage | FocusFindMessage | EditResultMessage | ClipboardMessage | DiagnosticsMessage | BaselineMessage;
 
@@ -158,16 +160,20 @@ export interface EditMessage {
 export interface ReadClipboardMessage {
   type: "readClipboard";
 }
+/** Ask what to compare the document with (a branch, another file, …); the host answers with `baseline`. */
+export interface CompareWithMessage {
+  type: "compareWith";
+}
 /** Offer to save `text` as a new file (export); the host asks where. */
 export interface SaveMessage {
   type: "save";
   fileName: string;
   text: string;
 }
-export type ViewToHost = ReadyMessage | NavigateMessage | CopyMessage | ErrorMessage | EditMessage | ReadClipboardMessage | SaveMessage;
+export type ViewToHost = ReadyMessage | NavigateMessage | CopyMessage | ErrorMessage | EditMessage | ReadClipboardMessage | SaveMessage | CompareWithMessage;
 
 const HOST_TYPES = new Set(["init", "update", "theme", "focusFind", "editResult", "clipboard", "diagnostics", "baseline"]);
-const VIEW_TYPES = new Set(["ready", "navigate", "copy", "error", "edit", "readClipboard", "save"]);
+const VIEW_TYPES = new Set(["ready", "navigate", "copy", "error", "edit", "readClipboard", "save", "compareWith"]);
 
 export function isHostToView(m: unknown): m is HostToView {
   return typeof m === "object" && m !== null && HOST_TYPES.has((m as { type?: string }).type ?? "");

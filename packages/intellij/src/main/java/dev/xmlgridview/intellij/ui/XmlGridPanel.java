@@ -106,6 +106,8 @@ public final class XmlGridPanel extends JPanel implements Disposable {
   private final LinkLabel<Void> problemsLink = new LinkLabel<>("", null);
   private int problemIndex = -1;
   private final DocumentChanges changes;
+  private @Nullable ChangeBaseline baseline;
+  private final LinkLabel<Void> compareLink = new LinkLabel<>("Compare…", null);
   private final LinkLabel<Void> changesLink = new LinkLabel<>("", null);
   private int changeIndex = -1;
   private final Project project;
@@ -197,12 +199,13 @@ public final class XmlGridPanel extends JPanel implements Disposable {
     tree.setProblems(problems);
     grid.setProblems(problems);
     changes = new DocumentChanges(this, this::changesChanged);
+    changes.setErrorHandler(this::compareFailed);
     tree.setChanges(changes);
     grid.setChanges(changes);
     if (!loader.isLarge()) {
       boolean json = loader.isJson();
-      ChangeBaseline.start(project, com.intellij.openapi.fileEditor.FileDocumentManager.getInstance().getFile(document), document.getText(), this,
-                           (text, label) -> changes.setBaseline(text, label, json));
+      baseline = ChangeBaseline.start(project, com.intellij.openapi.fileEditor.FileDocumentManager.getInstance().getFile(document), document.getText(), this,
+                                      (text, label, explicit) -> changes.setBaseline(text, label, json, explicit));
     }
     summary = new SummaryPanel(new SummaryPanel.Listener() {
       @Override
@@ -283,6 +286,12 @@ public final class XmlGridPanel extends JPanel implements Disposable {
     problemsLink.setVisible(false);
     changesLink.setListener((l, d) -> stepChange(1), null);
     changesLink.setVisible(false);
+    compareLink.setToolTipText("Show changes compared with the last commit, a branch, tag or commit, or another file");
+    compareLink.setListener((l, d) -> {
+      if (baseline != null) CompareMenu.show(project, l, baseline, this::compareFailed);
+    }, null);
+    compareLink.setVisible(baseline != null);
+    headerRight.add(compareLink);
     headerRight.add(changesLink);
     headerRight.add(problemsLink);
     // Next / previous change: the IDE's "Next Change" / "Previous Change" shortcuts (Ctrl+Alt+Shift+Down / Up).
@@ -543,9 +552,16 @@ public final class XmlGridPanel extends JPanel implements Disposable {
     changeIndex = -1;
     grid.recomputeChanges();
     tree.changesChanged();
-    // Shown only when there are changes, so files without any don't get a permanent label.
-    changesLink.setVisible(changes.active() && !changes.stops().isEmpty());
+    // Shown when there are changes, or for a baseline the user chose ("No differences"), so files
+    // without changes don't get a permanent label.
+    changesLink.setVisible(changes.active() && (!changes.stops().isEmpty() || changes.explicit()));
     if (!changesLink.isVisible()) return;
+    if (changes.stops().isEmpty()) {
+      changesLink.setText("No differences from " + changes.label());
+      changesLink.setIcon(com.intellij.icons.AllIcons.Actions.Diff);
+      changesLink.setToolTipText(null);
+      return;
+    }
     List<String> parts = new ArrayList<>();
     if (changes.addedCount() > 0) parts.add("+" + changes.addedCount());
     if (changes.modifiedCount() > 0) parts.add("~" + changes.modifiedCount());
@@ -592,6 +608,22 @@ public final class XmlGridPanel extends JPanel implements Disposable {
   }
 
   private String lastChangeMessage = "";
+
+  private void compareFailed(String message) {
+    lastChangeMessage = "Can't compare: " + message;
+    if (!com.intellij.openapi.application.ApplicationManager.getApplication().isUnitTestMode() && compareLink.isShowing()) {
+      com.intellij.openapi.ui.popup.JBPopupFactory.getInstance()
+        .createHtmlTextBalloonBuilder(StringUtil.escapeXmlEntities(lastChangeMessage), com.intellij.openapi.ui.MessageType.ERROR, null)
+        .setFadeoutTime(5000)
+        .createBalloon()
+        .show(com.intellij.ui.awt.RelativePoint.getSouthOf(compareLink), com.intellij.openapi.ui.popup.Balloon.Position.below);
+    }
+  }
+
+  @TestOnly
+  @Nullable ChangeBaseline baselineForTest() {
+    return baseline;
+  }
 
   @TestOnly
   XmlTreeView treeForTest() {

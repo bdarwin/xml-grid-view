@@ -105,6 +105,12 @@
         "command": "xmlGridView.find",
         "title": "Find",
         "category": "XML Grid View"
+      },
+      {
+        "command": "xmlGridView.compareWith",
+        "title": "Compare With…",
+        "category": "XML Grid View",
+        "icon": "$(git-compare)"
       }
     ],
     "menus": {
@@ -117,6 +123,11 @@
         {
           "command": "xmlGridView.showSource",
           "when": "activeCustomEditorId =~ /^xmlGridView\\./",
+          "group": "navigation"
+        },
+        {
+          "command": "xmlGridView.compareWith",
+          "when": "activeCustomEditorId == xmlGridView.editor",
           "group": "navigation"
         }
       ],
@@ -139,6 +150,10 @@
         {
           "command": "xmlGridView.find",
           "when": "activeCustomEditorId =~ /^xmlGridView\\./"
+        },
+        {
+          "command": "xmlGridView.compareWith",
+          "when": "activeCustomEditorId == xmlGridView.editor"
         }
       ]
     },

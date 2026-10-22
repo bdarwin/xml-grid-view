@@ -129,10 +129,20 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
     loader = new ModelLoader(project, document, this, navigator, (previous, built) -> modelChanged(built), this);
     problems = new DocumentProblems(project, document, this, () -> table.repaint());
     changes = new DocumentChanges(this, this::changesChanged);
+    changes.setErrorHandler(message -> {
+      if (!com.intellij.openapi.application.ApplicationManager.getApplication().isUnitTestMode() && table.isShowing()) {
+        com.intellij.openapi.ui.popup.JBPopupFactory.getInstance()
+          .createHtmlTextBalloonBuilder(com.intellij.openapi.util.text.StringUtil.escapeXmlEntities("Can't compare: " + message),
+                                        com.intellij.openapi.ui.MessageType.ERROR, null)
+          .setFadeoutTime(5000)
+          .createBalloon()
+          .show(com.intellij.ui.awt.RelativePoint.getCenterOf(table), com.intellij.openapi.ui.popup.Balloon.Position.above);
+      }
+    });
     if (!loader.isLarge()) {
       boolean json = loader.isJson();
-      ChangeBaseline.start(project, com.intellij.openapi.fileEditor.FileDocumentManager.getInstance().getFile(document), document.getText(), this,
-                           (text, label) -> changes.setBaseline(text, label, json));
+      baseline = ChangeBaseline.start(project, com.intellij.openapi.fileEditor.FileDocumentManager.getInstance().getFile(document), document.getText(), this,
+                                      (text, label, explicit) -> changes.setBaseline(text, label, json, explicit));
     }
 
     findBar = new FindBar(this, new FindBar.Listener() {
@@ -351,6 +361,7 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
 
   private final DocumentProblems problems;
   private final DocumentChanges changes;
+  private @Nullable ChangeBaseline baseline;
 
   private void changesChanged() {
     table.repaint();
@@ -737,6 +748,24 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
         toggled.clear();
         if (m.root() != null) toggled.add(m.root().path());
         rebuildRows(null);
+      }
+    });
+    g.add(new DumbAwareAction("Compare With…", "Show changes compared with the last commit, a branch, tag or commit, or another file", AllIcons.Actions.Diff) {
+      @Override
+      public void actionPerformed(@NotNull AnActionEvent e) {
+        if (baseline != null) {
+          CompareMenu.show(project, table, baseline, message -> com.intellij.openapi.ui.Messages.showErrorDialog(project, message, "Can't Compare"));
+        }
+      }
+
+      @Override
+      public void update(@NotNull AnActionEvent e) {
+        e.getPresentation().setEnabledAndVisible(baseline != null);
+      }
+
+      @Override
+      public @NotNull com.intellij.openapi.actionSystem.ActionUpdateThread getActionUpdateThread() {
+        return com.intellij.openapi.actionSystem.ActionUpdateThread.EDT;
       }
     });
     g.add(inspectAction);

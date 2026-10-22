@@ -24,7 +24,7 @@ interface Api {
   viewCount(uri: vscode.Uri): number;
   readyCount(uri: vscode.Uri): number;
   simulateViewMessage(uri: vscode.Uri, msg: { type: string; [k: string]: unknown }): Promise<void>;
-  baseline(uri: vscode.Uri): { text: string | null; label: string } | undefined;
+  baseline(uri: vscode.Uri): { text: string | null; label: string; explicit: boolean } | undefined;
 }
 
 function fixture(): vscode.Uri {
@@ -199,10 +199,50 @@ suite("XML Grid View", () => {
       const looseUri = vscode.Uri.file(loose);
       await vscode.commands.executeCommand("vscode.openWith", looseUri, VIEW_TYPE);
       await waitFor(() => api.baseline(looseUri), "a baseline outside git");
-      assert.deepStrictEqual(api.baseline(looseUri), { text: "<a/>", label: "when the file was opened" });
+      assert.deepStrictEqual(api.baseline(looseUri), { text: "<a/>", label: "when the file was opened", explicit: false });
     } finally {
       await vscode.commands.executeCommand("workbench.action.closeAllEditors");
       fs.rmSync(loose, { force: true });
+    }
+  });
+
+  test("compare with a branch or commit, or another file", async function () {
+    this.timeout(60_000);
+    const { execFileSync } = await import("node:child_process");
+    const cwd = path.dirname(fixture().fsPath);
+    let committed: string;
+    try {
+      committed = execFileSync("git", ["show", "HEAD:./books.xml"], { cwd, encoding: "utf8" });
+    } catch {
+      return this.skip();
+    }
+    const other = path.join(os.tmpdir(), "xgv-other.xml");
+    fs.writeFileSync(other, "<catalog/>");
+    try {
+      await vscode.commands.executeCommand("vscode.openWith", fixture(), VIEW_TYPE);
+      await waitFor(() => api.baseline(fixture())?.label === "the last commit", "the default baseline", 30_000);
+
+      await vscode.commands.executeCommand("xmlGridView.compareWith", { kind: "file", uri: vscode.Uri.file(other) }, fixture());
+      assert.strictEqual(api.baseline(fixture())!.text, "<catalog/>");
+      assert.strictEqual(api.baseline(fixture())!.explicit, true);
+      assert.match(api.baseline(fixture())!.label, /xgv-other\.xml$/);
+
+      // The other file changing on disk updates the baseline.
+      fs.writeFileSync(other, "<catalog><book/></catalog>");
+      await waitFor(() => api.baseline(fixture())?.text === "<catalog><book/></catalog>", "the changed file as baseline");
+
+      await vscode.commands.executeCommand("xmlGridView.compareWith", { kind: "ref", ref: "HEAD" }, fixture());
+      assert.deepStrictEqual(api.baseline(fixture()), { text: committed, label: "HEAD", explicit: true });
+
+      // A ref the file isn't in is refused and the baseline stays.
+      await vscode.commands.executeCommand("xmlGridView.compareWith", { kind: "ref", ref: "no-such-branch-xgv" }, fixture());
+      assert.strictEqual(api.baseline(fixture())!.label, "HEAD");
+
+      await vscode.commands.executeCommand("xmlGridView.compareWith", { kind: "head" }, fixture());
+      assert.deepStrictEqual(api.baseline(fixture()), { text: committed, label: "the last commit", explicit: false });
+    } finally {
+      await vscode.commands.executeCommand("workbench.action.closeAllEditors");
+      fs.rmSync(other, { force: true });
     }
   });
 });

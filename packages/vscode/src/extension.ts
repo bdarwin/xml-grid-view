@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import type { ViewToHost } from "@xmlgridview/core/protocol";
+import type { BaselineSource } from "./baseline";
 import { VIEW_TYPE, XmlGridEditorProvider } from "./provider";
 import { LARGE_VIEW_TYPE, LargeFileEditorProvider, TEXT_DOCUMENT_LIMIT } from "./large";
 
@@ -8,7 +9,7 @@ export interface XmlGridViewApi {
   viewCount(uri: vscode.Uri): number;
   readyCount(uri: vscode.Uri): number;
   simulateViewMessage(uri: vscode.Uri, msg: ViewToHost): Promise<void>;
-  baseline(uri: vscode.Uri): { text: string | null; label: string } | undefined;
+  baseline(uri: vscode.Uri): { text: string | null; label: string; explicit: boolean } | undefined;
 }
 
 export function activate(context: vscode.ExtensionContext): XmlGridViewApi {
@@ -40,6 +41,15 @@ export function activate(context: vscode.ExtensionContext): XmlGridViewApi {
     }),
     vscode.commands.registerCommand("xmlGridView.showSource", async () => {
       await active()?.showSource();
+    }),
+    // Compare with a branch, tag, commit or file; tests pass the source (and the file) directly.
+    vscode.commands.registerCommand("xmlGridView.compareWith", async (source?: BaselineSource, uri?: vscode.Uri) => {
+      const view = uri ? provider.viewsFor(uri)[0] : provider.active;
+      if (!view?.compareWith) {
+        void vscode.window.showInformationMessage("Open a file in XML Grid View first.");
+        return;
+      }
+      await view.compareWith(source);
     }),
     vscode.commands.registerCommand("xmlGridView.find", () => {
       active()?.post({ type: "focusFind" });

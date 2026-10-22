@@ -177,4 +177,71 @@ public class ChangesTest extends BasePlatformTestCase {
     FlatRow id1 = panel.visibleRows().stream().filter(r -> r.kind() == FlatRow.Kind.ATTR && r.attr().name().equals("id") && r.node().path().equals("0/0")).findFirst().orElseThrow();
     assertNull("unchanged attribute", panel.changeOf(id1));
   }
+
+  private static void run(java.nio.file.Path dir, String... cmd) throws Exception {
+    Process p = new ProcessBuilder(cmd).directory(dir.toFile()).redirectErrorStream(true).start();
+    String out = new String(p.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+    assertEquals(String.join(" ", cmd) + ": " + out, 0, p.waitFor());
+  }
+
+  /** Compare With: a branch or commit (read with git), another file, and refusals that keep the baseline. */
+  public void testCompareWithRefAndFile() throws Exception {
+    java.nio.file.Path dir = java.nio.file.Files.createTempDirectory("xgv-compare");
+    try {
+      java.nio.file.Path xml = dir.resolve("catalog.xml");
+      java.nio.file.Files.writeString(xml, BASE);
+      run(dir, "git", "init", "-q", "-b", "trunk");
+      run(dir, "git", "add", "catalog.xml");
+      run(dir, "git", "-c", "user.name=t", "-c", "user.email=t@example.com", "commit", "-q", "-m", "first");
+      java.nio.file.Files.writeString(xml, CURRENT);
+      java.nio.file.Path other = dir.resolve("other.xml");
+      java.nio.file.Files.writeString(other, CURRENT);
+      VirtualFile file = com.intellij.openapi.vfs.LocalFileSystem.getInstance().refreshAndFindFileByNioFile(xml);
+      VirtualFile otherFile = com.intellij.openapi.vfs.LocalFileSystem.getInstance().refreshAndFindFileByNioFile(other);
+      assertNotNull(file);
+      XmlGridViewerEditor e = (XmlGridViewerEditor)new XmlGridEditorProvider().createEditor(getProject(), file);
+      editor = e;
+      XmlGridPanel p = e.getPanel();
+      p.apply(build(CURRENT));
+      PlatformTestUtil.dispatchAllEventsInIdeEventQueue();
+      ChangeBaseline baseline = p.baselineForTest();
+      assertNotNull(baseline);
+      assertTrue(baseline.refs().contains("trunk"));
+
+      List<String> errors = new java.util.ArrayList<>();
+      baseline.compareWith(new ChangeBaseline.Ref("trunk"), errors::add);
+      PlatformTestUtil.dispatchAllEventsInIdeEventQueue();
+      assertEquals(List.of(), errors);
+      assertEquals("trunk", p.changesForTest().label());
+      assertTrue(p.changesForTest().explicit());
+      assertEquals("+1 ~2 −1", p.changesLinkTextForTest());
+
+      baseline.compareWith(new ChangeBaseline.Ref("no-such-branch"), errors::add);
+      PlatformTestUtil.dispatchAllEventsInIdeEventQueue();
+      assertEquals(List.of("The file is not in no-such-branch."), errors);
+      assertEquals("the baseline stays", "trunk", p.changesForTest().label());
+
+      baseline.compareWith(new ChangeBaseline.OtherFile(otherFile), errors::add);
+      PlatformTestUtil.dispatchAllEventsInIdeEventQueue();
+      assertEquals("other.xml", p.changesForTest().label());
+      assertEquals("No differences from other.xml", p.changesLinkTextForTest());
+
+      // A file that does not parse shows nothing (and is not taken as "everything changed").
+      java.nio.file.Files.writeString(other, "<catalog>");
+      com.intellij.openapi.vfs.VfsUtil.markDirtyAndRefresh(false, false, false, otherFile);
+      baseline.compareWith(new ChangeBaseline.OtherFile(otherFile), errors::add);
+      PlatformTestUtil.dispatchAllEventsInIdeEventQueue();
+      assertFalse(p.changesForTest().active());
+      assertEquals("", p.changesLinkTextForTest());
+      assertEquals("Can't compare: other.xml is not well-formed.", p.lastChangeMessageForTest());
+
+      baseline.compareWith(new ChangeBaseline.Opened(), errors::add);
+      PlatformTestUtil.dispatchAllEventsInIdeEventQueue();
+      assertEquals(ChangeBaseline.OPENED, p.changesForTest().label());
+      assertEquals("No differences from " + ChangeBaseline.OPENED, p.changesLinkTextForTest());
+    }
+    finally {
+      com.intellij.openapi.util.io.FileUtil.delete(dir.toFile());
+    }
+  }
 }

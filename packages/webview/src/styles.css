@@ -1437,6 +1437,28 @@ button.icon {
   border: 1px solid var(--xgv-border);
   color: var(--xgv-fg);
 }
+.compare-btn {
+  margin-left: auto;
+  align-self: center;
+  padding: 1px 8px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--xgv-link-fg);
+  cursor: pointer;
+}
+.compare-btn:hover {
+  border-color: var(--xgv-border);
+}
+.compare-btn + .changes-btn,
+.compare-btn + .problems-btn {
+  margin-left: 4px;
+}
+.compare-btn + .modebar-actions {
+  margin-left: 8px;
+}
+.changes-none {
+  color: var(--xgv-muted-fg);
+}
 .changes-btn + .problems-btn {
   margin-left: 8px;
 }

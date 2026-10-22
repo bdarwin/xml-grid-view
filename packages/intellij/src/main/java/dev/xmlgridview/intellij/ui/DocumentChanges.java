@@ -93,6 +93,14 @@ final class DocumentChanges {
   private @Nullable XmlDocumentModel model;
   private @Nullable XmlDocumentModel baseModel;
   private @Nullable String label;
+  private boolean explicit;
+  private java.util.function.Consumer<String> onError = m -> {
+  };
+
+  /** Told (on the EDT) when a baseline the user chose can't be parsed. */
+  void setErrorHandler(@NotNull java.util.function.Consumer<String> handler) {
+    onError = handler;
+  }
   private int generation;
   private Map<XNode, Mark> byNode = Map.of();
   private Map<XNode, DocumentDiff.Modified> details = Map.of();
@@ -115,6 +123,12 @@ final class DocumentChanges {
 
   /** Sets the baseline text ({@code null}: off) and what it is, e.g. "the last commit". */
   void setBaseline(@Nullable String text, @NotNull String label, boolean json) {
+    setBaseline(text, label, json, false);
+  }
+
+  /** {@code explicit}: the user chose it (Compare With), so "no differences" is worth showing. */
+  void setBaseline(@Nullable String text, @NotNull String label, boolean json, boolean explicit) {
+    this.explicit = explicit;
     int gen = ++generation;
     if (text == null) {
       apply(gen, null, null, null);
@@ -124,7 +138,10 @@ final class DocumentChanges {
       XmlDocumentModel base = json ? JsonModelBuilder.build(text, null) : XmlModelBuilder.build(text, null);
       XmlDocumentModel cur = model;
       DocumentDiff.Changes c = base.hasErrors() || cur == null || cur.hasErrors() ? null : DocumentDiff.diff(base, cur);
-      return () -> apply(gen, base.hasErrors() ? null : base, label, c, cur);
+      return () -> {
+        if (base.hasErrors() && explicit && gen == generation) onError.accept(label + " is not well-formed.");
+        apply(gen, base.hasErrors() ? null : base, label, c, cur);
+      };
     });
   }
 
@@ -235,6 +252,11 @@ final class DocumentChanges {
     for (XNode a = n.parent(); a != null && anc.add(a); a = a.parent()) {
       // all ancestors
     }
+  }
+
+  /** Whether the user chose the baseline (Compare With). */
+  boolean explicit() {
+    return explicit;
   }
 
   /** Whether changes are shown (there is a usable baseline). */

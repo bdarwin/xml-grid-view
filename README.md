@@ -216,6 +216,12 @@ limitations.
   Ctrl+Alt+Shift+Down / Up). In IntelliJ the last commit is the base revision
   of the IDE's version control. Turn it off in VS Code with
   `xmlGridView.showChanges`.
+- **Compare with a branch, tag, commit or another file:** "Compare…" above
+  the view (in IntelliJ's Flat view, in the right-click menu; in VS Code also
+  the editor title button and the command palette) shows the changes against
+  any branch, tag or commit of the file's git repository, against another
+  file (for example two environments' config files), or since the file was
+  opened. The comparison updates when that branch or file changes.
 - **Comments, processing instructions and the DOCTYPE** are shown, read-only
   and in grey, in the tree and the Flat view.
 - **JSON** (`.json`, `.jsonc`, `.geojson`): the same views and editing.

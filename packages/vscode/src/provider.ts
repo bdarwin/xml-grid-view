@@ -6,7 +6,7 @@ import {
   type ViewSettings,
   type ViewToHost,
 } from "@xmlgridview/core/protocol";
-import { watchBaseline } from "./baseline";
+import { pickBaselineSource, watchBaseline, type BaselineSource } from "./baseline";
 import { themeVars } from "./theme";
 
 export const VIEW_TYPE = "xmlGridView.editor";
@@ -22,7 +22,9 @@ export interface ViewEntry {
   /** Opens the XML source in a text editor beside the view. */
   showSource(): Promise<void>;
   /** The baseline changes are shown against (for tests). */
-  readonly baseline?: { text: string | null; label: string };
+  readonly baseline?: { text: string | null; label: string; explicit: boolean };
+  /** Compare with: asks what to compare with, unless `source` is given. */
+  compareWith?(source?: BaselineSource): Promise<void>;
 }
 
 /**
@@ -90,16 +92,24 @@ export class XmlGridEditorProvider implements vscode.CustomTextEditorProvider {
     };
 
     // The earlier version that changes are highlighted against; re-sent when the view reloads.
-    let baseline: { text: string | null; label: string } | undefined;
+    let baseline: { text: string | null; label: string; explicit: boolean } | undefined;
     const sendBaseline = () => {
       if (ready && baseline) post({ type: "baseline", ...baseline });
     };
-    disposables.push(
-      watchBaseline(document, (text, label) => {
-        baseline = { text, label };
-        sendBaseline();
-      }),
-    );
+    const baselineWatch = watchBaseline(document, (text, label, explicit) => {
+      baseline = { text, label, explicit };
+      sendBaseline();
+    });
+    disposables.push(baselineWatch);
+    const compareWith = async (source?: BaselineSource) => {
+      const next = source ?? (await pickBaselineSource(baselineWatch));
+      if (!next) return;
+      try {
+        await baselineWatch.compareWith(next);
+      } catch (e) {
+        void vscode.window.showErrorMessage(`Can't compare: ${(e as Error).message}`);
+      }
+    };
 
     const entry: ViewEntry = {
       uri: document.uri,
@@ -110,6 +120,7 @@ export class XmlGridEditorProvider implements vscode.CustomTextEditorProvider {
       get baseline() {
         return baseline;
       },
+      compareWith,
       post,
       showSource: async () => {
         await vscode.window.showTextDocument(document, { viewColumn: vscode.ViewColumn.Beside });
@@ -133,6 +144,9 @@ export class XmlGridEditorProvider implements vscode.CustomTextEditorProvider {
             break;
           case "save":
             await saveExport(document.uri, msg.fileName, msg.text);
+            break;
+          case "compareWith":
+            await compareWith();
             break;
           case "error":
             this.log.appendLine(`[${document.uri.fsPath}] ${msg.message}`);

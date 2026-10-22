@@ -20,6 +20,8 @@
   and values are highlighted in the tree, grid and Flat view, compared with
   the last git commit (or with the text when the file was opened). Elements
   are compared rather than lines, so reformatting does not count.
+- **Compare with a branch, tag, commit or another file** from "Compare…"
+  above the view.
 
 ## 0.4.0
 

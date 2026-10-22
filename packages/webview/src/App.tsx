@@ -150,6 +150,10 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
   /** Changes against the host's baseline (last commit / when opened); null when there is none. */
   const [changes, setChanges] = useState<DocumentChanges | null>(null);
   const [baselineLabel, setBaselineLabel] = useState<string | null>(null);
+  /** The user picked the baseline (Compare with…): the counter shows even without differences. */
+  const [baselineExplicit, setBaselineExplicit] = useState(false);
+  /** The host supports comparing (it has sent a baseline and change highlighting is on). */
+  const [canCompare, setCanCompare] = useState(false);
   const [baselineRev, setBaselineRev] = useState(0);
   const [changeIndex, setChangeIndex] = useState(-1);
   const docVersionRef = useRef<number | undefined>(undefined);
@@ -341,8 +345,12 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
         case "baseline": {
           const label = msg.label;
           const on = msg.text !== null;
-          void worker.request<"baseline">({ type: "baseline", text: msg.text, format: formatRef.current }).then(() => {
-            setBaselineLabel(on ? label : null);
+          const explicit = !!msg.explicit;
+          void worker.request<"baseline">({ type: "baseline", text: msg.text, format: formatRef.current }).then((parsed) => {
+            if (!parsed) setToast(`Can't compare with ${label}: it is not well-formed.`);
+            setBaselineLabel(on && parsed ? label : null);
+            setBaselineExplicit(explicit);
+            setCanCompare(on);
             setBaselineRev((r) => r + 1);
           });
           break;
@@ -1610,12 +1618,22 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
             {m === "grid" ? "Grid" : "Flat"}
           </button>
         ))}
-        {marks && marks.list.length > 0 && (
+        {canCompare && (
+          <button
+            class={"compare-btn" + (marks && (marks.list.length > 0 || baselineExplicit) ? " with-changes" : "")}
+            title="Show changes compared with the last commit, a branch, tag or commit, or another file"
+            onClick={() => host.post({ type: "compareWith" })}
+          >
+            Compare…
+          </button>
+        )}
+        {marks && (marks.list.length > 0 || baselineExplicit) && (
           <button
             class={"changes-btn" + (problems ? " with-problems" : "")}
-            title={`Changes since ${marks.label}. Click (or Alt+F5 / Shift+Alt+F5) to go to the next / previous.`}
+            title={`Changes compared with ${marks.label}. Click (or Alt+F5 / Shift+Alt+F5) to go to the next / previous.`}
             onClick={(e) => changeNav.current(e.shiftKey ? -1 : 1)}
           >
+            {!marks.list.length && <span class="changes-none">No differences from {marks.label}</span>}
             {marks.added > 0 && <span class="changes-added">+{marks.added}</span>}
             {marks.modified > 0 && <span class="changes-modified">~{marks.modified}</span>}
             {marks.removedCount > 0 && <span class="changes-removed">−{marks.removedCount}</span>}

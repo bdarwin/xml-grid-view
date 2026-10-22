@@ -293,3 +293,22 @@ test("changes against the baseline in tree, grid and Flat", async ({ page }) => 
   await expect(page.locator(".flat-row.change-modified").first()).toBeVisible();
   await shot(page, "light-changes-flat");
 });
+
+test("compare with another file: no differences, and a file that does not parse", async ({ page }) => {
+  await open(page);
+  await ready(page);
+  // Before any baseline (e.g. the large-file view) there is no Compare button.
+  await expect(page.locator(".compare-btn")).toHaveCount(0);
+  await page.evaluate((base) => window.postMessage({ type: "baseline", text: base, label: "the last commit" }, "*"), sample);
+  await expect(page.locator(".compare-btn")).toBeVisible();
+  // The default baseline without changes: no counter.
+  await expect(page.locator(".changes-btn")).toHaveCount(0);
+  // A chosen baseline without differences says so.
+  await page.evaluate((base) => window.postMessage({ type: "baseline", text: base, label: "copy.xml", explicit: true }, "*"), sample);
+  await expect(page.locator(".changes-btn")).toHaveText("No differences from copy.xml");
+  await shot(page, "light-compare-none");
+  // One that is not well-formed is refused with a message.
+  await page.evaluate(() => window.postMessage({ type: "baseline", text: "<catalog>", label: "broken.xml", explicit: true }, "*"));
+  await expect(page.locator(".toast")).toContainText("Can't compare with broken.xml: it is not well-formed.");
+  await expect(page.locator(".changes-btn")).toHaveCount(0);
+});

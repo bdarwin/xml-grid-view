@@ -93,6 +93,18 @@
         if (msg.type === "save") window.__saved = { fileName: msg.fileName, text: msg.text };
         // Value suggestions: tests set window.__suggest(offset, doc) to answer like an editor's completion.
         if (msg.type === "suggest") send({ type: "suggestions", id: msg.id, items: window.__suggest ? window.__suggest(msg.offset, window.__doc) : [] });
+        // Records mode: tests set window.__record(group, i) to make record i of a group.
+        if (msg.type === "requestRecordPage") {
+          const texts = [];
+          for (let i = msg.start; i < Math.min(msg.start + msg.count, window.__recordCount ?? 0); i++) texts.push(window.__record(msg.group, i));
+          send({ type: "recordPage", id: msg.id, texts });
+        }
+        if (msg.type === "requestRecordSearch") {
+          const matches = [];
+          const q = msg.query.toLowerCase();
+          for (let i = 0; i < (window.__recordCount ?? 0); i++) if (window.__record(msg.group, i).toLowerCase().includes(q)) matches.push(i);
+          send({ type: "recordSearch", id: msg.id, matches, total: matches.length, done: true });
+        }
         if (msg.type !== "edit") return;
         if (msg.docVersion !== undefined && msg.docVersion !== window.__version) {
           send({ type: "editResult", ok: false, message: "The document changed while editing; please try again." });

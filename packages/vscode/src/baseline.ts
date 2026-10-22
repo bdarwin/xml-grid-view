@@ -151,7 +151,9 @@ export function watchBaseline(document: vscode.TextDocument, listener: BaselineL
         fileWatcher?.dispose();
         fileWatcher = undefined;
         if (next.kind === "file") {
-          const w = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(vscode.Uri.joinPath(next.uri, ".."), path.basename(next.uri.fsPath)));
+          const w = vscode.workspace.createFileSystemWatcher(
+            new vscode.RelativePattern(vscode.Uri.joinPath(next.uri, ".."), path.basename(next.uri.fsPath)),
+          );
           w.onDidChange(() => schedule());
           fileWatcher = w;
         }

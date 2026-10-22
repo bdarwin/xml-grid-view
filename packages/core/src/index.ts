@@ -12,3 +12,4 @@ export * from "./structure.js";
 export * from "./jsonDocument.js";
 export * from "./jsonEdits.js";
 export * from "./changes.js";
+export * from "./records.js";

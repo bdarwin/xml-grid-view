@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { PROTOCOL_VERSION, isViewToHost, type HostToView } from "@xmlgridview/core/protocol";
 import { isJsonFileName, readSettings, saveExport, viewHtml, type ViewEntry } from "./provider";
+import { RecordFile } from "./recordFile";
 import { themeVars } from "./theme";
 
 export const LARGE_VIEW_TYPE = "xmlGridView.largeEditor";
@@ -10,8 +11,9 @@ const RELOAD_DEBOUNCE_MS = 500;
 
 /**
  * Read-only view for files too large for a VS Code text document: reads the file from
- * disk and reloads it when it changes. Files over `xmlGridView.maxFileSizeMB` (more than
- * the view's memory can hold) get a notice instead of the view.
+ * disk and reloads it when it changes. XML files over `xmlGridView.maxFileSizeMB` (more than
+ * the view's memory can hold) open in records mode: the root's children a page at a time,
+ * read from disk. JSON files over the limit get a notice.
  */
 export class LargeFileEditorProvider implements vscode.CustomReadonlyEditorProvider {
   private readonly views = new Set<ViewEntry>();
@@ -29,6 +31,15 @@ export class LargeFileEditorProvider implements vscode.CustomReadonlyEditorProvi
     return [...this.views].filter((v) => v.uri.toString() === uri.toString());
   }
 
+  /** The records index of a view in records mode (tests). */
+  recordsFor(uri: vscode.Uri): RecordFile | undefined {
+    for (const v of this.viewsFor(uri)) {
+      const f = (v as ViewEntry & { records?: RecordsHooks }).records?.file;
+      if (f) return f;
+    }
+    return undefined;
+  }
+
   openCustomDocument(uri: vscode.Uri): vscode.CustomDocument {
     return { uri, dispose: () => {} };
   }
@@ -37,7 +48,7 @@ export class LargeFileEditorProvider implements vscode.CustomReadonlyEditorProvi
     const uri = document.uri;
     const size = (await vscode.workspace.fs.stat(uri)).size;
     const maxBytes = maxFileSizeMB() * 1024 * 1024;
-    if (size > maxBytes) {
+    if (size > maxBytes && (isJsonFileName(uri.path) || uri.scheme !== "file")) {
       panel.webview.html = tooLargeHtml(vscode.workspace.asRelativePath(uri, false), size, maxBytes);
       return;
     }
@@ -45,6 +56,10 @@ export class LargeFileEditorProvider implements vscode.CustomReadonlyEditorProvi
     const webviewRoot = vscode.Uri.joinPath(this.context.extensionUri, "dist", "webview");
     panel.webview.options = { enableScripts: true, localResourceRoots: [webviewRoot] };
     panel.webview.html = viewHtml(panel.webview, webviewRoot);
+    if (size > maxBytes) {
+      this.resolveRecords(uri, panel);
+      return;
+    }
 
     const disposables: vscode.Disposable[] = [];
     let ready = false;
@@ -140,6 +155,112 @@ export class LargeFileEditorProvider implements vscode.CustomReadonlyEditorProvi
       for (const d of disposables) d.dispose();
     });
   }
+
+  /** Records mode: index the file, then serve pages of records, searches and single records to the view. */
+  private resolveRecords(uri: vscode.Uri, panel: vscode.WebviewPanel): void {
+    const disposables: vscode.Disposable[] = [];
+    let ready = false;
+    let disposed = false;
+    let file: RecordFile | undefined;
+    let searchId = 0;
+    const post = (msg: HostToView) => {
+      if (!disposed) void panel.webview.postMessage(msg);
+    };
+    const opening = RecordFile.open(
+      uri.fsPath,
+      (bytes, total) => post({ type: "recordsProgress", bytes, total }),
+      () => disposed,
+    );
+    const hooks: RecordsHooks = {};
+    const sendInit = (f: RecordFile) =>
+      post({
+        type: "init",
+        version: PROTOCOL_VERSION,
+        fileName: vscode.workspace.asRelativePath(uri, false),
+        format: "xml",
+        text: "",
+        theme: themeVars(),
+        settings: { ...readSettings(), readOnly: true },
+        records: f.info,
+      });
+    const entry: ViewEntry & { records: RecordsHooks } = {
+      uri,
+      panel,
+      records: hooks,
+      get ready() {
+        return ready;
+      },
+      post,
+      showSource: async () => {
+        await vscode.commands.executeCommand("vscode.open", uri, { viewColumn: vscode.ViewColumn.Beside, preview: false });
+      },
+      handle: async (msg) => {
+        switch (msg.type) {
+          case "ready":
+            ready = true;
+            try {
+              file = await opening;
+              hooks.file = file;
+              sendInit(file);
+            } catch (e) {
+              if (!disposed) this.log.appendLine(`[${uri.fsPath}] indexing failed: ${String(e)}`);
+            }
+            break;
+          case "requestRecordPage":
+            if (file) post({ type: "recordPage", id: msg.id, texts: await file.read(msg.group, msg.start, msg.count) });
+            break;
+          case "requestRecordSearch": {
+            if (!file) break;
+            const id = ++searchId;
+            let lastPost = 0;
+            await file.search(msg.group, msg.query, msg.caseSensitive, 100_000, (matches, total, done) => {
+              const now = Date.now();
+              if (!done && now - lastPost < 250) return;
+              lastPost = now;
+              post({ type: "recordSearch", id: msg.id, matches: [...matches], total, done });
+            }, () => disposed || id !== searchId);
+            break;
+          }
+          case "openRecord": {
+            if (!file) break;
+            const [text] = await file.read(msg.group, msg.index, 1);
+            if (text === undefined) break;
+            const doc = await vscode.workspace.openTextDocument({ content: text, language: "xml" });
+            await vscode.window.showTextDocument(doc, { viewColumn: vscode.ViewColumn.Beside, preview: true });
+            break;
+          }
+          case "copy":
+            await vscode.env.clipboard.writeText(msg.text);
+            break;
+          case "save":
+            await saveExport(uri, msg.fileName, msg.text);
+            break;
+          case "error":
+            this.log.appendLine(`[${uri.fsPath}] ${msg.message}`);
+            break;
+          case "edit":
+            post({ type: "editResult", ok: false, message: "Large files are read-only." });
+            break;
+        }
+      },
+    };
+    this.views.add(entry);
+    disposables.push(
+      panel.webview.onDidReceiveMessage((m: unknown) => {
+        if (isViewToHost(m)) void entry.handle(m);
+      }),
+    );
+    panel.onDidDispose(() => {
+      disposed = true;
+      this.views.delete(entry);
+      for (const d of disposables) d.dispose();
+    });
+  }
+}
+
+export interface RecordsHooks {
+  /** The indexed file (tests). */
+  file?: RecordFile;
 }
 
 /** Like TextDocument.positionAt: CR, LF and CRLF end lines; columns in UTF-16 units. */

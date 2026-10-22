@@ -26,6 +26,8 @@ interface Api {
   simulateViewMessage(uri: vscode.Uri, msg: { type: string; [k: string]: unknown }): Promise<void>;
   baseline(uri: vscode.Uri): { text: string | null; label: string; explicit: boolean } | undefined;
   suggestionsAt(uri: vscode.Uri, offset: number): Promise<string[]>;
+  records(uri: vscode.Uri): { count: number; rootName: string; error?: string } | undefined;
+  recordPage(uri: vscode.Uri, group: string, start: number, count: number): Promise<string[]>;
 }
 
 function fixture(): vscode.Uri {
@@ -157,19 +159,33 @@ suite("XML Grid View", () => {
     }
   });
 
-  test("files over maxFileSizeMB show a notice instead of the view", async function () {
+  test("XML files over maxFileSizeMB open in records mode; JSON files get a notice", async function () {
     this.timeout(60_000);
     const cfg = vscode.workspace.getConfiguration("xmlGridView");
     await cfg.update("maxFileSizeMB", 1, vscode.ConfigurationTarget.Global);
-    const uri = bigFile("xgv-too-large-test.xml", 2);
+    const uri = bigFile("xgv-records-test.xml", 2);
+    const json = vscode.Uri.file(path.join(os.tmpdir(), "xgv-too-large-test.json"));
+    fs.writeFileSync(json.fsPath, "[" + Array.from({ length: 30_000 }, (_, i) => `{"n":${i},"pad":"${"x".repeat(60)}"}`).join(",") + "]");
     try {
       await vscode.commands.executeCommand("vscode.openWith", uri, LARGE_VIEW_TYPE);
       await waitFor(() => customTab(uri, LARGE_VIEW_TYPE), "large-file editor tab");
+      const info = await waitFor(() => api.records(uri), "the records index", 30_000);
+      assert.ok(info.count > 15_000, `indexed ${info.count} records`);
+      assert.strictEqual(info.rootName, "events");
+      assert.strictEqual(info.error, undefined);
+      const page = await api.recordPage(uri, "event", info.count - 2, 5);
+      assert.strictEqual(page.length, 2, "the last page is cut at the end");
+      assert.match(page[1], /^<event><ts>.*<\/event>$/);
+
+      await vscode.commands.executeCommand("vscode.openWith", json, LARGE_VIEW_TYPE);
+      await waitFor(() => customTab(json, LARGE_VIEW_TYPE), "large-file editor tab");
       await new Promise((r) => setTimeout(r, 1000));
-      assert.strictEqual(api.viewCount(uri), 0, "no view is loaded");
+      assert.strictEqual(api.viewCount(json), 0, "no view is loaded");
     } finally {
+      await vscode.commands.executeCommand("workbench.action.closeAllEditors");
       await cfg.update("maxFileSizeMB", undefined, vscode.ConfigurationTarget.Global);
       fs.rmSync(uri.fsPath, { force: true });
+      fs.rmSync(json.fsPath, { force: true });
     }
   });
 

@@ -12,6 +12,8 @@ export interface XmlGridViewApi {
   simulateViewMessage(uri: vscode.Uri, msg: ViewToHost): Promise<void>;
   baseline(uri: vscode.Uri): { text: string | null; label: string; explicit: boolean } | undefined;
   suggestionsAt(uri: vscode.Uri, offset: number): Promise<string[]>;
+  records(uri: vscode.Uri): { count: number; rootName: string; error?: string } | undefined;
+  recordPage(uri: vscode.Uri, group: string, start: number, count: number): Promise<string[]>;
 }
 
 export function activate(context: vscode.ExtensionContext): XmlGridViewApi {
@@ -66,6 +68,13 @@ export function activate(context: vscode.ExtensionContext): XmlGridViewApi {
     },
     baseline: (uri) => viewsFor(uri)[0]?.baseline,
     suggestionsAt: async (uri, offset) => suggestionsAt(await vscode.workspace.openTextDocument(uri), offset),
+    records: (uri) => {
+      const f = large.recordsFor(uri);
+      if (!f) return undefined;
+      const info = f.info;
+      return { count: info.groups.reduce((n, g) => n + g.count, 0), rootName: info.rootName, error: info.error };
+    },
+    recordPage: async (uri, group, start, count) => (await large.recordsFor(uri)?.read(group, start, count)) ?? [],
   };
 }
 

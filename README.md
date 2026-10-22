@@ -273,9 +273,18 @@ limitations.
   In VS Code, files over 50 MB need an explicit **Load anyway** (the
   `xmlGridView.largeFileThresholdMB` setting). VS Code doesn't give
   extensions files over 50 MB as text documents, so *Open With XML Grid View*
-  opens those in a read-only view that reads the file from disk. Files over
-  150 MB (`xmlGridView.maxFileSizeMB`) show a notice instead, because the
-  view's memory can't hold them; use IntelliJ for those. IntelliJ asks only when the
+  opens those in a read-only view that reads the file from disk.
+  - **Records mode (VS Code, XML over 150 MB,** `xmlGridView.maxFileSizeMB`**):**
+    the file is too big to load, so it opens as its root's children (the
+    records) in a read-only grid that reads only the rows on screen from
+    disk. Indexing streams through the file once (about 200 MB/s) and keeps
+    only where each record starts and ends, so multi-GB files open. Columns
+    come from the records seen so far; *Find in all records* searches the
+    whole file; double-click a row to open that record as text; a chip per
+    tag when the root holds different kinds of records. There is no tree,
+    sorting, filtering or editing in this mode, and JSON files over the limit
+    still show a notice.
+  - IntelliJ asks only when the
   file may not fit in the IDE's free memory; a 500 MB file loads in about
   9 seconds and uses about 2.5 GB. Slow loads show a progress banner in
   IntelliJ.

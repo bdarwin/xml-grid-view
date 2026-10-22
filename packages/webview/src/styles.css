@@ -1580,3 +1580,43 @@ button.icon {
 .suggest-item.current {
   font-weight: 600;
 }
+
+/* Records mode (files too large to load): one group of the root's children, read a page at a time */
+.records {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+.records-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--xgv-border);
+  flex-wrap: wrap;
+}
+.records-title {
+  white-space: nowrap;
+}
+.records-find {
+  margin-left: auto;
+  width: 220px;
+  background: var(--xgv-input-bg);
+  color: var(--xgv-input-fg);
+  border: 1px solid var(--xgv-input-border);
+  padding: 2px 6px;
+}
+.records-hits {
+  color: var(--xgv-muted-fg);
+  white-space: nowrap;
+}
+.records-grid {
+  flex: 1;
+  min-height: 0;
+}
+.grid-row.record-hit .cell {
+  background-image: linear-gradient(var(--xgv-match-bg), var(--xgv-match-bg));
+}
+.grid-row.record-hit.current .cell {
+  background-image: linear-gradient(var(--xgv-match-current-bg), var(--xgv-match-current-bg));
+}

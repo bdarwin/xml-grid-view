@@ -1,7 +1,12 @@
 import * as vscode from "vscode";
 
 /** Completion kinds that are values (a schema's enumeration, JSON Schema enums), not snippets, tags or properties. */
-const VALUE_KINDS = new Set([vscode.CompletionItemKind.Value, vscode.CompletionItemKind.EnumMember, vscode.CompletionItemKind.Enum, vscode.CompletionItemKind.Constant]);
+const VALUE_KINDS = new Set([
+  vscode.CompletionItemKind.Value,
+  vscode.CompletionItemKind.EnumMember,
+  vscode.CompletionItemKind.Enum,
+  vscode.CompletionItemKind.Constant,
+]);
 /** JSON skeletons the JSON language service offers for any value. */
 const SKELETONS = new Set(["{}", "[]", '""']);
 
@@ -14,7 +19,11 @@ export async function suggestionsAt(document: vscode.TextDocument, offset: numbe
   if (docVersion !== undefined && docVersion !== document.version) return [];
   let list: vscode.CompletionList | undefined;
   try {
-    list = await vscode.commands.executeCommand<vscode.CompletionList>("vscode.executeCompletionItemProvider", document.uri, document.positionAt(offset));
+    list = await vscode.commands.executeCommand<vscode.CompletionList>(
+      "vscode.executeCompletionItemProvider",
+      document.uri,
+      document.positionAt(offset),
+    );
   } catch {
     return [];
   }

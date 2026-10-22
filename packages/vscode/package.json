@@ -183,7 +183,7 @@
           "type": "number",
           "default": 150,
           "minimum": 1,
-          "description": "Files over 50 MB open read-only, and files larger than this (in MB) are not opened: the view holds the whole document in memory and would crash."
+          "description": "Files over 50 MB open read-only. XML files larger than this (in MB) open in records mode (the root's children, read from disk a page at a time); JSON files larger than this are not opened."
         },
         "xmlGridView.readOnly": {
           "type": "boolean",

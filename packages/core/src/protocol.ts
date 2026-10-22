@@ -76,6 +76,42 @@ export interface InitMessage {
   docVersion?: number;
   theme: ThemeVars;
   settings: Partial<ViewSettings>;
+  /**
+   * Records mode, for files too large to load: `text` is empty and the view shows the root's
+   * children (the records) a page at a time, read from disk by the host.
+   */
+  records?: RecordsInfo;
+}
+/** A large file's records: the root's children, found by streaming through the file. */
+export interface RecordsInfo {
+  rootName: string;
+  /** The root's start tag as written (for namespaces and the root's attributes). */
+  rootStartTag: string;
+  /** Records by tag, most first. */
+  groups: { name: string; count: number }[];
+  fileSize: number;
+  /** Set when the file is not well-formed: the records before the problem are shown. */
+  error?: string;
+}
+/** Progress of indexing a large file before `init`. */
+export interface RecordsProgressMessage {
+  type: "recordsProgress";
+  bytes: number;
+  total: number;
+}
+/** Reply to `recordPage`: the records' XML, in order. */
+export interface RecordPageMessage {
+  type: "recordPage";
+  id: number;
+  texts: string[];
+}
+/** Reply to `recordSearch`: matching record indices (within the group), the first `limit` of them, and how many matched in all. */
+export interface RecordSearchMessage {
+  type: "recordSearch";
+  id: number;
+  matches: number[];
+  total: number;
+  done: boolean;
 }
 export interface UpdateMessage {
   type: "update";
@@ -136,7 +172,7 @@ export interface BaselineMessage {
   /** True when the user chose it (Compare with…), so "no differences" is worth saying. */
   explicit?: boolean;
 }
-export type HostToView = InitMessage | UpdateMessage | ThemeMessage | FocusFindMessage | EditResultMessage | ClipboardMessage | DiagnosticsMessage | BaselineMessage | SuggestionsMessage;
+export type HostToView = InitMessage | UpdateMessage | ThemeMessage | FocusFindMessage | EditResultMessage | ClipboardMessage | DiagnosticsMessage | BaselineMessage | SuggestionsMessage | RecordsProgressMessage | RecordPageMessage | RecordSearchMessage;
 
 export interface ReadyMessage {
   type: "ready";
@@ -177,16 +213,38 @@ export interface SuggestMessage {
   offset: number;
   docVersion?: number;
 }
+/** Records mode: ask for `count` records of a group (tag), starting at `start`; answered by `recordPage`. */
+export interface RequestRecordPageMessage {
+  type: "requestRecordPage";
+  id: number;
+  group: string;
+  start: number;
+  count: number;
+}
+/** Records mode: find records of a group containing `query`; answered by `recordSearch` (progressively). */
+export interface RequestRecordSearchMessage {
+  type: "requestRecordSearch";
+  id: number;
+  group: string;
+  query: string;
+  caseSensitive: boolean;
+}
+/** Records mode: open one record as text in an editor. */
+export interface OpenRecordMessage {
+  type: "openRecord";
+  group: string;
+  index: number;
+}
 /** Offer to save `text` as a new file (export); the host asks where. */
 export interface SaveMessage {
   type: "save";
   fileName: string;
   text: string;
 }
-export type ViewToHost = ReadyMessage | NavigateMessage | CopyMessage | ErrorMessage | EditMessage | ReadClipboardMessage | SaveMessage | CompareWithMessage | SuggestMessage;
+export type ViewToHost = ReadyMessage | NavigateMessage | CopyMessage | ErrorMessage | EditMessage | ReadClipboardMessage | SaveMessage | CompareWithMessage | SuggestMessage | RequestRecordPageMessage | RequestRecordSearchMessage | OpenRecordMessage;
 
-const HOST_TYPES = new Set(["init", "update", "theme", "focusFind", "editResult", "clipboard", "diagnostics", "baseline", "suggestions"]);
-const VIEW_TYPES = new Set(["ready", "navigate", "copy", "error", "edit", "readClipboard", "save", "compareWith", "suggest"]);
+const HOST_TYPES = new Set(["init", "update", "theme", "focusFind", "editResult", "clipboard", "diagnostics", "baseline", "suggestions", "recordsProgress", "recordPage", "recordSearch"]);
+const VIEW_TYPES = new Set(["ready", "navigate", "copy", "error", "edit", "readClipboard", "save", "compareWith", "suggest", "requestRecordPage", "requestRecordSearch", "openRecord"]);
 
 export function isHostToView(m: unknown): m is HostToView {
   return typeof m === "object" && m !== null && HOST_TYPES.has((m as { type?: string }).type ?? "");

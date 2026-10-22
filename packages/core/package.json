@@ -7,7 +7,8 @@
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./protocol": "./src/protocol.ts"
+    "./protocol": "./src/protocol.ts",
+    "./records": "./src/records.ts"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",

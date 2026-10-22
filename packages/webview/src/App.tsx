@@ -23,6 +23,7 @@ import {
   type FlatValues,
   type GridTable,
   type HostToView,
+  type RecordsInfo,
   type Matcher,
   type ParseError,
   type SearchQuery,
@@ -41,6 +42,7 @@ import { Grid, selectionRange, type CellPos, type GridSelection } from "./compon
 import { PromptDialog, type PromptDialogProps, type PromptField } from "./components/PromptDialog";
 import { Results, type ResultItem } from "./components/Results";
 import { Split } from "./components/Split";
+import { RecordsView } from "./components/RecordsView";
 import { Summary } from "./components/Summary";
 import { Tree } from "./components/Tree";
 import { ValueInspector, type InspectorTarget } from "./components/ValueInspector";
@@ -156,6 +158,9 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
   const [canCompare, setCanCompare] = useState(false);
   const [baselineRev, setBaselineRev] = useState(0);
   const [changeIndex, setChangeIndex] = useState(-1);
+  /** Records mode (files too large to load): the records' index from the host, and its progress before that. */
+  const [records, setRecords] = useState<RecordsInfo | null>(null);
+  const [recordsProgress, setRecordsProgress] = useState<{ bytes: number; total: number } | null>(null);
   const docVersionRef = useRef<number | undefined>(undefined);
   /** Host document version of the text the current model was parsed from. */
   const modelDocVersion = useRef<number | undefined>(undefined);
@@ -322,6 +327,10 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
           settingsRef.current = s;
           setFileName(msg.fileName);
           applyTheme(msg.theme);
+          if (msg.records) {
+            setRecords(msg.records);
+            break;
+          }
           textRef.current = msg.text;
           docVersionRef.current = msg.docVersion;
           const saved = host.getState()?.snapshot as Snapshot | undefined;
@@ -341,6 +350,9 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
           break;
         case "diagnostics":
           setDiagnostics(msg.items.filter((d) => d.severity !== "info"));
+          break;
+        case "recordsProgress":
+          setRecordsProgress({ bytes: msg.bytes, total: msg.total });
           break;
         case "baseline": {
           const label = msg.label;
@@ -1539,6 +1551,8 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
     );
   }
 
+  if (records) return <RecordsView host={host} info={records} fileName={fileName} copyWithHeader={!!settings.copyWithHeader} />;
+
   if (phase === "large") {
     return (
       <div class="notice" role="alert">
@@ -1568,7 +1582,13 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
             </button>
           </p>
         ) : (
-          <p class="muted">{phase === "waiting" ? "Waiting for document…" : "Parsing…"}</p>
+          <p class="muted">
+            {recordsProgress
+              ? `Indexing records… ${Math.floor((100 * recordsProgress.bytes) / Math.max(1, recordsProgress.total))}% of ${formatSize(recordsProgress.total)}`
+              : phase === "waiting"
+                ? "Waiting for document…"
+                : "Parsing…"}
+          </p>
         )}
       </div>
     );

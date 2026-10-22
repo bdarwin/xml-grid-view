@@ -22,6 +22,9 @@
   are compared rather than lines, so reformatting does not count.
 - **Compare with a branch, tag, commit or another file** from "Compare…"
   above the view.
+- **Records mode for huge XML files (VS Code):** files over 150 MB, even
+  several GB, open as a read-only grid of the root's children, read from disk
+  a page at a time, with find across the whole file.
 - **Selection stats:** count, sum, average, min and max of the selected
   grid cells.
 - **Allowed values while editing:** values limited by an XSD, DTD or JSON

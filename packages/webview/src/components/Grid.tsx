@@ -10,6 +10,17 @@ import { useState } from "preact/hooks";
 import { useViewport } from "./useViewport";
 
 export const ROW_HEIGHT = 22;
+/**
+ * Browsers cap element heights (Chromium at about 33 million px, i.e. 1.5 million rows); taller grids
+ * get a body of this height and map its scroll range onto the rows.
+ */
+const MAX_BODY = 15_000_000;
+
+/** How much further the rows move than the scrollbar, for a grid of `rows` rows in a viewport `viewH` high (1 normally). */
+function scrollScale(rows: number, viewH: number): number {
+  const full = rows * ROW_HEIGHT;
+  return full > MAX_BODY && MAX_BODY > viewH ? (full - viewH) / (MAX_BODY - viewH) : 1;
+}
 
 export interface CellPos {
   /** Row index in the view (after sort/filter). */
@@ -72,6 +83,12 @@ export interface GridProps {
   onMoveRow?(v: number, up: boolean, c: number): void;
   /** Ctrl/Cmd+V: paste the clipboard at the focused cell. */
   onPaste?(focus: CellPos): void;
+  /** No filter buttons in the header (records mode). */
+  noFilters?: boolean;
+  /** Told the view rows being rendered, e.g. to load them. */
+  onVisibleRange?(first: number, last: number): void;
+  /** Extra classes for a view row (e.g. search hits in records mode). */
+  rowClass?(v: number): string;
 }
 
 export function Grid(p: GridProps) {
@@ -115,8 +132,10 @@ export function Grid(p: GridProps) {
     const rowNum = (el.querySelector(".grid-header .rownum") as HTMLElement | null)?.offsetWidth ?? 0;
     const top = v * ROW_HEIGHT;
     const viewH = el.clientHeight - header;
-    if (top < el.scrollTop) el.scrollTop = top;
-    else if (top + ROW_HEIGHT > el.scrollTop + viewH) el.scrollTop = top + ROW_HEIGHT - viewH;
+    const scale = scrollScale(view.length, el.clientHeight);
+    const vTop = el.scrollTop * scale;
+    if (top < vTop) el.scrollTop = top / scale;
+    else if (top + ROW_HEIGHT > vTop + viewH) el.scrollTop = (top + ROW_HEIGHT - viewH) / scale;
     let left = 0;
     for (let i = 0; i < c; i++) left += widths[i] ?? 100;
     const w = widths[c] ?? 100;
@@ -132,8 +151,11 @@ export function Grid(p: GridProps) {
   }, []);
 
   const page = Math.max(1, Math.floor(vp.height / ROW_HEIGHT) - 2);
-  const first = Math.max(0, Math.floor(vp.top / ROW_HEIGHT) - 10);
-  const last = Math.min(view.length, Math.ceil((vp.top + vp.height) / ROW_HEIGHT) + 10);
+  // The rows' offset at the viewport top (equal to scrollTop unless the grid is too tall to scroll directly).
+  const vTop = vp.top * scrollScale(view.length, vp.height);
+  const first = Math.max(0, Math.floor(vTop / ROW_HEIGHT) - 10);
+  const last = Math.min(view.length, Math.ceil((vTop + vp.height) / ROW_HEIGHT) + 10);
+  useEffect(() => p.onVisibleRange?.(first, last), [first, last]);
 
   const select = (focus: CellPos, extend: boolean) => {
     const f = { v: clamp(focus.v, 0, view.length - 1), c: clamp(focus.c, 0, ncols - 1) };
@@ -272,7 +294,7 @@ export function Grid(p: GridProps) {
           >
             <span class="hlabel">{col.label}</span>
             {sorted !== 0 && <span class={"sort " + (sorted === 1 ? "asc" : "desc")} />}
-            <button
+            {!p.noFilters && <button
               class={"filter-btn" + (filtered ? " active" : "")}
               title={filtered ? "Filter (active)" : "Filter"}
               aria-label={`Filter ${col.label}`}
@@ -280,7 +302,7 @@ export function Grid(p: GridProps) {
                 e.stopPropagation();
                 p.onOpenFilter(c, (e.currentTarget as HTMLElement).getBoundingClientRect());
               }}
-            />
+            />}
             <span class="resize" onMouseDown={(e) => startResize(e, c)} onClick={(e) => e.stopPropagation()} onDblClick={(e) => {
               e.stopPropagation();
               p.onAutoFit(c);
@@ -392,11 +414,12 @@ export function Grid(p: GridProps) {
           (rowSelected ? " row-sel" : "") +
           (v % 2 ? " odd" : "") +
           (rowChange?.kind === "added" ? " row-added" : "") +
+          (p.rowClass?.(v) ?? "") +
           (goneAbove ? " removed-above" : "") +
           (goneBelow ? " removed-below" : "")
         }
         role="row"
-        style={{ top: v * ROW_HEIGHT }}
+        style={{ top: v * ROW_HEIGHT - vTop + vp.top }}
       >
         <div class={"rownum" + problemClass(p.problemRows?.get(r)) + changeClass(rowChange)} title={rowTitle} style={{ width: rowNumWidth }} onMouseDown={(e) => rowHeaderDown(e, v)} onDblClick={() => p.onActivate({ v, c: -1 })} onContextMenu={(e) => {
           if (!p.onContextMenu) return;
@@ -413,7 +436,7 @@ export function Grid(p: GridProps) {
   return (
     <div class="grid" ref={ref} tabIndex={0} role="grid" aria-rowcount={view.length} aria-colcount={ncols} onKeyDown={onKeyDown}>
       {header}
-      <div class="grid-body" style={{ height: view.length * ROW_HEIGHT }}>
+      <div class="grid-body" style={{ height: Math.min(view.length * ROW_HEIGHT, MAX_BODY) }}>
         {rows}
       </div>
       {view.length === 0 && <div class="grid-empty">{t.rowIds.length ? "No rows match the filters." : "No rows."}</div>}

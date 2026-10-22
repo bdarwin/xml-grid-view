@@ -205,6 +205,10 @@ limitations.
   the IDE's own validation, as of the last time the Text tab analysed the
   file. A counter above the view steps through them (F8 in VS Code, F2 in
   IntelliJ, Shift for the previous one).
+- **Selection stats:** select more than one grid cell to see the count of
+  non-empty cells and the sum, average, min and max of the numbers among
+  them (in VS Code in the status line under the grid, in IntelliJ next to
+  the row count).
 - **Allowed values while editing:** when the schema limits a value (an XSD
   enumeration, a DTD's enumerated attribute, a JSON Schema `enum`), editing
   the cell opens a list of the allowed values; type to narrow it, Up/Down and

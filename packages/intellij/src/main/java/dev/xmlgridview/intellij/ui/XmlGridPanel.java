@@ -333,6 +333,10 @@ public final class XmlGridPanel extends JPanel implements Disposable {
     export.setListener((l, d) -> showExportMenu(l), null);
     headerRight.add(export);
     headerRight.add(rowsLabel);
+    statsLabel.setForeground(UIUtil.getContextHelpForeground());
+    statsLabel.setToolTipText("Count of non-empty cells; sum, average, min and max of the numbers among them");
+    headerRight.add(statsLabel);
+    grid.onSelectionChanged(this::updateStats);
     gridHeader.add(headerRight, BorderLayout.EAST);
 
     JPanel gridTop = new JPanel();
@@ -737,6 +741,20 @@ public final class XmlGridPanel extends JPanel implements Disposable {
     catch (java.io.IOException ex) {
       com.intellij.openapi.ui.Messages.showErrorDialog(this, ex.getMessage(), "Export Failed");
     }
+  }
+
+  private final javax.swing.JLabel statsLabel = new javax.swing.JLabel();
+
+  /** Count, sum, average, min and max of the selected cells, when more than one is selected. */
+  private void updateStats() {
+    GridTable t = grid.gridTable();
+    List<int[]> cells = t == null ? List.of() : grid.selectedCells();
+    statsLabel.setText(cells.size() > 1 ? SelectionStats.of(t, cells).text() : "");
+  }
+
+  @TestOnly
+  String statsTextForTest() {
+    return statsLabel.getText();
   }
 
   private void updateRowsLabel() {

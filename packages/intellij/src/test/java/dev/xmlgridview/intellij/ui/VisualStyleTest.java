@@ -266,6 +266,16 @@ public class VisualStyleTest extends BasePlatformTestCase {
     paint(f, "flat-changes");
   }
 
+  public void testSelectionStatsInTheHeader() throws Exception {
+    XmlGridPanel p = grid();
+    JBTable t = widestTable(p);
+    int author = t.convertColumnIndexToView(p.gridForTest().gridTable().columnIndex("author"));
+    t.getSelectionModel().setSelectionInterval(0, 2);
+    t.getColumnModel().getSelectionModel().setSelectionInterval(author, author);
+    assertNotBlank(paint(p, "grid-stats"));
+    assertEquals("3 cells · Count 3", p.statsTextForTest());
+  }
+
   public void testFlatSectionBandsAndNameColours() throws Exception {
     FlatPanel p = flat();
     JBTable t = table(p, 2);

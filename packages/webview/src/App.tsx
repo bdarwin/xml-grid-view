@@ -45,7 +45,7 @@ import { Summary } from "./components/Summary";
 import { Tree } from "./components/Tree";
 import { ValueInspector, type InspectorTarget } from "./components/ValueInspector";
 import { changeMarks, gridChanges } from "./changes";
-import { autoFitWidth, computeView, isFilterActive, parseTsv, toCsv, toJsonRows, toTsv, type CellRange, type ColumnFilter, type Filters, type SortState } from "./gridView";
+import { autoFitWidth, computeView, selectionStats, statsText, isFilterActive, parseTsv, toCsv, toJsonRows, toTsv, type CellRange, type ColumnFilter, type Filters, type SortState } from "./gridView";
 import type { HostBridge } from "./host";
 import { StaleError, type WorkerClient } from "./workerClient";
 
@@ -1909,11 +1909,11 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
                     : `${view.length.toLocaleString()} of ${table.rowIds.length.toLocaleString()} rows`}
                 </span>
                 {gridSel && (
-                  <span>
+                  <span class="selection-stats" title="Count of non-empty cells; sum, average, min and max of the numbers among them">
                     {(() => {
                       const r = selectionRange(gridSel);
                       const n = (r.r1 - r.r0 + 1) * (r.c1 - r.c0 + 1);
-                      return n > 1 ? `${n.toLocaleString()} cells selected` : "";
+                      return n > 1 ? statsText(selectionStats(table, view, r)) : "";
                     })()}
                   </span>
                 )}

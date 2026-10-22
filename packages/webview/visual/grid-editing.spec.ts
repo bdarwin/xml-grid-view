@@ -231,3 +231,24 @@ test("value suggestions while editing a cell", async ({ page }) => {
   await expect(page.locator(".suggest-list")).toHaveCount(0);
   await page.keyboard.press("Escape");
 });
+
+test("count, sum, average, min and max of the selected cells", async ({ page }) => {
+  await open(page, XML.replace("<price>2</price>", "<price>0.2</price>").replace("<price>1</price>", "<price>0.1</price>"));
+  const stats = page.locator(".selection-stats");
+  // One cell: nothing.
+  await cell(page, 0, 2).click();
+  await expect(stats).toHaveText("");
+  // The price column (0.1, 0.2, 3): floating-point noise is rounded away.
+  await cell(page, 2, 2).click({ modifiers: ["Shift"] });
+  await expect(stats).toHaveText("3 cells · Count 3 · Sum 3.3 · Avg 1.1 · Min 0.1 · Max 3");
+  await page.mouse.move(0, 0);
+  await expect(page).toHaveScreenshot("light-selection-stats.png");
+  // Titles and prices: only the numbers are summed.
+  await cell(page, 0, 1).click();
+  await cell(page, 1, 2).click({ modifiers: ["Shift"] });
+  await expect(stats).toHaveText("4 cells · Count 4 · Sum 0.3 · Avg 0.15 · Min 0.1 · Max 0.2");
+  // Text only: just the count.
+  await cell(page, 0, 1).click();
+  await cell(page, 2, 1).click({ modifiers: ["Shift"] });
+  await expect(stats).toHaveText("3 cells · Count 3");
+});

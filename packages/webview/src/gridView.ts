@@ -260,3 +260,55 @@ export function toJsonRows(t: GridTable, view: Int32Array): string {
   }
   return JSON.stringify(out, null, 2) + "\n";
 }
+
+/** Count, sum, average, min and max of the selected cells, like a spreadsheet's status bar. */
+export interface SelectionStats {
+  /** Cells in the selection. */
+  cells: number;
+  /** Non-empty cells. */
+  count: number;
+  /** Cells holding a plain number (e.g. `12`, `-3.5`, `1e3`; no thousands separators). */
+  numbers: number;
+  sum: number;
+  min: number;
+  max: number;
+}
+
+const NUMBER = /^\s*[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?\s*$/;
+
+/** Stats of the cells in `range` (view rows and columns); drill-down cells count but are never numbers. */
+export function selectionStats(t: GridTable, view: Int32Array, range: CellRange): SelectionStats {
+  const ncols = t.columns.length;
+  const s: SelectionStats = { cells: 0, count: 0, numbers: 0, sum: 0, min: Infinity, max: -Infinity };
+  for (let v = range.r0; v <= range.r1 && v < view.length; v++) {
+    const r = view[v];
+    for (let c = range.c0; c <= range.c1 && c < ncols; c++) {
+      s.cells++;
+      const raw = t.cells[r * ncols + c];
+      if (raw === null || raw === "") continue;
+      s.count++;
+      if (typeof raw !== "string" || !NUMBER.test(raw)) continue;
+      const x = Number(raw);
+      if (!Number.isFinite(x)) continue;
+      s.numbers++;
+      s.sum += x;
+      if (x < s.min) s.min = x;
+      if (x > s.max) s.max = x;
+    }
+  }
+  return s;
+}
+
+/** A stat for display: grouped digits, at most 6 decimals (floating-point noise like 0.30000000000000004 rounded away). */
+export function formatStat(x: number): string {
+  return x.toLocaleString(undefined, { maximumFractionDigits: 6 });
+}
+
+/** The status bar text for a selection of more than one cell, e.g. "3 cells · Count 3 · Sum 6 · Avg 2 · Min 1 · Max 3". */
+export function statsText(s: SelectionStats): string {
+  const parts = [`${s.cells.toLocaleString()} cells`, `Count ${s.count.toLocaleString()}`];
+  if (s.numbers > 0) {
+    parts.push(`Sum ${formatStat(s.sum)}`, `Avg ${formatStat(s.sum / s.numbers)}`, `Min ${formatStat(s.min)}`, `Max ${formatStat(s.max)}`);
+  }
+  return parts.join(" · ");
+}

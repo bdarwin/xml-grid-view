@@ -475,6 +475,16 @@ final class GridView extends JPanel implements UiDataProvider {
     return rows;
   }
 
+  /** Calls {@code r} when the selected cells change. */
+  void onSelectionChanged(@NotNull Runnable r) {
+    table.getSelectionModel().addListSelectionListener(e -> {
+      if (!e.getValueIsAdjusting()) r.run();
+    });
+    table.getColumnModel().getSelectionModel().addListSelectionListener(e -> {
+      if (!e.getValueIsAdjusting()) r.run();
+    });
+  }
+
   /** Selected cells as {model row, model column} pairs, in view order. */
   List<int[]> selectedCells() {
     List<int[]> out = new ArrayList<>();

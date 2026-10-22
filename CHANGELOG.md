@@ -22,6 +22,8 @@
   are compared rather than lines, so reformatting does not count.
 - **Compare with a branch, tag, commit or another file** from "Compare…"
   above the view.
+- **Selection stats:** count, sum, average, min and max of the selected
+  grid cells.
 - **Allowed values while editing:** values limited by an XSD, DTD or JSON
   Schema are offered as a list when you edit the cell.
 

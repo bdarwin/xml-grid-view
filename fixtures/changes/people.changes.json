@@ -1,0 +1,10 @@
+{
+  "added": ["0/0/0/2/1", "0/2"],
+  "modified": [
+    { "path": "0/0/0/1", "text": "36" },
+    { "path": "0/0/1/1", "text": "41", "type": "string" },
+    { "path": "0/0/2/0", "text": "Grace" },
+    { "path": "0/0/2/1", "text": "85" }
+  ],
+  "removed": [{ "parent": "0/0/2", "before": 2, "name": "active", "preview": "false" }]
+}

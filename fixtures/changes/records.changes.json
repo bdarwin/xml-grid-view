@@ -1,0 +1,19 @@
+{
+  "added": ["0/3"],
+  "modified": [
+    {
+      "path": "0",
+      "attrs": { "version": "1" }
+    },
+    {
+      "path": "0/1",
+      "attrs": { "format": null }
+    },
+    { "path": "0/1/1", "text": "12.50" },
+    {
+      "path": "0/2",
+      "removedAttrs": { "lang": "fr" }
+    }
+  ],
+  "removed": [{ "parent": "0", "before": 2, "name": "book", "preview": "b3 · Ulysses · 15.00" }]
+}

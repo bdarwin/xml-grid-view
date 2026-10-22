@@ -16,6 +16,10 @@
   through them.
 - **Comments, processing instructions and the DOCTYPE** are shown in the
   tree and the Flat view.
+- **Changes since the last commit:** added, changed and removed elements
+  and values are highlighted in the tree, grid and Flat view, compared with
+  the last git commit (or with the text when the file was opened). Elements
+  are compared rather than lines, so reformatting does not count.
 
 ## 0.4.0
 

@@ -1,4 +1,5 @@
-import { displayName, miscByParent, type Diagnostic, type FlatValues, type Matcher, type SkeletonMisc, type TreeSkeleton } from "@xmlgridview/core";
+import { displayName, miscByParent, type Diagnostic, type ElementChange, type FlatValues, type Matcher, type SkeletonMisc, type TreeSkeleton } from "@xmlgridview/core";
+import { changeClass, modifiedTitle, removedTitle, type ChangeMark, type ChangeMarks } from "../changes";
 import { problemClass, problemTitle } from "../problems";
 import { miscIndex, miscRow } from "./Tree";
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
@@ -140,6 +141,9 @@ export interface FlatViewProps {
   onContextMenu?(pos: FlatPos, x: number, y: number): void;
   /** Problems by element; ones inside an attribute's span mark that attribute's row. */
   problems?: Map<number, Diagnostic[]>;
+  /** Changes against the baseline, and the details of changed elements by id. */
+  changes?: ChangeMarks | null;
+  changeDetails?: Map<number, ElementChange>;
 }
 
 let measureCtx: CanvasRenderingContext2D | null = null;
@@ -362,8 +366,27 @@ export function FlatView(p: FlatViewProps) {
           ? all.filter((d) => inAttr(d, attrSpans[attr]))
           : undefined
         : all.filter((d) => !attrSpans?.some((a) => inAttr(d, a)));
+    // Changes: a new or changed attribute marks its row; an element row shows new elements, changed text
+    // and removed attributes; removed children are listed on their parent's row.
+    let change: ChangeMark | undefined;
+    const el = misc ? undefined : p.changes?.byElement.get(id);
+    if (el?.kind === "added") change = el;
+    else if (el && p.changes) {
+      const d = p.changeDetails?.get(id);
+      if (isAttr) {
+        const an = v?.attrs[attr]?.name;
+        const was = an !== undefined ? d?.attrs?.[an] : undefined;
+        if (was !== undefined) change = was === null ? { kind: "added", title: `New since ${p.changes.label}` } : { kind: "modified", title: `Was: ${was}` };
+      } else if (d && (d.text !== undefined || d.removedAttrs)) change = { kind: "modified", title: modifiedTitle({ id, text: d.text, type: d.type, removedAttrs: d.removedAttrs }, p.changes.label) };
+    }
+    // Removed elements: a line above the element that now follows them, or below their parent's row when they were last.
+    const goneBefore = !misc && !isAttr ? p.changes?.removedBefore.get(id) : undefined;
+    const goneLast = !misc && !isAttr ? p.changes?.removed.get(id)?.filter((r) => r.before >= sk.childCount[id]) : undefined;
+    const gone = goneBefore?.length ? goneBefore : goneLast?.length ? goneLast : undefined;
     const cls =
       "flat-row" +
+      changeClass(change) +
+      (goneBefore?.length ? " removed-above" : goneLast?.length ? " removed-child" : "") +
       (isAttr ? " attr" : "") +
       (misc ? " misc" : "") +
       problemClass(rowProblems) +
@@ -411,7 +434,7 @@ export function FlatView(p: FlatViewProps) {
           class={"flat-name" + (nameSel ? " sel" : "") + (isFocus && curCol === 0 ? " focus" : "")}
           role="gridcell"
           aria-selected={nameSel}
-          title={problemTitle(rowProblems)}
+          title={[problemTitle(rowProblems), change?.title, gone && removedTitle(gone, p.changes!.label)].filter(Boolean).join("\n\n") || undefined}
           style={{ width: nameW, paddingLeft: `calc(${depth} * var(--xgv-tree-indent) + 4px)` }}
           onMouseDown={cellDown(0)}
           onMouseEnter={cellEnter(0)}

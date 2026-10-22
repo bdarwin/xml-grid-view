@@ -1,4 +1,5 @@
 import type {
+  DocumentChanges,
   DocSearchResult,
   EditResult,
   EditTarget,
@@ -22,7 +23,10 @@ export type WorkerRequest =
   | { id: number; type: "xpath"; gen: number; expr: string }
   | { id: number; type: "flatValues"; gen: number; ids: number[] }
   | { id: number; type: "edit"; gen: number; target: EditTarget; value: string }
-  | { id: number; type: "structure"; gen: number; op: StructureOp };
+  | { id: number; type: "structure"; gen: number; op: StructureOp }
+  /** Sets the earlier version that `changes` compares against (null: none). */
+  | { id: number; type: "baseline"; text: string | null; format?: "xml" | "json" }
+  | { id: number; type: "changes"; gen: number };
 
 export interface LoadResult {
   /** Generation of the model now held by the worker. */
@@ -44,6 +48,9 @@ export interface WorkerResults {
   flatValues: FlatValues[];
   edit: EditResult;
   structure: StructureResult;
+  baseline: null;
+  /** Null when there is no baseline or it does not parse. */
+  changes: DocumentChanges | null;
 }
 
 export type WorkerResponse =

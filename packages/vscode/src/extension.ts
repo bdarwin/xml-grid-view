@@ -8,6 +8,7 @@ export interface XmlGridViewApi {
   viewCount(uri: vscode.Uri): number;
   readyCount(uri: vscode.Uri): number;
   simulateViewMessage(uri: vscode.Uri, msg: ViewToHost): Promise<void>;
+  baseline(uri: vscode.Uri): { text: string | null; label: string } | undefined;
 }
 
 export function activate(context: vscode.ExtensionContext): XmlGridViewApi {
@@ -51,6 +52,7 @@ export function activate(context: vscode.ExtensionContext): XmlGridViewApi {
     simulateViewMessage: async (uri, msg) => {
       for (const v of viewsFor(uri)) await v.handle(msg);
     },
+    baseline: (uri) => viewsFor(uri)[0]?.baseline,
   };
 }
 

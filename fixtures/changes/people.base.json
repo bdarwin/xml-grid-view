@@ -1,0 +1,8 @@
+{
+  "people": [
+    { "name": "Ada", "age": 36, "tags": ["math"] },
+    { "name": "Alan", "age": "41", "active": true },
+    { "name": "Grace", "age": 85, "active": false }
+  ],
+  "count": 3
+}

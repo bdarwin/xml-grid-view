@@ -6,6 +6,7 @@ import {
   XmlParser,
   computeValueEdit,
   computeStructureEdit,
+  diffDocuments,
   evaluateXPath,
   jsBackend,
   searchDocument,
@@ -24,6 +25,8 @@ export function createWorkerHandler(post: (r: WorkerResponse, transfer?: Transfe
   let modelGood = false;
   let gen = 0;
   let latestLoad = 0;
+  /** The parsed baseline for `changes`, or null. */
+  let baseDoc: XDocument | null = null;
 
   const yieldNow = () => new Promise<void>((r) => setTimeout(r, 0));
 
@@ -73,6 +76,15 @@ export function createWorkerHandler(post: (r: WorkerResponse, transfer?: Transfe
         void load(req.id, req.text, req.format).catch((e) => post({ id: req.id, ok: false, error: String((e as Error)?.message ?? e) }));
         return;
       }
+      if (req.type === "baseline") {
+        baseDoc = null;
+        if (req.text !== null) {
+          const doc = req.format === "json" ? parseJsonDocument(req.text) : new XmlParser(req.text).run();
+          if (!doc.errors.length) baseDoc = doc;
+        }
+        post({ id: req.id, ok: true, result: null });
+        return;
+      }
       if (!model || req.gen !== gen) {
         post({ id: req.id, ok: false, error: "stale", stale: true });
         return;
@@ -98,6 +110,9 @@ export function createWorkerHandler(post: (r: WorkerResponse, transfer?: Transfe
           return;
         case "flatValues":
           post({ id: req.id, ok: true, result: model.flatValues(req.ids) });
+          return;
+        case "changes":
+          post({ id: req.id, ok: true, result: baseDoc && modelGood ? diffDocuments(baseDoc, model.doc) : null });
           return;
         case "xpath":
           post({ id: req.id, ok: true, result: evaluateXPath(model, modelText, req.expr, jsBackend) });

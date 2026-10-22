@@ -6,6 +6,7 @@ import {
   type ViewSettings,
   type ViewToHost,
 } from "@xmlgridview/core/protocol";
+import { watchBaseline } from "./baseline";
 import { themeVars } from "./theme";
 
 export const VIEW_TYPE = "xmlGridView.editor";
@@ -20,6 +21,8 @@ export interface ViewEntry {
   handle(msg: ViewToHost): Promise<void>;
   /** Opens the XML source in a text editor beside the view. */
   showSource(): Promise<void>;
+  /** The baseline changes are shown against (for tests). */
+  readonly baseline?: { text: string | null; label: string };
 }
 
 /**
@@ -86,11 +89,26 @@ export class XmlGridEditorProvider implements vscode.CustomTextEditorProvider {
       post({ type: "diagnostics", items });
     };
 
+    // The earlier version that changes are highlighted against; re-sent when the view reloads.
+    let baseline: { text: string | null; label: string } | undefined;
+    const sendBaseline = () => {
+      if (ready && baseline) post({ type: "baseline", ...baseline });
+    };
+    disposables.push(
+      watchBaseline(document, (text, label) => {
+        baseline = { text, label };
+        sendBaseline();
+      }),
+    );
+
     const entry: ViewEntry = {
       uri: document.uri,
       panel,
       get ready() {
         return ready;
+      },
+      get baseline() {
+        return baseline;
       },
       post,
       showSource: async () => {
@@ -102,6 +120,7 @@ export class XmlGridEditorProvider implements vscode.CustomTextEditorProvider {
             ready = true;
             sendInit();
             sendDiagnostics();
+            sendBaseline();
             break;
           case "navigate":
             await revealInTextEditor(document, msg.offset, msg.length);

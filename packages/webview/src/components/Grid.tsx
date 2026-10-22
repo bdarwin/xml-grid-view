@@ -3,6 +3,7 @@ import { useEffect, useRef } from "preact/hooks";
 import { cellString, isFilterActive, type CellRange, type Filters, type SortState } from "../gridView";
 import { Highlight } from "./Highlight";
 import { isInspectable } from "../inspect";
+import { changeClass, type GridChanges } from "../changes";
 import { problemClass, problemTitle } from "../problems";
 import { CellEditor, type EditMove } from "./CellEditor";
 import { useState } from "preact/hooks";
@@ -61,6 +62,8 @@ export interface GridProps {
   /** Problems by cell (table coordinates r * ncols + c) and by table row. */
   problemCells?: Map<number, Diagnostic[]>;
   problemRows?: Map<number, Diagnostic[]>;
+  /** Changes against the baseline: tinted cells and rows, and a line where rows were removed. */
+  changes?: GridChanges | null;
   /** Delete: empty the selected cells. */
   onClear?(range: CellRange): void;
   /** Alt+Shift+Up/Down: move the focused row. */
@@ -306,7 +309,8 @@ export function Grid(p: GridProps) {
         (key === p.currentHit ? " current-hit" : "") +
         (raw === null ? " empty" : "") +
         (col.kind === "attr" ? " attr-cell" : "") +
-        problemClass(p.problemCells?.get(key));
+        problemClass(p.problemCells?.get(key)) +
+        changeClass(p.changes?.cells.get(key));
       const pos = { v, c };
       let content;
       if (typeof raw === "number") {
@@ -357,7 +361,7 @@ export function Grid(p: GridProps) {
           style={{ width: widths[c] }}
           role="gridcell"
           aria-selected={!!inSel}
-          title={problemTitle(p.problemCells?.get(key)) ?? (typeof raw === "string" && raw.length > 40 ? raw.slice(0, 1000) : undefined)}
+          title={problemTitle(p.problemCells?.get(key)) ?? p.changes?.cells.get(key)?.title ?? (typeof raw === "string" && raw.length > 40 ? raw.slice(0, 1000) : undefined)}
           onMouseDown={(e) => cellDown(e, pos)}
           onMouseEnter={() => cellEnter(pos)}
           onContextMenu={(e) => {
@@ -374,9 +378,25 @@ export function Grid(p: GridProps) {
         </div>,
       );
     }
+    const rowChange = p.changes?.rows.get(r);
+    const goneAbove = p.changes?.removedAbove.get(r);
+    const goneBelow = r === t.rowIds.length - 1 ? p.changes?.removedAbove.get(t.rowIds.length) : undefined;
+    const rowTitle = [problemTitle(p.problemRows?.get(r)), rowChange?.title, goneAbove && "Above: " + goneAbove, goneBelow && "Below: " + goneBelow].filter(Boolean).join("\n\n") || undefined;
     rows.push(
-      <div key={r} class={"grid-row" + (rowSelected ? " row-sel" : "") + (v % 2 ? " odd" : "")} role="row" style={{ top: v * ROW_HEIGHT }}>
-        <div class={"rownum" + problemClass(p.problemRows?.get(r))} title={problemTitle(p.problemRows?.get(r))} style={{ width: rowNumWidth }} onMouseDown={(e) => rowHeaderDown(e, v)} onDblClick={() => p.onActivate({ v, c: -1 })} onContextMenu={(e) => {
+      <div
+        key={r}
+        class={
+          "grid-row" +
+          (rowSelected ? " row-sel" : "") +
+          (v % 2 ? " odd" : "") +
+          (rowChange?.kind === "added" ? " row-added" : "") +
+          (goneAbove ? " removed-above" : "") +
+          (goneBelow ? " removed-below" : "")
+        }
+        role="row"
+        style={{ top: v * ROW_HEIGHT }}
+      >
+        <div class={"rownum" + problemClass(p.problemRows?.get(r)) + changeClass(rowChange)} title={rowTitle} style={{ width: rowNumWidth }} onMouseDown={(e) => rowHeaderDown(e, v)} onDblClick={() => p.onActivate({ v, c: -1 })} onContextMenu={(e) => {
           if (!p.onContextMenu) return;
           e.preventDefault();
           p.onContextMenu({ v, c: -1 }, e.clientX, e.clientY);

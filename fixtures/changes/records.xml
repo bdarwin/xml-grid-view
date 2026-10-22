@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<catalog version="2">
+  <book id="b1" lang="en"><title>Dune</title>
+    <price>9.99</price></book>
+  <book id="b2" format="paperback">
+    <title>Emma</title>
+    <price>13.00</price>
+  </book>
+  <book id="b4">
+    <title>Candide</title>
+    <price>7.25</price>
+  </book>
+  <!-- the end -->
+  <book id="b5">
+    <title>Beloved</title>
+    <price>11.00</price>
+  </book>
+</catalog>

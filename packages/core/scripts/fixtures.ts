@@ -13,6 +13,9 @@ import {
   applyEdit,
   applyEdits,
   computeStructureEdit,
+  diffDocuments,
+  pathKey,
+  pathOfElement,
   type StructureOp,
   computeValueEdit,
   elementAtPath,
@@ -35,6 +38,7 @@ export const EDITS_DIR = resolve(CASES_DIR, "../edits");
 export const STRUCTURE_DIR = resolve(CASES_DIR, "../structure");
 
 export const JSONEDIT_DIR = resolve(CASES_DIR, "../jsonedit");
+export const CHANGES_DIR = resolve(CASES_DIR, "../changes");
 
 /** Parses a fixture input by its extension (.json → JSON document, else XML). */
 function parseByName(path: string, text: string) {
@@ -100,6 +104,32 @@ export function expectedStructureOutput(c: { xml: string; ops: string }): string
     return { op, expected: { edits: r.edits, result, wellFormed: parseByName(c.xml, result).errors.length === 0 } };
   });
   return stableJson({ cases });
+}
+
+/** Change cases: fixtures/changes/<name>.base.{xml,json} (the baseline) and <name>.{xml,json} -> <name>.changes.json. */
+export function listChangeCases(): { name: string; base: string; cur: string; expected: string }[] {
+  return readdirSync(CHANGES_DIR)
+    .filter((f) => /\.base\.(xml|json)$/.test(f))
+    .sort()
+    .map((f) => {
+      const name = f.replace(/\.base\.(xml|json)$/, "");
+      const ext = f.slice(f.lastIndexOf("."));
+      return { name, base: join(CHANGES_DIR, f), cur: join(CHANGES_DIR, name + ext), expected: join(CHANGES_DIR, name + ".changes.json") };
+    });
+}
+
+/** The changes from the baseline to the current document, with elements by path ("/"-joined indexes). */
+export function expectedChangesOutput(c: { base: string; cur: string }): string {
+  const base = parseByName(c.base, readFileSync(c.base, "utf8"));
+  const cur = parseByName(c.cur, readFileSync(c.cur, "utf8"));
+  if (base.errors.length || cur.errors.length) throw new Error(`${c.cur}: change fixtures must be well-formed`);
+  const at = (id: number) => pathKey(pathOfElement(cur.elements[id]));
+  const d = diffDocuments(base, cur);
+  return stableJson({
+    added: d.added.map(at),
+    modified: d.modified.map(({ id, ...rest }) => ({ path: at(id), ...rest })),
+    removed: d.removed.map(({ parent, ...rest }) => ({ parent: parent < 0 ? null : at(parent), ...rest })),
+  });
 }
 
 /** JSON value-inspector cases: fixtures/json/<name>.txt -> <name>.json. */

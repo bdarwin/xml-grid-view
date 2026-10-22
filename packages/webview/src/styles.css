@@ -1417,3 +1417,121 @@ button.icon {
   background: var(--xgv-problem-error);
   vertical-align: middle;
 }
+
+/* Changes against the baseline (last commit, or the text when the file was opened) */
+:root {
+  --xgv-change-added: var(--vscode-editorGutter-addedBackground, #2ea043);
+  --xgv-change-modified: var(--vscode-editorGutter-modifiedBackground, #1b81a8);
+  --xgv-change-removed: var(--vscode-editorGutter-deletedBackground, #f85149);
+  --xgv-change-added-fg: var(--vscode-gitDecoration-addedResourceForeground, var(--xgv-change-added));
+  --xgv-change-modified-fg: var(--vscode-gitDecoration-modifiedResourceForeground, #9a6700);
+  --xgv-change-removed-fg: var(--vscode-gitDecoration-deletedResourceForeground, var(--xgv-change-removed));
+}
+.changes-btn {
+  margin-left: auto;
+  align-self: center;
+  display: inline-flex;
+  gap: 8px;
+  padding: 1px 8px;
+  background: transparent;
+  border: 1px solid var(--xgv-border);
+  color: var(--xgv-fg);
+}
+.changes-btn + .problems-btn {
+  margin-left: 8px;
+}
+.changes-btn + .modebar-actions {
+  margin-left: 8px;
+}
+.changes-none {
+  color: var(--xgv-muted-fg);
+}
+.changes-added {
+  color: var(--xgv-change-added-fg);
+}
+.changes-modified {
+  color: var(--xgv-change-modified-fg);
+}
+.changes-removed {
+  color: var(--xgv-change-removed-fg);
+}
+.tree-row.change-added .tag,
+.flat-row.change-added .flat-name .tag,
+.flat-row.change-added .flat-name .attr-name {
+  color: var(--xgv-change-added-fg);
+}
+.tree-row.change-modified .tag,
+.flat-row.change-modified .flat-name .tag,
+.flat-row.change-modified .flat-name .attr-name {
+  color: var(--xgv-change-modified-fg);
+}
+.tree-row.change-removed {
+  cursor: default;
+  opacity: 0.75;
+}
+.tree-row.change-removed .tag,
+.tree-row.change-removed .preview {
+  color: var(--xgv-change-removed-fg);
+  text-decoration: line-through;
+}
+.tree-row.change-within .tag::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 5px;
+  border-radius: 50%;
+  background: var(--xgv-change-modified);
+  vertical-align: middle;
+}
+/* Grid: a tint over the cell (kept under selection and hover), a bar on the right of the row number. */
+.cell.change-added,
+.grid-row.row-added .cell {
+  background-image: linear-gradient(color-mix(in srgb, var(--xgv-change-added) 18%, transparent), color-mix(in srgb, var(--xgv-change-added) 18%, transparent));
+}
+.cell.change-modified {
+  background-image: linear-gradient(color-mix(in srgb, var(--xgv-change-modified) 22%, transparent), color-mix(in srgb, var(--xgv-change-modified) 22%, transparent));
+}
+.cell.change-removed {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    color-mix(in srgb, var(--xgv-change-removed) 22%, transparent) 0 4px,
+    transparent 4px 8px
+  );
+}
+.rownum.change-added,
+.flat-row.change-added .rownum {
+  background-image: linear-gradient(to left, var(--xgv-change-added) 3px, transparent 3px);
+}
+.rownum.change-modified,
+.flat-row.change-modified .rownum {
+  background-image: linear-gradient(to left, var(--xgv-change-modified) 3px, transparent 3px);
+}
+.flat-row.change-added .flat-value {
+  background-image: linear-gradient(color-mix(in srgb, var(--xgv-change-added) 18%, transparent), color-mix(in srgb, var(--xgv-change-added) 18%, transparent));
+}
+.flat-row.change-modified .flat-value {
+  background-image: linear-gradient(color-mix(in srgb, var(--xgv-change-modified) 22%, transparent), color-mix(in srgb, var(--xgv-change-modified) 22%, transparent));
+}
+/* Where rows (grid) or children (Flat) were removed: a red line. */
+.grid-row.removed-above::before,
+.grid-row.removed-below::after,
+.flat-row.removed-above::before,
+.flat-row.removed-child::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--xgv-change-removed);
+  pointer-events: none;
+  z-index: 1;
+}
+.grid-row.removed-above::before,
+.flat-row.removed-above::before {
+  top: 0;
+}
+.grid-row.removed-below::after,
+.flat-row.removed-child::after {
+  bottom: 0;
+}

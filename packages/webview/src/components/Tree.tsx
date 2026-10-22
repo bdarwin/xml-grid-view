@@ -1,4 +1,5 @@
-import { displayName, miscByParent, miscDisplay, type Diagnostic, type Matcher, type TreeSkeleton } from "@xmlgridview/core";
+import { displayName, miscByParent, miscDisplay, type Diagnostic, type Matcher, type RemovedElement, type TreeSkeleton } from "@xmlgridview/core";
+import { changeClass, removedName, type ChangeMarks } from "../changes";
 import { problemClass, problemTitle } from "../problems";
 import { useEffect, useMemo } from "preact/hooks";
 import { Highlight, PreviewText } from "./Highlight";
@@ -23,6 +24,8 @@ export interface TreeProps {
   /** Problems by element, and the ancestors of elements with problems (marked while collapsed). */
   problems?: Map<number, Diagnostic[]>;
   problemWithin?: Set<number>;
+  /** Changes against the baseline: colours added and changed elements, shows removed ones struck through. */
+  changes?: ChangeMarks | null;
   /** Double-click on a comment, PI or DOCTYPE: go to its source. */
   onActivateOffset?(offset: number, length: number): void;
   onInspect?(id: number): void;
@@ -33,25 +36,42 @@ export interface TreeProps {
 /** Row id of comment/PI/DOCTYPE `k`: -k-2 (-1 means "no element"). */
 export const miscRow = (k: number) => -k - 2;
 export const miscIndex = (row: number) => -row - 2;
+/** Row id of removed element `k` (an index into the rows' `removed` list). */
+const REMOVED_BASE = -(1 << 30);
+
+interface TreeRows {
+  ids: Int32Array;
+  /** Removed elements shown among their former siblings: row id REMOVED_BASE - k. */
+  removed: { parent: number; r: RemovedElement }[];
+}
 
 /**
  * Visible rows in display order: element ids, and comments, PIs and the DOCTYPE (miscRow) among
  * the children of elements that have element children (not when filtering).
  */
-function flatten(sk: TreeSkeleton, expanded: Set<number>, filter: Set<number> | null): Int32Array {
+function flatten(sk: TreeSkeleton, expanded: Set<number>, filter: Set<number> | null, gone?: Map<number, RemovedElement[]>): TreeRows {
   const out: number[] = [];
   const stack: number[] = [];
+  const removed: TreeRows["removed"] = [];
   const misc = filter || !sk.misc.length ? null : miscByParent(sk);
   const pushSiblings = (parent: number, first: number) => {
     const sibs: number[] = [];
     const ms = misc?.get(parent) ?? [];
+    const rs = filter ? [] : (gone?.get(parent) ?? []);
+    const pushRemoved = (r: RemovedElement) => {
+      sibs.push(REMOVED_BASE - removed.length);
+      removed.push({ parent, r });
+    };
     let j = 0;
+    let k = 0;
     let i = 0;
     for (let c = first; c >= 0; c = sk.nextSibling[c], i++) {
       while (j < ms.length && sk.misc[ms[j]].before <= i) sibs.push(miscRow(ms[j++]));
+      while (k < rs.length && rs[k].before <= i) pushRemoved(rs[k++]);
       if (!filter || filter.has(c)) sibs.push(c);
     }
     while (j < ms.length) sibs.push(miscRow(ms[j++]));
+    while (k < rs.length) pushRemoved(rs[k++]);
     for (let k = sibs.length - 1; k >= 0; k--) stack.push(sibs[k]);
   };
   pushSiblings(-1, sk.firstRoot);
@@ -60,12 +80,12 @@ function flatten(sk: TreeSkeleton, expanded: Set<number>, filter: Set<number> | 
     out.push(id);
     if (id >= 0 && sk.firstChild[id] >= 0 && (filter ? true : expanded.has(id))) pushSiblings(id, sk.firstChild[id]);
   }
-  return Int32Array.from(out);
+  return { ids: Int32Array.from(out), removed };
 }
 
 export function Tree(p: TreeProps) {
   const { skeleton: sk } = p;
-  const rows = useMemo(() => flatten(sk, p.expanded, p.filter), [sk, p.expanded, p.filter]);
+  const { ids: rows, removed } = useMemo(() => flatten(sk, p.expanded, p.filter, p.changes?.removed), [sk, p.expanded, p.filter, p.changes]);
   const [ref, vp] = useViewport<HTMLDivElement>();
   const selIndex = useMemo(() => rows.indexOf(p.selected), [rows, p.selected]);
 
@@ -138,6 +158,25 @@ export function Tree(p: TreeProps) {
   const items = [];
   for (let i = first; i < last; i++) {
     const id = rows[i];
+    if (id <= REMOVED_BASE) {
+      const { parent, r } = removed[REMOVED_BASE - id];
+      const depth = parent < 0 ? 0 : sk.depth[parent] + 1;
+      items.push(
+        <div
+          key={id}
+          class="tree-row change-removed"
+          role="treeitem"
+          aria-level={depth + 1}
+          title={`Removed since ${p.changes!.label}`}
+          style={{ top: i * TREE_ROW_HEIGHT, paddingLeft: `calc(${depth} * var(--xgv-tree-indent) + 4px)` }}
+        >
+          <span class="twisty" />
+          <span class="tag">{removedName(sk, parent, r)}</span>
+          {r.preview && <span class="preview">{r.preview}</span>}
+        </div>,
+      );
+      continue;
+    }
     if (id < 0) {
       const m = sk.misc[miscIndex(id)];
       const depth = m.parent < 0 ? 0 : sk.depth[m.parent] + 1;
@@ -160,12 +199,15 @@ export function Tree(p: TreeProps) {
     const hasKids = sk.firstChild[id] >= 0;
     const open = hasKids && (p.filter ? true : p.expanded.has(id));
     const own = p.problems?.get(id);
+    const change = p.changes?.byElement.get(id);
     const cls =
       "tree-row" +
       (id === p.selected ? " selected" : "") +
       (p.hits?.has(id) ? " hit" : "") +
       problemClass(own) +
-      (!own && hasKids && !open && p.problemWithin?.has(id) ? " problem-within" : "");
+      (!own && hasKids && !open && p.problemWithin?.has(id) ? " problem-within" : "") +
+      changeClass(change) +
+      (!change && !open && p.changes?.within.has(id) ? " change-within" : "");
     items.push(
       <div
         key={id}
@@ -174,7 +216,7 @@ export function Tree(p: TreeProps) {
         aria-level={sk.depth[id] + 1}
         aria-expanded={hasKids ? open : undefined}
         aria-selected={id === p.selected}
-        title={problemTitle(own)}
+        title={problemTitle(own) ?? change?.title ?? (!open && p.changes?.within.has(id) ? `Changed below since ${p.changes.label}` : undefined)}
         style={{ top: i * TREE_ROW_HEIGHT, paddingLeft: `calc(${sk.depth[id]} * var(--xgv-tree-indent) + 4px)` }}
         onMouseDown={(e) => {
           if ((e.target as HTMLElement).classList.contains("twisty")) return;

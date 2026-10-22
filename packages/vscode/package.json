@@ -174,6 +174,11 @@
           "type": "boolean",
           "default": false,
           "description": "Disable value editing in XML Grid View (the view never changes the document)."
+        },
+        "xmlGridView.showChanges": {
+          "type": "boolean",
+          "default": true,
+          "description": "Highlight what changed in the tree, grid and Flat view: against the last commit when the file is in a git repository, otherwise since the file was opened."
         }
       }
     }

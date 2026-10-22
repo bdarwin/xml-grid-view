@@ -11,3 +11,4 @@ export * from "./edits.js";
 export * from "./structure.js";
 export * from "./jsonDocument.js";
 export * from "./jsonEdits.js";
+export * from "./changes.js";

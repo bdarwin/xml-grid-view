@@ -15,6 +15,7 @@ import {
   pathOfId,
   parsePathKey,
   type DocSearchResult,
+  type DocumentChanges,
   type Diagnostic,
   type EditTarget,
   type ElementPath,
@@ -43,6 +44,7 @@ import { Split } from "./components/Split";
 import { Summary } from "./components/Summary";
 import { Tree } from "./components/Tree";
 import { ValueInspector, type InspectorTarget } from "./components/ValueInspector";
+import { changeMarks, gridChanges } from "./changes";
 import { autoFitWidth, computeView, isFilterActive, parseTsv, toCsv, toJsonRows, toTsv, type CellRange, type ColumnFilter, type Filters, type SortState } from "./gridView";
 import type { HostBridge } from "./host";
 import { StaleError, type WorkerClient } from "./workerClient";
@@ -145,6 +147,11 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
   /** Problems the editor reports for the document (schema validation etc.). */
   const [diagnostics, setDiagnostics] = useState<Diagnostic[]>([]);
   const [problemIndex, setProblemIndex] = useState(-1);
+  /** Changes against the host's baseline (last commit / when opened); null when there is none. */
+  const [changes, setChanges] = useState<DocumentChanges | null>(null);
+  const [baselineLabel, setBaselineLabel] = useState<string | null>(null);
+  const [baselineRev, setBaselineRev] = useState(0);
+  const [changeIndex, setChangeIndex] = useState(-1);
   const docVersionRef = useRef<number | undefined>(undefined);
   /** Host document version of the text the current model was parsed from. */
   const modelDocVersion = useRef<number | undefined>(undefined);
@@ -331,6 +338,15 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
         case "diagnostics":
           setDiagnostics(msg.items.filter((d) => d.severity !== "info"));
           break;
+        case "baseline": {
+          const label = msg.label;
+          const on = msg.text !== null;
+          void worker.request<"baseline">({ type: "baseline", text: msg.text, format: formatRef.current }).then(() => {
+            setBaselineLabel(on ? label : null);
+            setBaselineRev((r) => r + 1);
+          });
+          break;
+        }
         case "editResult":
           pendingEdit.current?.(msg);
           pendingEdit.current = null;
@@ -371,6 +387,29 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
   }, [skeleton, diagnostics]);
 
   useEffect(() => setProblemIndex(-1), [problems]);
+
+  // ----- changes against the baseline ---------------------------------------
+
+  useEffect(() => {
+    if (!baselineLabel || !skeleton) {
+      setChanges(null);
+      return;
+    }
+    let cancelled = false;
+    worker
+      .request<"changes">({ type: "changes", gen })
+      .then((c) => !cancelled && setChanges(c))
+      .catch((e) => {
+        if (!(e instanceof StaleError) && !cancelled) setChanges(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [gen, skeleton, baselineLabel, baselineRev]);
+
+  const marks = useMemo(() => (skeleton && changes && baselineLabel ? changeMarks(skeleton, changes, baselineLabel) : null), [skeleton, changes, baselineLabel]);
+  const changeDetails = useMemo(() => new Map((changes?.modified ?? []).map((c) => [c.id, c])), [changes]);
+  useEffect(() => setChangeIndex(-1), [marks]);
 
   // ----- grid table --------------------------------------------------------
 
@@ -457,6 +496,8 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
     }
     return { cells, rows };
   }, [table, problems, skeleton]);
+
+  const gridChangeMarks = useMemo(() => (table && marks && skeleton ? gridChanges(table, skeleton, marks, changeDetails) : null), [table, marks, skeleton, changeDetails]);
 
   // After a grid edit (new row, move, paste), select the row it was about once the grid is rebuilt.
   useEffect(() => {
@@ -1373,6 +1414,11 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
     setProblemIndex(idx);
     const { d, id } = problems.list[idx];
     setToast(`${d.severity === "error" ? "Error" : "Warning"} ${idx + 1}/${n}: ${d.message}`);
+    revealInView(id);
+  };
+  /** Shows element `id`: in Flat, its row; otherwise its row in the grid of its siblings. */
+  const revealInView = (id: number) => {
+    if (!skeleton) return;
     if (mode === "flat") {
       revealFlat(skeleton, id);
       setFlatSel({ anchor: { id, attr: -1, col: 0 }, focus: { id, attr: -1, col: 1 } });
@@ -1391,6 +1437,27 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
     pendingGridRow.current = { id, c: 0 };
     selectElement(p, { group: name, reveal: true });
   };
+  /** Shows change `i` (wrapping), with what changed. */
+  const goToChange = (i: number) => {
+    if (!marks || !skeleton || !marks.list.length) return;
+    const n = marks.list.length;
+    const idx = ((i % n) + n) % n;
+    setChangeIndex(idx);
+    const stop = marks.list[idx];
+    const own = marks.byElement.get(stop.id);
+    if (stop.removed) {
+      const { parent, items } = stop.removed;
+      setToast(`Change ${idx + 1}/${n}: removed ${items.map((r) => (r.preview ? `${r.name} (${r.preview})` : r.name)).join(", ")}`);
+      // The parent's grid of the removed rows' tag, with the row after the gap selected.
+      if (mode !== "flat" && parent >= 0) {
+        if (stop.id !== parent) pendingGridRow.current = { id: stop.id, c: 0 };
+        return selectElement(parent, { group: items[0].name, reveal: true });
+      }
+    } else setToast(`Change ${idx + 1}/${n}: ${displayName(skeleton, stop.id)} — ${own ? own.title.split("\n").slice(0, 3).join(" · ") : ""}`);
+    revealInView(stop.id);
+  };
+  const changeNav = useRef(goToChange);
+  changeNav.current = (step: number) => goToChange(changeIndex < 0 ? (step > 0 ? 0 : -1) : changeIndex + step);
   const problemNav = useRef(goToProblem);
   problemNav.current = (step: number) => goToProblem(problemIndex < 0 ? (step > 0 ? 0 : -1) : problemIndex + step);
   const prevHit = () => goToHit(findIndex < 0 ? findCount - 1 : findIndex - 1);
@@ -1423,6 +1490,9 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
       if (mod && !e.altKey && e.key.toLowerCase() === "f") {
         e.preventDefault();
         openFind();
+      } else if (e.key === "F5" && e.altKey) {
+        e.preventDefault();
+        changeNav.current(e.shiftKey ? -1 : 1);
       } else if (e.key === "F8") {
         e.preventDefault();
         problemNav.current(e.shiftKey ? -1 : 1);
@@ -1540,6 +1610,18 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
             {m === "grid" ? "Grid" : "Flat"}
           </button>
         ))}
+        {marks && (
+          <button
+            class={"changes-btn" + (problems ? " with-problems" : "")}
+            title={`Changes since ${marks.label}. Click (or Alt+F5 / Shift+Alt+F5) to go to the next / previous.`}
+            onClick={(e) => changeNav.current(e.shiftKey ? -1 : 1)}
+          >
+            {!marks.list.length && <span class="changes-none">No changes</span>}
+            {marks.added > 0 && <span class="changes-added">+{marks.added}</span>}
+            {marks.modified > 0 && <span class="changes-modified">~{marks.modified}</span>}
+            {marks.removedCount > 0 && <span class="changes-removed">−{marks.removedCount}</span>}
+          </button>
+        )}
         {problems && (
           <button
             class={"problems-btn " + (problems.errors ? "has-errors" : "has-warnings")}
@@ -1613,6 +1695,7 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
               onActivateOffset={navigateTo}
               problems={problems?.byElement}
               problemWithin={problems?.within}
+              changes={marks}
               onInspect={(id) => void inspectElement(id)}
               onContextMenu={(id, x, y) => openStructureMenu(id, null, x, y)}
             />
@@ -1643,6 +1726,8 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
               }
               onSelect={selectFlat}
               problems={problems?.byElement}
+              changes={marks}
+              changeDetails={changeDetails}
               onActivate={(pos) => void activateFlat(pos)}
               onCopy={(sel) => void copyFlat(sel, rowsForFlat)}
               onInspect={(pos) => void inspectFlat(pos)}
@@ -1777,6 +1862,7 @@ export function App({ host, worker }: { host: HostBridge; worker: WorkerClient }
                 onContextMenu={openGridMenu}
                 problemCells={gridProblems?.cells}
                 problemRows={gridProblems?.rows}
+                changes={gridChangeMarks}
                 onClear={clearCells}
                 onMoveRow={(v, up, c) => moveRow(v, up, c)}
                 onPaste={(focus) => void pasteGrid(focus)}

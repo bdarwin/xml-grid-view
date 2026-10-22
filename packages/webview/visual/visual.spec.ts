@@ -260,3 +260,36 @@ test("JSON document as tree and grid", async ({ page }) => {
   await page.locator(".flat-row").first().waitFor();
   await shot(page, "light-json-flat");
 });
+
+test("changes against the baseline in tree, grid and Flat", async ({ page }) => {
+  // The current text: bk101's format and bk102's price changed, bk103 removed, bk105 added.
+  const bk103 = sample.slice(sample.indexOf("  <book id=\"bk103\""), sample.indexOf("  <book id=\"bk104\""));
+  const text = sample
+    .replace('id="bk101" format="hardcover"', 'id="bk101" format="paperback"')
+    .replace('<price currency="USD">5.95</price>', '<price currency="USD">6.95</price>')
+    .replace(bk103, "")
+    .replace(
+      "  <config>",
+      '  <book id="bk105" format="ebook">\n    <author>Knorr, Stefan</author>\n    <title>Creepy Crawlies</title>\n    <genre>Horror</genre>\n    <price currency="USD">4.95</price>\n  </book>\n  <config>',
+    );
+  await open(page, { text });
+  await ready(page);
+  await page.evaluate((base) => window.postMessage({ type: "baseline", text: base, label: "the last commit" }, "*"), sample);
+  await expect(page.locator(".changes-btn")).toHaveText("+1~2−1");
+  await expect(page.locator(".grid-row.row-added")).toHaveCount(1);
+  await expect(page.locator(".cell.change-modified")).toHaveCount(2);
+  await expect(page.locator(".grid-row.removed-above")).toHaveCount(1);
+  await expect(page.locator(".rownum.change-modified").first()).toHaveAttribute("title", /Changed since the last commit/);
+  await expect(page.locator(".tree-row.change-removed")).toHaveText(/book.*bk103/);
+  await shot(page, "light-changes-grid");
+
+  // Alt+F5 steps through the changes.
+  await page.locator(".grid").focus();
+  await page.keyboard.press("Alt+F5");
+  await expect(page.locator(".toast")).toContainText("Change 1/");
+
+  await page.getByRole("tab", { name: "Flat" }).click();
+  await page.locator(".flat-row").first().waitFor();
+  await expect(page.locator(".flat-row.change-modified").first()).toBeVisible();
+  await shot(page, "light-changes-flat");
+});

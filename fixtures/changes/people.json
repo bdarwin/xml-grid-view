@@ -1,0 +1,9 @@
+{
+  "people": [
+    { "name": "Ada", "age": 37, "tags": ["math", "poetry"] },
+    { "name": "Alan", "age": 41, "active": true },
+    { "name": "Edsger", "age": 72 }
+  ],
+  "count": 3,
+  "updated": "2026-10-22"
+}

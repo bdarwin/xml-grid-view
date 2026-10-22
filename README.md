@@ -205,6 +205,13 @@ limitations.
   the IDE's own validation, as of the last time the Text tab analysed the
   file. A counter above the view steps through them (F8 in VS Code, F2 in
   IntelliJ, Shift for the previous one).
+- **Changes:** what changed since the last git commit (or, for a file
+  outside git, since it was opened) is highlighted. New rows and elements
+  are green, changed values blue with the old value as a tooltip, and
+  removed elements are struck through in the tree and marked with a red
+  line in the grid. Elements are compared, not lines, so reformatting is not
+  a change. A counter above the view steps through them (Alt+F5, Shift for
+  the previous one). Turn it off with `xmlGridView.showChanges`.
 - **Comments, processing instructions and the DOCTYPE** are shown, read-only
   and in grey, in the tree and the Flat view.
 - **JSON** (`.json`, `.jsonc`, `.geojson`): the same views and editing.

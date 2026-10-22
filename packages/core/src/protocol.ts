@@ -117,7 +117,18 @@ export interface ClipboardMessage {
   type: "clipboard";
   text: string;
 }
-export type HostToView = InitMessage | UpdateMessage | ThemeMessage | FocusFindMessage | EditResultMessage | ClipboardMessage | DiagnosticsMessage;
+/**
+ * The earlier version of the document that changes are shown against: the last commit when the
+ * file is in a git repository, otherwise the text when it was opened. `text: null` turns change
+ * highlighting off.
+ */
+export interface BaselineMessage {
+  type: "baseline";
+  text: string | null;
+  /** What the baseline is, for tooltips, e.g. "the last commit" or "when the file was opened". */
+  label: string;
+}
+export type HostToView = InitMessage | UpdateMessage | ThemeMessage | FocusFindMessage | EditResultMessage | ClipboardMessage | DiagnosticsMessage | BaselineMessage;
 
 export interface ReadyMessage {
   type: "ready";
@@ -155,7 +166,7 @@ export interface SaveMessage {
 }
 export type ViewToHost = ReadyMessage | NavigateMessage | CopyMessage | ErrorMessage | EditMessage | ReadClipboardMessage | SaveMessage;
 
-const HOST_TYPES = new Set(["init", "update", "theme", "focusFind", "editResult", "clipboard", "diagnostics"]);
+const HOST_TYPES = new Set(["init", "update", "theme", "focusFind", "editResult", "clipboard", "diagnostics", "baseline"]);
 const VIEW_TYPES = new Set(["ready", "navigate", "copy", "error", "edit", "readClipboard", "save"]);
 
 export function isHostToView(m: unknown): m is HostToView {

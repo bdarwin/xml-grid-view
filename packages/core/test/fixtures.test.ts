@@ -1,6 +1,6 @@
 import { readFileSync, existsSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { expectedEditsOutput, expectedJsonOutput, expectedOutputs, expectedStructureOutput, listCases, listEditCases, listJsonCases, listStructureCases } from "../scripts/fixtures.js";
+import { expectedChangesOutput, expectedEditsOutput, expectedJsonOutput, expectedOutputs, expectedStructureOutput, listCases, listChangeCases, listEditCases, listJsonCases, listStructureCases } from "../scripts/fixtures.js";
 
 describe("golden fixtures", () => {
   const cases = listCases();
@@ -46,6 +46,12 @@ describe("golden fixtures", () => {
       expect(JSON.parse(expectedStructureOutput(c))).toEqual(expected);
       // Every successful structural edit must keep the document well-formed.
       for (const k of expected.cases) if (!k.expected.error) expect(k.expected.wellFormed, JSON.stringify(k.op)).toBe(true);
+    });
+  }
+  for (const c of listChangeCases()) {
+    it(`changes/${c.name}`, () => {
+      expect(existsSync(c.expected), `${c.expected} is missing; run pnpm fixtures:generate`).toBe(true);
+      expect(JSON.parse(expectedChangesOutput(c))).toEqual(JSON.parse(readFileSync(c.expected, "utf8")));
     });
   }
 });

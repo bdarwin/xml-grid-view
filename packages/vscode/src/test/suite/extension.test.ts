@@ -24,6 +24,7 @@ interface Api {
   viewCount(uri: vscode.Uri): number;
   readyCount(uri: vscode.Uri): number;
   simulateViewMessage(uri: vscode.Uri, msg: { type: string; [k: string]: unknown }): Promise<void>;
+  baseline(uri: vscode.Uri): { text: string | null; label: string } | undefined;
 }
 
 function fixture(): vscode.Uri {
@@ -176,5 +177,32 @@ suite("XML Grid View", () => {
     await waitFor(() => api.viewCount(fixture()) > 0, "view to resolve");
     await api.simulateViewMessage(fixture(), { type: "copy", text: "a\tb" });
     assert.strictEqual(await vscode.env.clipboard.readText(), "a\tb");
+  });
+
+  test("changes are shown against the last commit, or the opened text outside git", async function () {
+    this.timeout(60_000);
+    const { execFileSync } = await import("node:child_process");
+    // The fixture is tracked in this repository; skip when the tests run outside a git checkout.
+    let committed: string;
+    try {
+      committed = execFileSync("git", ["show", "HEAD:./books.xml"], { cwd: path.dirname(fixture().fsPath), encoding: "utf8" });
+    } catch {
+      return this.skip();
+    }
+    const loose = path.join(os.tmpdir(), "xgv-no-git.xml");
+    fs.writeFileSync(loose, "<a/>");
+    try {
+      await vscode.commands.executeCommand("vscode.openWith", fixture(), VIEW_TYPE);
+      await waitFor(() => api.baseline(fixture())?.label === "the last commit", "the last commit as baseline", 30_000);
+      assert.strictEqual(api.baseline(fixture())!.text, committed);
+
+      const looseUri = vscode.Uri.file(loose);
+      await vscode.commands.executeCommand("vscode.openWith", looseUri, VIEW_TYPE);
+      await waitFor(() => api.baseline(looseUri), "a baseline outside git");
+      assert.deepStrictEqual(api.baseline(looseUri), { text: "<a/>", label: "when the file was opened" });
+    } finally {
+      await vscode.commands.executeCommand("workbench.action.closeAllEditors");
+      fs.rmSync(loose, { force: true });
+    }
   });
 });

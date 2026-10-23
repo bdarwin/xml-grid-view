@@ -71,6 +71,15 @@ public class VisualStyleTest extends BasePlatformTestCase {
   private XmlFlatViewerEditor flatEditor;
 
   @Override
+  protected void setUp() throws Exception {
+    super.setUp();
+    // Headless Linux runs on Metal, whose tree arrows can't paint without a component (they NPE);
+    // the IDE's own look never uses them.
+    javax.swing.UIManager.put("Tree.expandedIcon", com.intellij.icons.AllIcons.General.ArrowDown);
+    javax.swing.UIManager.put("Tree.collapsedIcon", com.intellij.icons.AllIcons.General.ArrowRight);
+  }
+
+  @Override
   protected void tearDown() throws Exception {
     try {
       if (gridEditor != null) Disposer.dispose(gridEditor);

@@ -1,4 +1,5 @@
 import { execFile } from "node:child_process";
+import { unwatchFile, watchFile } from "node:fs";
 import * as path from "node:path";
 import * as vscode from "vscode";
 
@@ -150,7 +151,13 @@ export function watchBaseline(document: vscode.TextDocument, listener: BaselineL
         const { text, label } = await read();
         fileWatcher?.dispose();
         fileWatcher = undefined;
-        if (next.kind === "file") {
+        if (next.kind === "file" && next.uri.scheme === "file") {
+          // Polled: VS Code's watcher misses files outside the workspace on some platforms.
+          const p = next.uri.fsPath;
+          const onChange = () => schedule();
+          watchFile(p, { interval: 1000, persistent: false }, onChange);
+          fileWatcher = { dispose: () => unwatchFile(p, onChange) };
+        } else if (next.kind === "file") {
           const w = vscode.workspace.createFileSystemWatcher(
             new vscode.RelativePattern(vscode.Uri.joinPath(next.uri, ".."), path.basename(next.uri.fsPath)),
           );

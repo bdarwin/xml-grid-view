@@ -1,6 +1,5 @@
 package dev.xmlgridview.intellij.ui;
 
-import com.intellij.ide.ui.UISettings;
 import com.intellij.ui.JBColor;
 import com.intellij.util.ui.JBUI;
 import com.intellij.util.ui.UIUtil;
@@ -11,6 +10,8 @@ import javax.swing.event.TableModelEvent;
 import java.awt.Dimension;
 import java.awt.FontMetrics;
 import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.event.MouseAdapter;
@@ -104,8 +105,12 @@ final class RowNumberHeader extends JComponent {
     int first = Math.max(0, table.rowAtPoint(new Point(0, clip.y)));
     int last = table.rowAtPoint(new Point(0, clip.y + clip.height));
     if (last < 0) last = table.getRowCount() - 1;
-    // Text drawn directly (not by a Swing component) gets the IDE's antialiasing only when asked.
-    UISettings.setupAntialiasing(g);
+    // Text drawn directly (not by a Swing component) is antialiased only when asked: as the table's.
+    Object aa = table.getClientProperty(RenderingHints.KEY_TEXT_ANTIALIASING);
+    if (aa == null) aa = javax.swing.UIManager.get(RenderingHints.KEY_TEXT_ANTIALIASING);
+    if (aa != null) ((Graphics2D)g).setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, aa);
+    Object contrast = table.getClientProperty(RenderingHints.KEY_TEXT_LCD_CONTRAST);
+    if (contrast != null) ((Graphics2D)g).setRenderingHint(RenderingHints.KEY_TEXT_LCD_CONTRAST, contrast);
     FontMetrics fm = g.getFontMetrics(getFont());
     g.setFont(getFont());
     int[] selected = table.getSelectedRows();

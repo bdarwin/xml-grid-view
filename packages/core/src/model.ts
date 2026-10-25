@@ -273,6 +273,12 @@ export function defaultGroup(groups: GroupInfo[]): string | null {
   return groups.find((g) => g.count > 1)?.name ?? SELF_GROUP;
 }
 
+/** `s.toLowerCase()`, or `s` itself when it has no upper case (no new string). */
+function lowerOf(s: string): string {
+  const l = s.toLowerCase();
+  return l === s ? s : l;
+}
+
 function buildIndex(doc: XDocument): SearchIndex {
   const n = doc.elements.length;
   const names = new Array<string>(n);
@@ -285,16 +291,23 @@ function buildIndex(doc: XDocument): SearchIndex {
     attrValues: new Array<string[]>(n),
     texts: new Array<string>(n),
   };
+  // Lower-case copies share the original when nothing changes, and elements without attributes
+  // share one empty list: millions of small strings and arrays on large files otherwise.
+  const none: string[] = [];
+  const lowerAll = (xs: string[]) => {
+    const ls = xs.map(lowerOf);
+    return ls.every((x, k) => x === xs[k]) ? xs : ls;
+  };
   for (let i = 0; i < n; i++) {
     const el = doc.elements[i];
     names[i] = el.name;
-    attrNames[i] = el.attrs.map((a) => a.name);
-    attrValues[i] = el.attrs.map((a) => a.value);
+    attrNames[i] = el.attrs.length ? el.attrs.map((a) => a.name) : none;
+    attrValues[i] = el.attrs.length ? el.attrs.map((a) => a.value) : none;
     texts[i] = elementText(el);
-    lower.names[i] = el.name.toLowerCase();
-    lower.attrNames[i] = attrNames[i].map((s) => s.toLowerCase());
-    lower.attrValues[i] = attrValues[i].map((s) => s.toLowerCase());
-    lower.texts[i] = texts[i].toLowerCase();
+    lower.names[i] = lowerOf(el.name);
+    lower.attrNames[i] = el.attrs.length ? lowerAll(attrNames[i]) : none;
+    lower.attrValues[i] = el.attrs.length ? lowerAll(attrValues[i]) : none;
+    lower.texts[i] = lowerOf(texts[i]);
   }
   return { names, attrNames, attrValues, texts, lower };
 }

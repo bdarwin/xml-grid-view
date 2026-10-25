@@ -1,6 +1,14 @@
 import { SaxesParser, type SaxesTagNS, type SaxesAttributeNS } from "saxes";
 import type { ParseError, XAttr, XDocument, XElement, XMisc, XText } from "./types.js";
 
+/**
+ * Shared until something is added: most elements have no namespace declarations, attributes or
+ * element children, and a separate empty object or array for each costs memory on large files.
+ * Frozen, so an accidental write fails loudly instead of changing every element.
+ */
+const NO_NS: Record<string, string> = Object.freeze({}) as Record<string, string>;
+const NONE: never[] = Object.freeze([]) as unknown as never[];
+
 /** Characters fed to saxes per step of the incremental parser. */
 const DEFAULT_CHUNK = 1 << 20;
 
@@ -96,6 +104,7 @@ export class XmlParser {
       const el = this.stack.pop()!;
       el.end = this.text.length;
       if (el.openEnd < 0) el.openEnd = this.text.length;
+      trim(el);
     }
   }
 
@@ -125,20 +134,22 @@ export class XmlParser {
         local: tag.name,
         prefix: "",
         uri: "",
-        attrs: [],
-        children: [],
-        elements: [],
+        attrs: NONE,
+        children: NONE,
+        elements: NONE,
         parent,
         index: parent ? parent.elements.length : this.doc.roots.length,
         start: start < 0 ? 0 : start,
         end: -1,
         openEnd: -1,
-        nsDecls: {},
+        nsDecls: NO_NS,
       };
       this.doc.elements.push(el);
       if (parent) {
-        parent.children.push(el);
-        parent.elements.push(el);
+        if (parent.children === NONE) parent.children = [el];
+        else parent.children.push(el);
+        if (parent.elements === NONE) parent.elements = [el];
+        else parent.elements.push(el);
       } else {
         this.doc.roots.push(el);
       }
@@ -171,10 +182,12 @@ export class XmlParser {
       };
       // Namespace declarations are not attributes in the model; they are kept in nsDecls.
       if (a.name === "xmlns" || a.name.startsWith("xmlns:")) {
+        if (pending.nsDecls === NO_NS) pending.nsDecls = {};
         pending.nsDecls[a.name === "xmlns" ? "" : a.name.slice(6)] = a.value;
         return;
       }
-      pending.attrs.push(xa);
+      if (pending.attrs === NONE) pending.attrs = [xa];
+      else pending.attrs.push(xa);
     });
 
     sax.on("opentag", (tag) => {
@@ -208,6 +221,7 @@ export class XmlParser {
         const el = this.stack.pop()!;
         this.tags.pop();
         if (el.end < sax.position) el.end = sax.position;
+        trim(el);
       }
       this.cursor = sax.position;
     });
@@ -222,7 +236,8 @@ export class XmlParser {
         return;
       }
       const node: XText = { kind, value, start, end };
-      parent.children.push(node);
+      if (parent.children === NONE) parent.children = [node];
+      else parent.children.push(node);
     };
 
     sax.on("text", (value) => {
@@ -255,6 +270,16 @@ export class XmlParser {
     sax.on("doctype", (t) => misc("doctype", "<!DOCTYPE", "DOCTYPE", t));
     sax.on("xmldecl", skip);
   }
+}
+
+/**
+ * Copies a closed element's growable arrays to exact-size ones: arrays grown by push keep spare
+ * capacity, most of the memory of a large document of small elements.
+ */
+function trim(el: XElement) {
+  if (el.children.length > 1) el.children = el.children.slice();
+  if (el.elements.length > 1) el.elements = el.elements.slice();
+  if (el.attrs.length > 1) el.attrs = el.attrs.slice();
 }
 
 /** Trims XML whitespace (space, tab, CR, LF). */

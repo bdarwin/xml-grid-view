@@ -81,11 +81,17 @@ different name because another publisher already uses "XML Grid View".)
 
 To install from a file instead, choose **Extensions → … → Install from VSIX…** and pick
 `packages/vscode/xml-grid-view-plus-<version>.vsix`. From a terminal, run
-`code --install-extension packages/vscode/xml-grid-view-plus-0.2.2.vsix`.
+`code --install-extension packages/vscode/xml-grid-view-plus-<version>.vsix`.
 
-XML files still open in the text editor. To open the viewer, use **Open With
-XML Grid View**, from the editor title button, the Explorer context menu or
-the Command Palette.
+XML and JSON files still open in the text editor. To open the viewer, use
+**Open With XML Grid View**, from the editor title button, the Explorer
+context menu or the Command Palette. To open a file type in the viewer by
+default, right-click a tab, choose **Reopen Editor With… → Configure default
+editor for '*.xml'…** and pick **XML Grid View**, or set it in settings.json:
+
+```json
+"workbench.editorAssociations": { "*.xml": "xmlGridView.editor" }
+```
 
 ### IntelliJ (2024.3 or newer)
 
@@ -249,8 +255,8 @@ limitations.
     indentation are handled when adding and removing.
   - XPath is XML-only; Find works on JSON. Validation problems (e.g. JSON
     Schema in VS Code) are marked like XML ones.
-  - In VS Code, open a JSON file with **Open With… → XML Grid View** (it is
-    not the default editor for JSON).
+  - In VS Code, JSON files open in the viewer the same way as XML files
+    (see Installing).
 - **Find (Ctrl/Cmd+F):**
   - Match case, whole word and regex.
   - Scope: the current grid or the whole document.

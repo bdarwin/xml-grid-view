@@ -1,0 +1,74 @@
+{
+  "0": {
+    "default": ".",
+    "groups": [{ "tag": "article", "count": 1 }],
+    "grids": {
+      ".": {
+        "columns": [{ "key": "article", "kind": "complex" }],
+        "rows": [
+          [{ "drill": "article", "count": 1 }]
+        ]
+      },
+      "article": {
+        "columns": [
+          { "key": "@key", "kind": "attr" },
+          { "key": "@note", "kind": "attr" },
+          { "key": "author", "kind": "complex" },
+          { "key": "title", "kind": "leaf" },
+          { "key": "publisher", "kind": "leaf" },
+          { "key": "footer", "kind": "leaf" },
+          { "key": "custom", "kind": "leaf" }
+        ],
+        "rows": [
+          ["a1", "Fronhöfer & Example & Co", { "drill": "author", "count": 2 }, " Café — €5", "Example & Co", "Example & Co — ©", "&notInTheTable; stays"]
+        ]
+      }
+    }
+  },
+  "0/0": {
+    "default": "author",
+    "groups": [
+      { "tag": "author", "count": 2 },
+      { "tag": "title", "count": 1 },
+      { "tag": "publisher", "count": 1 },
+      { "tag": "footer", "count": 1 },
+      { "tag": "custom", "count": 1 }
+    ],
+    "grids": {
+      ".": {
+        "columns": [
+          { "key": "@key", "kind": "attr" },
+          { "key": "@note", "kind": "attr" },
+          { "key": "author", "kind": "complex" },
+          { "key": "title", "kind": "leaf" },
+          { "key": "publisher", "kind": "leaf" },
+          { "key": "footer", "kind": "leaf" },
+          { "key": "custom", "kind": "leaf" }
+        ],
+        "rows": [
+          ["a1", "Fronhöfer & Example & Co", { "drill": "author", "count": 2 }, " Café — €5", "Example & Co", "Example & Co — ©", "&notInTheTable; stays"]
+        ]
+      },
+      "author": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [["Jürgen Beyerer"], ["P. Lévêque"]]
+      },
+      "title": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [[" Café — €5"]]
+      },
+      "publisher": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [["Example & Co"]]
+      },
+      "footer": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [["Example & Co — ©"]]
+      },
+      "custom": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [["&notInTheTable; stays"]]
+      }
+    }
+  }
+}

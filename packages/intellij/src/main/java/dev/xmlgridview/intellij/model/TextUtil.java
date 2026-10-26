@@ -1,5 +1,7 @@
 package dev.xmlgridview.intellij.model;
 
+import java.util.Map;
+
 /** Text normalization helpers shared by the model, matching the TS core. */
 public final class TextUtil {
   private TextUtil() {
@@ -20,6 +22,11 @@ public final class TextUtil {
 
   /** Decodes predefined entity and character references; unknown references are kept verbatim. */
   public static String decodeEntities(CharSequence raw) {
+    return decodeEntities(raw, Map.of());
+  }
+
+  /** Like {@link #decodeEntities(CharSequence)}, also decoding the names in {@code entities} (declared by the DOCTYPE). */
+  public static String decodeEntities(CharSequence raw, Map<String, String> entities) {
     String s = raw.toString();
     int amp = s.indexOf('&');
     if (amp < 0) return s;
@@ -28,9 +35,9 @@ public final class TextUtil {
     while (i < s.length()) {
       char c = s.charAt(i);
       int semi;
-      if (c == '&' && (semi = s.indexOf(';', i + 1)) > i + 1 && semi - i <= 12) {
+      if (c == '&' && (semi = s.indexOf(';', i + 1)) > i + 1 && semi - i <= maxReference(entities)) {
         String name = s.substring(i + 1, semi);
-        String rep = decodeReference(name);
+        String rep = decodeReference(name, entities);
         if (rep != null) {
           sb.append(rep);
           i = semi + 1;
@@ -41,6 +48,17 @@ public final class TextUtil {
       i++;
     }
     return sb.toString();
+  }
+
+  /** Longest reference ("&" to ";") worth decoding: predefined and character references are short, declared names may be long. */
+  public static int maxReference(Map<String, String> entities) {
+    return entities.isEmpty() ? 12 : 256;
+  }
+
+  /** {@link #decodeReference(String)}, then the names in {@code entities}. */
+  public static String decodeReference(String name, Map<String, String> entities) {
+    String rep = decodeReference(name);
+    return rep != null || name.startsWith("#") ? rep : entities.get(name);
   }
 
   /** Decodes the inside of a reference ("amp", "#65", "#x41"), or null when unknown. */

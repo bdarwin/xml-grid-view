@@ -48,6 +48,14 @@ public class GoldenFixturesTest extends BasePlatformTestCase {
     return ReadAction.compute(() -> XmlModelBuilder.build(getProject(), text));
   }
 
+  /** The HTML entity table matches the core's (fixtures/html-entities.json, written from it). */
+  public void testHtmlEntityTableMatchesTheCore() throws IOException {
+    JsonObject expected = com.google.gson.JsonParser.parseString(Files.readString(casesDir().resolveSibling("html-entities.json"), StandardCharsets.UTF_8)).getAsJsonObject();
+    java.util.Map<String, String> fromCore = new java.util.HashMap<>();
+    for (var e : expected.entrySet()) fromCore.put(e.getKey(), e.getValue().getAsString());
+    assertEquals(fromCore, dev.xmlgridview.intellij.model.HtmlEntities.MAP);
+  }
+
   public void testAllFixtures() throws IOException {
     List<Path> cases = cases();
     assertFalse("no fixture cases found", cases.isEmpty());

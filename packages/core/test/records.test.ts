@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { RecordScanner, scanRecords, type RecordScan } from "../src/index.js";
+import { RecordScanner, parseXml, scanRecords, xmlEncoding, type RecordScan } from "../src/index.js";
 
 const enc = new TextEncoder();
 const dec = new TextDecoder();
@@ -81,5 +81,42 @@ describe("record scanner", () => {
     expect(s.error).toBeUndefined();
     expect(s.count).toBe(0);
     expect(s.rootName).toBe("root");
+  });
+});
+
+describe("DOCTYPE and encoding", () => {
+  it("keeps the DOCTYPE, so pages decode the entities it declares", () => {
+    const scan = scanChunked(TRICKY, 7);
+    expect(scan.doctype).toMatch(/^<!DOCTYPE catalog \[[\s\S]*<!ENTITY note "a > b">[\s\S]*\]>$/);
+    expect(scanRecords(enc.encode("<r><a/></r>")).doctype).toBe("");
+  });
+
+  it("decodes records of an ISO-8859-1 file with an external DTD, as the view parses a page", () => {
+    // DBLP-style: Latin-1 bytes, HTML entities declared in a DTD that isn't read.
+    const head = '<?xml version="1.0" encoding="ISO-8859-1"?>\n<!DOCTYPE dblp SYSTEM "dblp.dtd">\n<dblp>\n';
+    const body = '<article key="a"><author>J&uuml;rgen</author><title>Café</title></article>\n</dblp>\n';
+    const bytes = Uint8Array.from([...head, ...body].map((c) => c.charCodeAt(0)));
+    const encoding = xmlEncoding(bytes);
+    expect(encoding).toBe("windows-1252");
+    const s = new RecordScanner(encoding);
+    s.feed(bytes);
+    const scan = s.finish();
+    expect(scan.error).toBeUndefined();
+    const latin1 = new TextDecoder(encoding);
+    const record = latin1.decode(bytes.subarray(scan.starts[0], scan.ends[0]));
+    const doc = parseXml(`${scan.doctype}${scan.rootStartTag}${record}</dblp>`);
+    expect(doc.errors).toEqual([]);
+    const article = doc.roots[0].elements[0];
+    expect(article.elements.map((e) => e.children.map((c) => (c.kind === "element" ? "" : c.value)).join(""))).toEqual(["Jürgen", "Café"]);
+  });
+
+  it("finds the encoding from a byte order mark or the declaration", () => {
+    const b = (s: string) => Uint8Array.from([...s].map((c) => c.charCodeAt(0)));
+    expect(xmlEncoding(b("<root/>"))).toBe("utf-8");
+    expect(xmlEncoding(b('<?xml version="1.0" encoding="UTF-8"?><r/>'))).toBe("utf-8");
+    expect(xmlEncoding(b("<?xml version='1.0' encoding='windows-1252'?><r/>"))).toBe("windows-1252");
+    expect(xmlEncoding(b('<?xml version="1.0" encoding="no-such-charset"?><r/>'))).toBe("utf-8");
+    expect(xmlEncoding(Uint8Array.from([0xef, 0xbb, 0xbf, 0x3c]))).toBe("utf-8");
+    expect(xmlEncoding(Uint8Array.from([0xff, 0xfe, 0x3c, 0x00]))).toBe("utf-16le");
   });
 });

@@ -1,0 +1,8 @@
+<!DOCTYPE doc [
+  <!ENTITY product "Grid View">
+  <!ENTITY version '0.5'>
+]>
+<doc>
+  <name>&product; &version;</name>
+  <attr label="&product;"/>
+</doc>

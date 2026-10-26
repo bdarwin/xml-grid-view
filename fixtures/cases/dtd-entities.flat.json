@@ -1,0 +1,13 @@
+[
+  { "depth": 0, "kind": "doctype", "name": "DOCTYPE", "value": "dblp SYSTEM \"dblp.dtd\" [\n  <!ENTITY org \"Example &amp; Co\">\n  <!ENTITY sign '&org; &#8212; &copy;'>\n  <!ENTITY org \"ignored: the first declaration wins\">\n  <!-- comments in the subset are fine -->\n]", "path": "" },
+  { "depth": 0, "kind": "element", "name": "dblp", "value": "", "path": "0" },
+  { "depth": 1, "kind": "element", "name": "article", "value": "", "path": "0/0" },
+  { "depth": 2, "kind": "attr", "name": "@key", "value": "a1", "path": "0/0" },
+  { "depth": 2, "kind": "attr", "name": "@note", "value": "Fronhöfer & Example & Co", "path": "0/0" },
+  { "depth": 2, "kind": "element", "name": "author", "value": "Jürgen Beyerer", "path": "0/0/0" },
+  { "depth": 2, "kind": "element", "name": "author", "value": "P. Lévêque", "path": "0/0/1" },
+  { "depth": 2, "kind": "element", "name": "title", "value": " Café — €5", "path": "0/0/2" },
+  { "depth": 2, "kind": "element", "name": "publisher", "value": "Example & Co", "path": "0/0/3" },
+  { "depth": 2, "kind": "element", "name": "footer", "value": "Example & Co — ©", "path": "0/0/4" },
+  { "depth": 2, "kind": "element", "name": "custom", "value": "&notInTheTable; stays", "path": "0/0/5" }
+]

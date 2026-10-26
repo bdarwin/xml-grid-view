@@ -1,5 +1,5 @@
 import { createReadStream, promises as fs } from "node:fs";
-import { RecordScanner, type RecordScan } from "@xmlgridview/core/records";
+import { RecordScanner, xmlEncoding, type RecordScan } from "@xmlgridview/core/records";
 import type { RecordsInfo } from "@xmlgridview/core/protocol";
 
 const CHUNK = 4 * 1024 * 1024;
@@ -17,12 +17,23 @@ export class RecordFile {
     readonly path: string,
     readonly size: number,
     private readonly scan: RecordScan,
+    private readonly decoder: { decode(bytes: Uint8Array): string },
   ) {}
 
   /** Indexes the file; `progress` gets the bytes read so far. Rejects when `cancelled()` turns true. */
   static async open(path: string, progress: (bytes: number, total: number) => void, cancelled: () => boolean): Promise<RecordFile> {
     const size = (await fs.stat(path)).size;
-    const scanner = new RecordScanner();
+    const head = Buffer.alloc(512);
+    const fh = await fs.open(path, "r");
+    try {
+      await fh.read(head, 0, head.length, 0);
+    } finally {
+      await fh.close();
+    }
+    // Records are found byte by byte, which needs an ASCII-compatible encoding.
+    const encoding = xmlEncoding(head);
+    if (encoding.startsWith("utf-16")) throw new Error("UTF-16 files can't be opened as records; save the file as UTF-8.");
+    const scanner = new RecordScanner(encoding);
     let last = 0;
     await new Promise<void>((resolve, reject) => {
       const stream = createReadStream(path, { highWaterMark: CHUNK });
@@ -47,7 +58,7 @@ export class RecordFile {
       stream.on("error", reject);
     });
     progress(size, size);
-    return new RecordFile(path, size, scanner.finish());
+    return new RecordFile(path, size, scanner.finish(), new TextDecoder(encoding));
   }
 
   get info(): RecordsInfo {
@@ -59,6 +70,7 @@ export class RecordFile {
     return {
       rootName: this.scan.rootName,
       rootStartTag: this.scan.rootStartTag,
+      doctype: this.scan.doctype || undefined,
       groups: [...counts].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count),
       fileSize: this.size,
       error: this.scan.error ? `${this.scan.error.message} at byte ${this.scan.error.offset}` : undefined,
@@ -99,7 +111,7 @@ export class RecordFile {
         const to = this.scan.ends[g[j]];
         const buf = Buffer.alloc(to - from);
         await fh.read(buf, 0, buf.length, from);
-        for (let k = i; k <= j; k++) out.push(buf.toString("utf8", this.scan.starts[g[k]] - from, this.scan.ends[g[k]] - from));
+        for (let k = i; k <= j; k++) out.push(this.decoder.decode(buf.subarray(this.scan.starts[g[k]] - from, this.scan.ends[g[k]] - from)));
         i = j + 1;
       }
     } finally {

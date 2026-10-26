@@ -41,6 +41,8 @@ final class XmlFastParser {
   private int topLevel;
   /** Tag and attribute names, shared: documents repeat a few names millions of times. */
   private final Map<String, String> names = new HashMap<>();
+  /** Entities declared by the DOCTYPE (see {@link DtdEntities}). */
+  private Map<String, String> entities = Map.of();
 
   private static final class Frame {
     final XNode node;
@@ -116,7 +118,11 @@ final class XmlFastParser {
       else if (s.startsWith("<!", pos)) {
         int start = pos;
         skipDeclaration();
-        if (s.startsWith("<!DOCTYPE", start)) addMisc(XMisc.Kind.DOCTYPE, "DOCTYPE", s.substring(start + 9, Math.max(start + 9, s.charAt(pos - 1) == '>' ? pos - 1 : pos)), start);
+        if (s.startsWith("<!DOCTYPE", start)) {
+          String doctype = s.substring(start + 9, Math.max(start + 9, s.charAt(pos - 1) == '>' ? pos - 1 : pos));
+          entities = DtdEntities.of(doctype);
+          addMisc(XMisc.Kind.DOCTYPE, "DOCTYPE", doctype, start);
+        }
       }
       else if (s.startsWith("</", pos)) {
         endTag();
@@ -361,7 +367,7 @@ final class XmlFastParser {
       char c = s.charAt(i);
       if (c == '&') {
         int semi = s.indexOf(';', i + 1);
-        String rep = semi > i + 1 && semi < b && semi - i <= 12 ? TextUtil.decodeReference(s.substring(i + 1, semi)) : null;
+        String rep = semi > i + 1 && semi < b && semi - i <= TextUtil.maxReference(entities) ? TextUtil.decodeReference(s.substring(i + 1, semi), entities) : null;
         if (rep != null) {
           if (f.text == null) {
             if (TextUtil.xmlTrim(rep).isEmpty()) {
@@ -448,6 +454,6 @@ final class XmlFastParser {
       else if (c == '\t' || c == '\n') sb.append(' ');
       else sb.append(c);
     }
-    return TextUtil.decodeEntities(sb);
+    return TextUtil.decodeEntities(sb, entities);
   }
 }

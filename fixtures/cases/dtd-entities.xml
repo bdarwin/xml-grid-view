@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE dblp SYSTEM "dblp.dtd" [
+  <!ENTITY org "Example &amp; Co">
+  <!ENTITY sign '&org; &#8212; &copy;'>
+  <!ENTITY org "ignored: the first declaration wins">
+  <!-- comments in the subset are fine -->
+]>
+<dblp>
+  <article key="a1" note="Fronh&ouml;fer &amp; &org;">
+    <author>J&uuml;rgen Beyerer</author>
+    <author>P. L&eacute;v&ecirc;que</author>
+    <title>&nbsp;Caf&eacute; &mdash; &euro;5</title>
+    <publisher>&org;</publisher>
+    <footer>&sign;</footer>
+    <custom>&notInTheTable; stays</custom>
+  </article>
+</dblp>

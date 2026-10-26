@@ -87,6 +87,8 @@ export interface RecordsInfo {
   rootName: string;
   /** The root's start tag as written (for namespaces and the root's attributes). */
   rootStartTag: string;
+  /** The DOCTYPE declaration, when there is one (for the entities it declares). */
+  doctype?: string;
   /** Records by tag, most first. */
   groups: { name: string; count: number }[];
   fileSize: number;

@@ -194,7 +194,11 @@ export function RecordsView(p: { host: HostBridge; info: RecordsInfo; fileName: 
           </span>
         )}
       </div>
-      {info.error && <div class="banner warning">This file is not well-formed ({info.error}); the records before that point are shown.</div>}
+      {info.error && (
+        <div class="banner warning">
+          {info.rootName ? `This file is not well-formed (${info.error}); the records before that point are shown.` : `Can't open this file as records: ${info.error}`}
+        </div>
+      )}
       <div class="grid-wrap records-grid" ref={wrapRef}>
         <Grid
           table={table}
@@ -244,7 +248,7 @@ function identity(n: number): Int32Array {
 
 /** Parses a page of records inside the root's start tag (for its namespaces) and adds new columns to `columns`. */
 export function parsePage(info: RecordsInfo, group: string, texts: string[], columns: GridColumn[]): Page {
-  const doc = parseXml(`${selfOpen(info.rootStartTag)}\n${texts.join("\n")}\n</${info.rootName}>`);
+  const doc = parseXml(`${info.doctype ?? ""}${selfOpen(info.rootStartTag)}\n${texts.join("\n")}\n</${info.rootName}>`);
   const model = new XmlModel(doc);
   const keys = new Map<string, number>();
   const rows: (string | number | null)[][] = [];

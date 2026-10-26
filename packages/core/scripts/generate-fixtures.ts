@@ -7,7 +7,8 @@
  * Generated changes are meant to be reviewed (git diff) before committing; CI only runs --check.
  */
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { relative } from "node:path";
+import { join, relative } from "node:path";
+import { HTML_ENTITIES, stableJson } from "../src/index.js";
 import { CASES_DIR, expectedChangesOutput, expectedEditsOutput, expectedJsonOutput, expectedOutputs, expectedStructureOutput, listCases, listChangeCases, listEditCases, listJsonCases, listStructureCases } from "./fixtures.js";
 
 const check = process.argv.includes("--check");
@@ -47,6 +48,16 @@ for (const c of listChangeCases()) {
   if (current === content) continue;
   changed.push(relative(CASES_DIR, c.expected));
   if (!check) writeFileSync(c.expected, content);
+}
+// The HTML entity table, which the IntelliJ parser's copy is checked against.
+{
+  const path = join(CASES_DIR, "..", "html-entities.json");
+  const content = stableJson(HTML_ENTITIES);
+  const current = existsSync(path) ? readFileSync(path, "utf8") : null;
+  if (current !== content) {
+    changed.push(relative(CASES_DIR, path));
+    if (!check) writeFileSync(path, content);
+  }
 }
 if (!changed.length) {
   console.log("Fixtures are up to date.");

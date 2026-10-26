@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { PROTOCOL_VERSION, isViewToHost, type HostToView } from "@xmlgridview/core/protocol";
+import { xmlEncoding } from "@xmlgridview/core/records";
 import { isJsonFileName, readSettings, saveExport, viewHtml, type ViewEntry } from "./provider";
 import { RecordFile } from "./recordFile";
 import { themeVars } from "./theme";
@@ -70,7 +71,9 @@ export class LargeFileEditorProvider implements vscode.CustomReadonlyEditorProvi
       void panel.webview.postMessage(msg);
     };
     const load = async () => {
-      text = new TextDecoder("utf-8").decode(await vscode.workspace.fs.readFile(uri));
+      const bytes = await vscode.workspace.fs.readFile(uri);
+      // JSON is always UTF-8; XML declares its encoding.
+      text = new TextDecoder(isJsonFileName(uri.path) ? "utf-8" : xmlEncoding(bytes)).decode(bytes);
       return ++version;
     };
 
@@ -172,7 +175,7 @@ export class LargeFileEditorProvider implements vscode.CustomReadonlyEditorProvi
       () => disposed,
     );
     const hooks: RecordsHooks = {};
-    const sendInit = (f: RecordFile) =>
+    const sendInit = (info: RecordFile["info"]) =>
       post({
         type: "init",
         version: PROTOCOL_VERSION,
@@ -181,7 +184,7 @@ export class LargeFileEditorProvider implements vscode.CustomReadonlyEditorProvi
         text: "",
         theme: themeVars(),
         settings: { ...readSettings(), readOnly: true },
-        records: f.info,
+        records: info,
       });
     const entry: ViewEntry & { records: RecordsHooks } = {
       uri,
@@ -201,9 +204,13 @@ export class LargeFileEditorProvider implements vscode.CustomReadonlyEditorProvi
             try {
               file = await opening;
               hooks.file = file;
-              sendInit(file);
+              sendInit(file.info);
             } catch (e) {
-              if (!disposed) this.log.appendLine(`[${uri.fsPath}] indexing failed: ${String(e)}`);
+              if (disposed) break;
+              this.log.appendLine(`[${uri.fsPath}] indexing failed: ${String(e)}`);
+              // Shown in place of the records.
+              const size = await vscode.workspace.fs.stat(uri).then((s) => s.size, () => 0);
+              sendInit({ rootName: "", rootStartTag: "", groups: [], fileSize: size, error: (e as Error).message ?? String(e) });
             }
             break;
           case "requestRecordPage":

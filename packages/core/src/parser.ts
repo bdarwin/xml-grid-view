@@ -1,4 +1,5 @@
 import { SaxesParser, type SaxesTagNS, type SaxesAttributeNS } from "saxes";
+import { dtdEntities } from "./dtd.js";
 import type { ParseError, XAttr, XDocument, XElement, XMisc, XText } from "./types.js";
 
 /**
@@ -122,7 +123,12 @@ export class XmlParser {
     const text = this.text;
     let pending: XElement | null = null;
 
-    sax.on("error", (e) => this.addError(e.message, sax.position));
+    // Set by the DOCTYPE: names declared in a DTD that isn't read are not errors (see dtd.ts).
+    let undeclaredAllowed = false;
+    sax.on("error", (e) => {
+      if (undeclaredAllowed && e.message.endsWith("undefined entity.")) return;
+      this.addError(e.message, sax.position);
+    });
 
     sax.on("opentagstart", (tag) => {
       const start = text.lastIndexOf("<", sax.position - 1);
@@ -267,7 +273,12 @@ export class XmlParser {
     };
     sax.on("comment", (t) => misc("comment", "<!--", "#comment", t));
     sax.on("processinginstruction", (pi) => misc("pi", "<?", pi.target, pi.body));
-    sax.on("doctype", (t) => misc("doctype", "<!DOCTYPE", "DOCTYPE", t));
+    sax.on("doctype", (t) => {
+      const dtd = dtdEntities(t);
+      Object.assign(sax.ENTITIES, dtd.entities);
+      undeclaredAllowed = dtd.external;
+      misc("doctype", "<!DOCTYPE", "DOCTYPE", t);
+    });
     sax.on("xmldecl", skip);
   }
 }

@@ -1,0 +1,7 @@
+[
+  { "depth": 0, "kind": "doctype", "name": "DOCTYPE", "value": "doc [\n  <!ENTITY product \"Grid View\">\n  <!ENTITY version '0.5'>\n]", "path": "" },
+  { "depth": 0, "kind": "element", "name": "doc", "value": "", "path": "0" },
+  { "depth": 1, "kind": "element", "name": "name", "value": "Grid View 0.5", "path": "0/0" },
+  { "depth": 1, "kind": "element", "name": "attr", "value": "", "path": "0/1" },
+  { "depth": 2, "kind": "attr", "name": "@label", "value": "Grid View", "path": "0/1" }
+]

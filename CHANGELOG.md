@@ -29,6 +29,16 @@
   grid cells.
 - **Allowed values while editing:** values limited by an XSD, DTD or JSON
   Schema are offered as a list when you edit the cell.
+- **Entities from a DTD:** documents that reference an external DTD
+  (DocBook, XHTML, DBLP, …) no longer show "undefined entity" errors; the
+  standard HTML names such as `&uuml;` and `&nbsp;` are decoded, and so are
+  entities declared in the document's own DOCTYPE.
+- **Lower memory use:** a parsed document takes about 40% less memory, so
+  larger files load in VS Code.
+- **IntelliJ: values in the editor font:** grid cells, the Flat view and the
+  tree use the editor's font and size, like the database results grid.
+- Files over 50 MB in VS Code and records mode honour the encoding in the
+  XML declaration (e.g. ISO-8859-1).
 
 ## 0.4.0
 

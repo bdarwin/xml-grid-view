@@ -1,0 +1,28 @@
+{
+  "0": {
+    "default": ".",
+    "groups": [
+      { "tag": "name", "count": 1 },
+      { "tag": "attr", "count": 1 }
+    ],
+    "grids": {
+      ".": {
+        "columns": [
+          { "key": "name", "kind": "leaf" },
+          { "key": "attr", "kind": "complex" }
+        ],
+        "rows": [
+          ["Grid View 0.5", { "drill": "attr", "count": 1 }]
+        ]
+      },
+      "name": {
+        "columns": [{ "key": "#text", "kind": "text" }],
+        "rows": [["Grid View 0.5"]]
+      },
+      "attr": {
+        "columns": [{ "key": "@label", "kind": "attr" }],
+        "rows": [["Grid View"]]
+      }
+    }
+  }
+}

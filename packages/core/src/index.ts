@@ -13,3 +13,5 @@ export * from "./jsonDocument.js";
 export * from "./jsonEdits.js";
 export * from "./changes.js";
 export * from "./records.js";
+export * from "./dtd.js";
+export * from "./htmlEntities.js";

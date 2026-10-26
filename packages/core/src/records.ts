@@ -10,6 +10,8 @@ export interface RecordScan {
   /** The root element's start tag as written, decoded (empty when there is no root). */
   rootStartTag: string;
   rootName: string;
+  /** The DOCTYPE declaration as written (`<!DOCTYPE …>`), decoded; empty when there is none. */
+  doctype: string;
   /** Byte offsets of each record's "<" and just past its end. */
   starts: Float64Array;
   ends: Float64Array;
@@ -82,6 +84,8 @@ export class RecordScanner {
   private rootName = "";
   private rootTag: number[] = [];
   private capturingRoot = false;
+  private doctype: number[] = [];
+  private capturingDoctype = false;
   private starts = new Float64Array(1024);
   private ends = new Float64Array(1024);
   private nameIdx = new Uint32Array(1024);
@@ -89,7 +93,12 @@ export class RecordScanner {
   private open = -1;
   private sawRoot = false;
   private error: { message: string; offset: number } | undefined;
-  private readonly decoder = new TextDecoder("utf-8");
+  private readonly decoder: { decode(bytes: Uint8Array): string };
+
+  /** `encoding`: the file's (see {@link xmlEncoding}); an ASCII-compatible one, as bytes are scanned. */
+  constructor(encoding = "utf-8") {
+    this.decoder = new TextDecoder(encoding);
+  }
 
   /** Bytes scanned so far. */
   get offset(): number {
@@ -105,6 +114,8 @@ export class RecordScanner {
     for (let i = 0; i < chunk.length; i++, this.pos++) {
       const b = chunk[i];
       if (this.capturingRoot && this.rootTag.length < 65536) this.rootTag.push(b);
+      // The DOCTYPE (with its internal subset, up to 1 MB) declares entities the records use.
+      if (this.capturingDoctype && this.doctype.length < 1 << 20) this.doctype.push(b);
       switch (this.state) {
         case S.Text: {
           if (b !== 0x3c) {
@@ -142,6 +153,10 @@ export class RecordScanner {
           } else {
             this.declDepth = 0;
             this.state = S.Decl;
+            if (this.depth === 0 && !this.sawRoot && !this.doctype.length) {
+              this.capturingDoctype = true;
+              this.doctype = [0x3c, 0x21, b];
+            }
           }
           break;
         case S.BangDash:
@@ -179,7 +194,10 @@ export class RecordScanner {
             this.state = S.DeclQuote;
           } else if (b === 0x5b) this.declDepth++;
           else if (b === 0x5d) this.declDepth--;
-          else if (b === 0x3e && this.declDepth <= 0) this.state = S.Text;
+          else if (b === 0x3e && this.declDepth <= 0) {
+            this.state = S.Text;
+            this.capturingDoctype = false;
+          }
           break;
         case S.DeclQuote:
           if (b === this.quote) this.state = S.Decl;
@@ -310,6 +328,7 @@ export class RecordScanner {
     return {
       rootStartTag: this.decoder.decode(Uint8Array.from(this.rootTag)),
       rootName: this.rootName,
+      doctype: this.doctype.length < 1 << 20 ? this.decoder.decode(Uint8Array.from(this.doctype)) : "",
       starts: this.starts.slice(0, n),
       ends: this.ends.slice(0, n),
       nameIdx: this.nameIdx.slice(0, n),
@@ -317,6 +336,30 @@ export class RecordScanner {
       count: n,
       error: this.error,
     };
+  }
+}
+
+/**
+ * The encoding of an XML file from its first bytes: a byte order mark, else the XML declaration's
+ * `encoding` when the platform can decode it, else UTF-8.
+ */
+export function xmlEncoding(head: Uint8Array): string {
+  if (head[0] === 0xef && head[1] === 0xbb && head[2] === 0xbf) return "utf-8";
+  if (head[0] === 0xff && head[1] === 0xfe) return "utf-16le";
+  if (head[0] === 0xfe && head[1] === 0xff) return "utf-16be";
+  if (head[0] === 0x3c && head[1] === 0x00) return "utf-16le";
+  if (head[0] === 0x00 && head[1] === 0x3c) return "utf-16be";
+  let decl = "";
+  for (let i = 0; i < Math.min(head.length, 512); i++) {
+    decl += String.fromCharCode(head[i]);
+    if (head[i] === 0x3e) break;
+  }
+  const m = /^<\?xml\s[^>]*?encoding\s*=\s*["']([A-Za-z0-9._-]+)["']/.exec(decl);
+  if (!m) return "utf-8";
+  try {
+    return new TextDecoder(m[1]).encoding;
+  } catch {
+    return "utf-8";
   }
 }
 

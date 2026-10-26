@@ -126,6 +126,7 @@ public final class FlatPanel extends JPanel implements Disposable, UiDataProvide
     this.navigator = navigator;
     this.project = project;
     Disposer.register(parent, this);
+    ViewFont.apply(table, this);
     loader = new ModelLoader(project, document, this, navigator, (previous, built) -> modelChanged(built), this);
     problems = new DocumentProblems(project, document, this, () -> table.repaint());
     changes = new DocumentChanges(this, this::changesChanged);

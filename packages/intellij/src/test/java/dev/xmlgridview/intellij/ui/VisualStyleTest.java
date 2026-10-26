@@ -275,6 +275,32 @@ public class VisualStyleTest extends BasePlatformTestCase {
     paint(f, "flat-changes");
   }
 
+  public void testValuesUseTheEditorFont() throws Exception {
+    java.awt.Font editor = ViewFont.editor();
+    XmlGridPanel g = grid();
+    paint(g, "grid");
+    JBTable t = widestTable(g);
+    assertFontFits("grid cell", t, t.prepareRenderer(t.getCellRenderer(0, 0), 0, 0), editor);
+    com.intellij.ui.treeStructure.Tree tree = UIUtil.findComponentOfType(g, com.intellij.ui.treeStructure.Tree.class);
+    assertNotNull(tree);
+    assertEquals(editor, tree.getFont());
+    Component node = tree.getCellRenderer().getTreeCellRendererComponent(tree, tree.getPathForRow(0).getLastPathComponent(), false, false, false, 0, false);
+    assertEquals("tree node font", editor.getFamily(), node.getFont().getFamily());
+    assertEquals(editor.getSize(), node.getFont().getSize());
+
+    FlatPanel f = flat();
+    JBTable ft = table(f, 2);
+    paint(f, "flat");
+    assertFontFits("Flat value", ft, ft.prepareRenderer(ft.getCellRenderer(0, 1), 0, 1), editor);
+  }
+
+  /** The renderer paints in the editor font, and rows are tall enough for it. */
+  private static void assertFontFits(String what, JBTable t, Component c, java.awt.Font editor) {
+    assertEquals(what + " font", editor.getFamily(), c.getFont().getFamily());
+    assertEquals(what + " size", editor.getSize(), c.getFont().getSize());
+    assertTrue(what + ": row height " + t.getRowHeight(0) + " fits the font", t.getRowHeight(0) >= t.getFontMetrics(editor).getHeight());
+  }
+
   public void testSelectionStatsInTheHeader() throws Exception {
     XmlGridPanel p = grid();
     JBTable t = widestTable(p);

@@ -118,6 +118,7 @@ final class GridView extends JPanel implements UiDataProvider {
     this.findState = findState;
 
     table.setRowSorter(sorter);
+    ViewFont.apply(table, parent);
     table.setCellSelectionEnabled(true);
     table.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
     table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);

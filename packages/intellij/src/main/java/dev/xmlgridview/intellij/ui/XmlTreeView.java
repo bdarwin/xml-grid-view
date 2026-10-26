@@ -127,6 +127,7 @@ final class XmlTreeView extends JPanel {
     this.findState = findState;
     structureModel = new StructureTreeModel<>(structure, parent);
     tree = new Tree(new AsyncTreeModel(structureModel, parent));
+    ViewFont.apply(tree, parent);
     tree.setRootVisible(false);
     tree.setShowsRootHandles(true);
     tree.getSelectionModel().setSelectionMode(TreeSelectionModel.SINGLE_TREE_SELECTION);
@@ -428,7 +429,7 @@ final class XmlTreeView extends JPanel {
         Highlight.append(this, a.value(), plain ? SimpleTextAttributes.REGULAR_ATTRIBUTES : XmlColors.attrValueAttrs(SimpleTextAttributes.STYLE_PLAIN),
                          fs.targets().attrValues() ? fs.matcher() : null);
       }
-      if (!n.children().isEmpty()) append("  (" + n.children().size() + ")", SimpleTextAttributes.GRAYED_SMALL_ATTRIBUTES);
+      if (!n.children().isEmpty()) append("  (" + n.children().size() + ")", SimpleTextAttributes.GRAYED_ATTRIBUTES);
       else if (!n.text().isEmpty()) {
         String t = n.text().length() > 60 ? n.text().substring(0, 59) + "…" : n.text();
         append("  ", SimpleTextAttributes.REGULAR_ATTRIBUTES);

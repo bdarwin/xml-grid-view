@@ -1,7 +1,7 @@
 # XML Grid View
 
-[![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/bdarwin.xml-grid-view-plus?label=VS%20Code%20Marketplace)](https://marketplace.visualstudio.com/items?itemName=bdarwin.xml-grid-view-plus)
-[![Installs](https://img.shields.io/visual-studio-marketplace/i/bdarwin.xml-grid-view-plus)](https://marketplace.visualstudio.com/items?itemName=bdarwin.xml-grid-view-plus)
+[![VS Code Marketplace](https://vsmarketplacebadges.dev/version-short/bdarwin.xml-grid-view-plus.svg?label=VS%20Code%20Marketplace)](https://marketplace.visualstudio.com/items?itemName=bdarwin.xml-grid-view-plus)
+[![Installs](https://vsmarketplacebadges.dev/installs-short/bdarwin.xml-grid-view-plus.svg)](https://marketplace.visualstudio.com/items?itemName=bdarwin.xml-grid-view-plus)
 [![JetBrains Marketplace](https://img.shields.io/jetbrains/plugin/v/34932-xml-grid-view?label=JetBrains%20Marketplace)](https://plugins.jetbrains.com/plugin/34932-xml-grid-view)
 [![Downloads](https://img.shields.io/jetbrains/plugin/d/34932-xml-grid-view)](https://plugins.jetbrains.com/plugin/34932-xml-grid-view)
 [![CI](https://github.com/bdarwin/xml-grid-view/actions/workflows/ci.yml/badge.svg)](https://github.com/bdarwin/xml-grid-view/actions/workflows/ci.yml)
